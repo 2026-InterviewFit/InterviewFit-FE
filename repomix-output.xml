@@ -1,0 +1,821 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+app/
+  about/
+    page.tsx
+  community/
+    page.tsx
+  features/
+    page.tsx
+  how-to/
+    page.tsx
+  favicon.ico
+  globals.css
+  layout.tsx
+  page.tsx
+components/
+  home/
+    Hero.tsx
+    HeroCard.tsx
+    Navbar.tsx
+    TrustedLogos.tsx
+hooks/
+  useCounter.ts
+lib/
+  constants.ts
+  utils.ts
+public/
+  fonts/
+    PlayfairDisplay-Bold.ttf
+    Satoshi.ttf
+  images/
+    home/
+      next.svg
+      react.svg
+      spring.svg
+  file.svg
+  globe.svg
+  vercel.svg
+  window.svg
+.gitignore
+AGENTS.md
+CLAUDE.md
+eslint.config.mjs
+next.config.ts
+package.json
+postcss.config.mjs
+README.md
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="app/about/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      About
+    </main>
+  );
+}
+</file>
+
+<file path="app/community/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      Community
+    </main>
+  );
+}
+</file>
+
+<file path="app/features/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      Features Page
+    </main>
+  );
+}
+</file>
+
+<file path="app/how-to/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      How-to
+    </main>
+  );
+}
+</file>
+
+<file path="components/home/Hero.tsx">
+"use client";
+
+import { motion } from "framer-motion";
+import { HERO } from "@/lib/constants";
+
+const easeOut = [0.22, 1, 0.36, 1] as const;
+
+export default function Hero() {
+  return (
+    <section className="mx-auto w-full max-w-[1280px] px-8 pt-20 pb-12 text-center">
+      <motion.h1
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.1, ease: easeOut }}
+        className="font-serif text-[clamp(64px,9vw,144px)] font-medium leading-[0.95] tracking-[-0.04em] text-ink"
+      >
+        {HERO.title}
+      </motion.h1>
+
+      <motion.p
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.3, ease: easeOut }}
+        className="mx-auto mt-8 max-w-xl text-base text-muted"
+      >
+        {HERO.subtitle}
+      </motion.p>
+    </section>
+  );
+}
+</file>
+
+<file path="components/home/HeroCard.tsx">
+"use client";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { useCounter } from "@/hooks/useCounter";
+import { LIVE_STATS } from "@/lib/constants"; // TESTIMONIALS는 에러나니까 뺐어!
+
+const easeOut = [0.22, 1, 0.36, 1] as const;
+
+// 🔥 일단 화면 띄워볼 수 있게 만든 가라 데이터 (나중에 백엔드 연동할 때 교체하면 됨!)
+const MOCK_TESTIMONIALS = [
+  { text: "인터뷰핏을 사용하고 자신감이 생겼어요.", user: "사용자 A님" },
+  { text: "시선 처리 피드백이 정말 큰 도움이 됐습니다!", user: "취준생 B님" },
+  { text: "덕분에 원하던 기업에 찰떡같이 합격했습니다!", user: "합격자 C님" },
+];
+
+// 큐브 회전 애니메이션 컴포넌트
+function TestimonialCube({ testimonials }: { testimonials: typeof MOCK_TESTIMONIALS }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
+    }, 5000); // 5초마다 다음 후기로 변경
+
+    return () => clearInterval(timer);
+  }, [testimonials.length]);
+
+  return (
+    <div className="relative h-20 w-full overflow-hidden flex items-center justify-center">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0, y: -20 }} // 위에서 등장
+          animate={{ opacity: 1, y: 0 }}   // 중앙에 안착
+          exit={{ opacity: 0, y: 20 }}     // 아래로 퇴장
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }} 
+          className="flex flex-col items-center justify-center gap-1.5 px-4 absolute w-full"
+        >
+          {/* font-serif(궁서체 느낌) 빼고 폰트 깔끔하게! */}
+          <p className="font-sans text-xl font-medium leading-relaxed text-white/90 text-center">
+            "{testimonials[currentIndex].text}"
+          </p>
+          <p className="text-xs text-white/50">- {testimonials[currentIndex].user} -</p>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function HeroCard() {
+  const usersCount = useCounter({
+    target: LIVE_STATS.users,
+    duration: 1500,
+    delay: 600,
+  });
+  
+  const satisfaction = useCounter({
+    target: LIVE_STATS.satisfaction,
+    duration: 1500,
+    delay: 800,
+    decimals: 1,
+  });
+
+  return (
+    <section className="mx-auto w-full max-w-[1280px] px-8 pb-20">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.9, delay: 0.5, ease: easeOut }}
+        className="relative mx-auto h-[420px] w-full"
+      >
+        {/* 뒷판 */}
+        <div className="absolute bottom-0 left-0 right-0 h-[280px] rounded-[28px] bg-navy/90" />
+
+        {/* 메인 카드 */}
+        <div className="absolute bottom-0 left-1/2 h-[420px] w-[78%] -translate-x-1/2 overflow-hidden rounded-[28px] border border-white/10 bg-navy-dark shadow-2xl">
+          {/* 배경 그라데이션 */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#3a4d7a] via-[#1f2c46] to-[#0f1729]" />
+
+          {/* 광원 효과 */}
+          <div className="absolute left-1/3 top-8 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
+
+          {/* 상단 라이브 인디케이터 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.9 }}
+            className="absolute top-8 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">
+              Live
+            </span>
+          </motion.div>
+
+          {/* 통계 3분할 (정확한 1:1:1 비율 + 중앙 정렬 + 자동 구분선) */}
+          <div className="relative z-10 grid h-full grid-cols-3 items-center divide-x divide-white/10 px-8 pt-16">
+            
+            {/* 1. 사용자 수 */}
+            <StatItem delay={0.8} label="활성 사용자">
+              <div className="font-serif text-5xl font-medium tracking-tight text-white">
+                {usersCount}
+              </div>
+              <div className="mt-2 text-xs text-white/50">현재 연습 중</div>
+            </StatItem>
+
+            {/* 2. 사용자 한줄 후기 (큐브 애니메이션 적용!) */}
+            <StatItem delay={0.9} label="수강생 리얼 후기">
+              <TestimonialCube testimonials={MOCK_TESTIMONIALS} />
+            </StatItem>
+
+            {/* 3. 만족도 */}
+            <StatItem delay={1.0} label="사용자 만족도">
+              <div className="flex items-baseline justify-center gap-1.5">
+                <div className="font-serif text-5xl font-medium tracking-tight text-white">
+                  {satisfaction}
+                </div>
+                <div className="text-2xl text-white/40">/5</div>
+              </div>
+              <div className="mt-2 text-xs text-white/50">★★★★★ 기준</div>
+            </StatItem>
+
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   재사용 컴포넌트
+   ───────────────────────────────────────────── */
+
+interface StatItemProps {
+  children: React.ReactNode;
+  label: string;
+  delay: number;
+}
+
+function StatItem({ children, label, delay }: StatItemProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay, ease: easeOut }}
+      className="flex flex-col items-center text-center px-4"
+    >
+      <div className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">
+        {label}
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+</file>
+
+<file path="components/home/Navbar.tsx">
+"use client";
+
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { NAV_ITEMS, BRAND } from "@/lib/constants";
+
+export default function Navbar() {
+  return (
+    <motion.nav
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className="sticky top-0 z-50 w-full bg-bg/80 backdrop-blur-md"
+    >
+      <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-8">
+        <Link
+          href="/"
+          className="font-serif text-2xl font-medium tracking-tight text-ink"
+        >
+          {BRAND.name}
+        </Link>
+
+        <div className="flex items-center gap-1 rounded-full bg-chip px-2 py-2">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-full px-4 py-2 text-sm font-medium text-ink/80 transition-colors hover:bg-white hover:text-ink"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
+        <Link
+          href="/features"
+          className="flex h-10 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-medium text-white transition-transform hover:scale-[1.03]"
+        >
+          시작하기
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+    </motion.nav>
+  );
+}
+</file>
+
+<file path="components/home/TrustedLogos.tsx">
+const LOGOS = ["Logo 1", "Logo 2", "Logo 3", "Logo 4"];
+
+export default function TrustedLogos() {
+  return (
+    <section className="mx-auto w-full max-w-[1280px] px-8 py-16">
+      <p className="mb-8 text-center text-xs font-medium uppercase tracking-widest text-muted">
+        Trusted by
+      </p>
+      <div className="flex items-center justify-center gap-16 opacity-60">
+        {LOGOS.map((logo) => (
+          <div
+            key={logo}
+            className="text-sm font-medium text-muted"
+          >
+            {logo}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="hooks/useCounter.ts">
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface UseCounterOptions {
+  target: number;       // 도달할 목표 숫자
+  duration?: number;    // 애니메이션 시간 (ms)
+  delay?: number;       // 시작 전 대기 (ms)
+  decimals?: number;    // 소수점 자리수
+}
+
+/**
+ * 0에서 target까지 부드럽게 카운팅하는 훅.
+ * easeOutCubic 곡선으로 끝에 가까워질수록 천천히 멈춤.
+ */
+export function useCounter({
+  target,
+  duration = 1800,
+  delay = 0,
+  decimals = 0,
+}: UseCounterOptions) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    let frameId: number;
+    let startTime: number | null = null;
+
+    const timeoutId = setTimeout(() => {
+      const animate = (timestamp: number) => {
+        if (startTime === null) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // easeOutCubic: 끝에 부드럽게 멈춤
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setValue(target * eased);
+
+        if (progress < 1) {
+          frameId = requestAnimationFrame(animate);
+        } else {
+          setValue(target);
+        }
+      };
+
+      frameId = requestAnimationFrame(animate);
+    }, delay);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [target, duration, delay]);
+
+  // 소수점 처리
+  return decimals > 0
+    ? value.toFixed(decimals)
+    : Math.floor(value).toLocaleString();
+}
+</file>
+
+<file path="lib/constants.ts">
+export const NAV_ITEMS = [
+  { label: "기능 소개", href: "/features" },
+  { label: "커뮤니티", href: "/community" },
+  { label: "사용법", href: "/how-to" },
+  { label: "소개", href: "/about" },
+] as const;
+
+export const HERO = {
+  title: "Practice smarter.",
+  subtitle:
+    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
+} as const;
+
+// ⚠️ Mock 데이터 — 추후 백엔드 API로 교체 예정
+// 연동 시: GET /api/stats/live 같은 엔드포인트에서 받아오기
+export const LIVE_STATS = {
+  users: 12847,
+  passRate: {
+    first: 52,   // 1회차 사용자 평균 합격률 (%)
+    repeat: 86,  // 다회차 사용자 평균 합격률 (%)
+  },
+  satisfaction: 4.8, // 5점 만점
+} as const;
+
+export const BRAND = {
+  name: "InterviewFit",
+} as const;
+</file>
+
+<file path="lib/utils.ts">
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+</file>
+
+<file path="public/images/home/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="public/images/home/react.svg">
+<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>React</title><path d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.41 0-.783.093-1.106.278-1.375.793-1.683 3.264-.973 6.365C1.98 8.917 0 10.42 0 12.004c0 1.59 1.99 3.097 5.043 4.03-.704 3.113-.39 5.588.988 6.38.32.187.69.275 1.102.275 1.345 0 3.107-.96 4.888-2.624 1.78 1.654 3.542 2.603 4.887 2.603.41 0 .783-.09 1.106-.275 1.374-.792 1.683-3.263.973-6.365C22.02 15.096 24 13.59 24 12.004c0-1.59-1.99-3.097-5.043-4.032.704-3.11.39-5.587-.988-6.38-.318-.184-.688-.277-1.092-.278zm-.005 1.09v.006c.225 0 .406.044.558.127.666.382.955 1.835.73 3.704-.054.46-.142.945-.25 1.44-.96-.236-2.006-.417-3.107-.534-.66-.905-1.345-1.727-2.035-2.447 1.592-1.48 3.087-2.292 4.105-2.295zm-9.77.02c1.012 0 2.514.808 4.11 2.28-.686.72-1.37 1.537-2.02 2.442-1.107.117-2.154.298-3.113.538-.112-.49-.195-.964-.254-1.42-.23-1.868.054-3.32.714-3.707.19-.09.4-.127.563-.132zm4.882 3.05c.455.468.91.992 1.36 1.564-.44-.02-.89-.034-1.345-.034-.46 0-.915.01-1.36.034.44-.572.895-1.096 1.345-1.565zM12 8.1c.74 0 1.477.034 2.202.093.406.582.802 1.203 1.183 1.86.372.64.71 1.29 1.018 1.946-.308.655-.646 1.31-1.013 1.95-.38.66-.773 1.288-1.18 1.87-.728.063-1.466.098-2.21.098-.74 0-1.477-.035-2.202-.093-.406-.582-.802-1.204-1.183-1.86-.372-.64-.71-1.29-1.018-1.946.303-.657.646-1.313 1.013-1.954.38-.66.773-1.286 1.18-1.868.728-.064 1.466-.098 2.21-.098zm-3.635.254c-.24.377-.48.763-.704 1.16-.225.39-.435.782-.635 1.174-.265-.656-.49-1.31-.676-1.947.64-.15 1.315-.283 2.015-.386zm7.26 0c.695.103 1.365.23 2.006.387-.18.632-.405 1.282-.66 1.933-.2-.39-.41-.783-.64-1.174-.225-.392-.465-.774-.705-1.146zm3.063.675c.484.15.944.317 1.375.498 1.732.74 2.852 1.708 2.852 2.476-.005.768-1.125 1.74-2.857 2.475-.42.18-.88.342-1.355.493-.28-.958-.646-1.956-1.1-2.98.45-1.017.81-2.01 1.085-2.964zm-13.395.004c.278.96.645 1.957 1.1 2.98-.45 1.017-.812 2.01-1.086 2.964-.484-.15-.944-.318-1.37-.5-1.732-.737-2.852-1.706-2.852-2.474 0-.768 1.12-1.742 2.852-2.476.42-.18.88-.342 1.356-.494zm11.678 4.28c.265.657.49 1.312.676 1.948-.64.157-1.316.29-2.016.39.24-.375.48-.762.705-1.158.225-.39.435-.788.636-1.18zm-9.945.02c.2.392.41.783.64 1.175.23.39.465.772.705 1.143-.695-.102-1.365-.23-2.006-.386.18-.63.406-1.282.66-1.933zM17.92 16.32c.112.493.2.968.254 1.423.23 1.868-.054 3.32-.714 3.708-.147.09-.338.128-.563.128-1.012 0-2.514-.807-4.11-2.28.686-.72 1.37-1.536 2.02-2.44 1.107-.118 2.154-.3 3.113-.54zm-11.83.01c.96.234 2.006.415 3.107.532.66.905 1.345 1.727 2.035 2.446-1.595 1.483-3.092 2.295-4.11 2.295-.22-.005-.406-.05-.553-.132-.666-.38-.955-1.834-.73-3.703.054-.46.142-.944.25-1.438zm4.56.64c.44.02.89.034 1.345.034.46 0 .915-.01 1.36-.034-.44.572-.895 1.095-1.345 1.565-.455-.47-.91-.993-1.36-1.565z"/></svg>
+</file>
+
+<file path="public/images/home/spring.svg">
+<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Spring</title><path d="M21.8537 1.4158a10.4504 10.4504 0 0 1-1.284 2.2471A11.9666 11.9666 0 1 0 3.8518 20.7757l.4445.3951a11.9543 11.9543 0 0 0 19.6316-8.2971c.3457-3.0126-.568-6.8649-2.0743-11.458zM5.5805 20.8745a1.0174 1.0174 0 1 1-.1482-1.4323 1.0396 1.0396 0 0 1 .1482 1.4323zm16.1991-3.5806c-2.9385 3.9263-9.2601 2.5928-13.2852 2.7904 0 0-.7161.0494-1.4323.1481 0 0 .2717-.1234.6174-.2469 2.8398-.9877 4.1732-1.1853 5.9018-2.0743 3.2349-1.6545 6.4698-5.2844 7.1118-9.0379-1.2347 3.6053-4.9881 6.7167-8.3959 7.9761-2.3459.8643-6.5685 1.7039-6.5685 1.7039l-.1729-.0988c-2.8645-1.4076-2.9632-7.6304 2.2718-9.6306 2.2966-.889 4.4696-.395 6.9637-.9877 2.6422-.6174 5.7043-2.5929 6.939-5.1857 1.3828 4.1732 3.062 10.643.0493 14.6434z"/></svg>
+</file>
+
+<file path="app/globals.css">
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f5f5f3;
+  --color-ink: #171717;
+  --color-navy: #1f2c46;
+  --color-navy-dark: #0f1729;
+  --color-muted: #737373;
+  --color-chip: #eceff3;
+  --color-line: #e5e5e3;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+</file>
+
+<file path="app/layout.tsx">
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+  title: "InterviewFit — Practice smarter.",
+  description:
+    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${inter.variable} ${playfair.variable}`}
+    >
+      <body>{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="app/page.tsx">
+import Navbar from "@/components/home/Navbar";
+import Hero from "@/components/home/Hero";
+import HeroCard from "@/components/home/HeroCard";
+import TrustedLogos from "@/components/home/TrustedLogos";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen w-full bg-bg">
+      <Navbar />
+      <Hero />
+      <HeroCard />
+      <TrustedLogos />
+    </main>
+  );
+}
+</file>
+
+<file path="public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="package.json">
+{
+  "name": "interviewfit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
+    "lenis": "^1.3.23",
+    "lucide-react": "^1.16.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+</files>
