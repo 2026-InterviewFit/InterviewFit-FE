@@ -1,3 +1,4 @@
+
 <directory_structure>
 app/
   about/
@@ -25,13 +26,14 @@ app/
   page.tsx
 components/
   dashboard/
+    AnalyticsSection.tsx
     Sidebar.tsx
     StatCard.tsx
     Topbar.tsx
+    VideoHistory.tsx
   landing/
     BoardingSection.tsx
     Hero.tsx
-    HeroCard.tsx
     IntroSection.tsx
   login/
     LoginBackground.tsx
@@ -51,9 +53,12 @@ public/
   fonts/
     PlayfairDisplay-Bold.ttf
     Satoshi.ttf
+  3d-chat.png
+  3d-computer.png
+  3d-thumb.png
+  3d-tool.png
   file.svg
   globe.svg
-  hero-bg.jpg
   vercel.svg
   window.svg
 .gitignore
@@ -67,14 +72,52 @@ README.md
 tsconfig.json
 </directory_structure>
 
-<files>
-This section contains the contents of the repository's files.
+
+<file path="app/about/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      About
+    </main>
+  );
+}
+</file>
+
+<file path="app/community/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      Community
+    </main>
+  );
+}
+</file>
 
 <file path="app/faq/page.tsx">
 export default function FaqPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg p-8">
       <h1 className="text-3xl font-bold text-ink">자주하는 질문 페이지 (준비 중)</h1>
+    </main>
+  );
+}
+</file>
+
+<file path="app/features/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      Features Page
+    </main>
+  );
+}
+</file>
+
+<file path="app/how-to/page.tsx">
+export default function FeaturesPage() {
+  return (
+    <main className="p-20 text-5xl">
+      How-to
     </main>
   );
 }
@@ -102,17 +145,14 @@ export default function InterviewPage() {
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Video } from "lucide-react";
-import Navbar from "@/components/shared/Navbar";
-import Footer from "@/components/shared/Footer";
-// 👇 2단계에서 만들 웹캠 컴포넌트 불러오기!
+import Sidebar from "@/components/dashboard/Sidebar";
+import Topbar from "@/components/dashboard/Topbar";
 import InterviewRecording from "@/components/practice/InterviewRecording";
+import { Mic, Video, FileText, Play, Award, BarChart3 } from "lucide-react";
 
 export default function DashboardPage() {
   const [isInterviewing, setIsInterviewing] = useState(false);
 
-  // 녹화 시작 버튼을 누르면 풀스크린 웹캠 화면으로 전환!
   if (isInterviewing) {
     return (
       <main className="fixed inset-0 z-[100] h-screen w-screen bg-black">
@@ -121,45 +161,220 @@ export default function DashboardPage() {
     );
   }
 
-  // 기본 대시보드 화면 (버튼 중앙 배치)
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
-      <Navbar />
-      
-      <main className="flex flex-1 flex-col items-center justify-center px-8 py-20">
-        <div className="w-full max-w-3xl text-center">
-          <h1 className="text-3xl font-bold text-ink">모의 면접을 시작해보세요.</h1>
-          <p className="mt-2 text-muted">
-            WEBCAM 촬영을 통해 AI 분석을 받아보세요.
-          </p>
+    <div className="flex min-h-screen bg-bg font-sans text-ink">
+      {/* 1. 좌측 고정 사이드바 */}
+      <Sidebar />
 
-          <div className="mt-12 w-full">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setIsInterviewing(true)}
-              className="group relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[40px] bg-navy py-24 px-8 text-center shadow-2xl"
-            >
-              {/* 배경 장식 */}
-              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl transition-all group-hover:bg-blue-400/30" />
-              <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
+      {/* 2. 우측 메인 콘텐츠 영역 */}
+      <div className="flex flex-1 flex-col px-10 py-8 overflow-y-auto">
+        <Topbar />
+
+        {/* 메인 대시보드 레이아웃 */}
+        <main className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-12">
+          
+          {/* 💡 [좌측 영역] 종합 분석 및 육각형 그래프 (7칸 차지) */}
+          <div className="lg:col-span-7 flex flex-col gap-8">
+            
+            {/* 1. 종합 AI 분석 리포트 (육각형 차트 중앙 배치) */}
+            <div className="rounded-[32px] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border border-black/[0.02] flex flex-col md:flex-row items-center gap-8">
               
-              <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_0_40px_rgba(59,130,246,0.5)]">
-                <Video className="h-10 w-10 ml-1" />
+              {/* SVG로 정교하게 그린 육각형 레이더 차트 */}
+              <div className="relative flex flex-col items-center justify-center bg-gradient-to-br from-[#bfdbfe]/10 to-[#fef08a]/10 rounded-[24px] p-6 border border-black/[0.01]">
+                <span className="text-xs font-bold text-muted mb-4 flex items-center gap-1">
+                  <BarChart3 className="h-3.5 w-3.5 text-blue-500" /> 역량 밸런스 점수
+                </span>
+                <svg width="220" height="220" viewBox="0 0 220 220" className="drop-shadow-sm">
+                  {/* 기본 가이드라인 육각형 백그라운드 */}
+                  <polygon points="110,20 188,65 188,155 110,200 32,155 32,65" fill="none" stroke="#e5e7eb" strokeWidth="1" />
+                  <polygon points="110,65 149,87 149,132 110,155 71,132 71,87" fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3" />
+                  
+                  {/* 중심축 라인 */}
+                  <line x1="110" y1="20" x2="110" y2="200" stroke="#f3f4f6" strokeWidth="1" />
+                  <line x1="32" y1="65" x2="188" y2="155" stroke="#f3f4f6" strokeWidth="1" />
+                  <line x1="32" y1="155" x2="188" y2="65" stroke="#f3f4f6" strokeWidth="1" />
+
+                  {/* 🔥 실제 매칭 데이터 육각형 (은재님의 평가 기준치 반영) */}
+                  {/* 순서: 내용(논리), 속도/BPM, 음량안정성, 시선처리, 표정/감정, 자세/고개 */}
+                  <polygon 
+                    points="110,45 170,75 165,140 110,175 55,135 45,75" 
+                    fill="url(#radarGradient)" 
+                    stroke="#3b82f6" 
+                    strokeWidth="2" 
+                  />
+
+                  {/* 텍스트 레이블 좌표 매칭 */}
+                  <text x="110" y="14" textAnchor="middle" className="text-[10px] font-bold fill-navy">논리성(STAR)</text>
+                  <text x="194" y="68" textAnchor="start" className="text-[10px] font-bold fill-navy">발화 속도</text>
+                  <text x="194" y="160" textAnchor="start" className="text-[10px] font-bold fill-navy">음량 안정성</text>
+                  <text x="110" y="214" textAnchor="middle" className="text-[10px] font-bold fill-navy">시선 처리</text>
+                  <text x="26" y="160" textAnchor="end" className="text-[10px] font-bold fill-navy">표정 분석</text>
+                  <text x="26" y="68" textAnchor="end" className="text-[10px] font-bold fill-navy">자세 안정</text>
+
+                  {/* 그라데이션 정의 (인터뷰핏 시그니처 컬러 믹스) */}
+                  <defs>
+                    <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.4" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
-              
-              <h2 className="relative z-10 mt-8 text-3xl font-bold text-white">
-                새로운 모의면접 시작하기
-              </h2>
-              <p className="relative z-10 mt-4 text-white/70">
-                웹캠과 마이크를 켜고 실전과 같은 환경에서 연습해보세요.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </main>
 
-      <Footer />
+              {/* 종합 한줄 평 및 코칭 메시지 */}
+              <div className="flex-1 space-y-4">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+                  <Award className="h-3.5 w-3.5" />종합 평가 우수
+                </div>
+                <h2 className="text-2xl font-bold text-navy leading-snug">
+                  전체적으로 안정적인<br />면접 페이스를 유지하고 있어요.
+                </h2>
+                <p className="text-sm text-muted leading-relaxed">
+                  STAR 구조에 맞춘 답변 논리성은 매우 뛰어납니다. 다만, 답변 중반부에 고개를 숙이는 습관과 "그니까" 등의 반복 표현이 일부 감지되었으니 이 부분만 유의해 주세요.
+                </p>
+              </div>
+            </div>
+
+            {/* 2. 세부 평가 세부 요소 카드 (오디오, 비전, 텍스트) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* 가. 언어 및 텍스트 평가 (GPT-4o & Whisper) */}
+              <div className="rounded-[28px] bg-white p-6 border border-black/[0.02] shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 mb-4">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-navy text-base">답변 내용 및 논리</h4>
+                  <p className="text-xs text-muted mt-1">STAR 구조 기반 분석</p>
+                  
+                  <div className="mt-6 space-y-3">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span>STAR 구조 매칭</span>
+                      <span className="text-purple-600 font-bold">90%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500 rounded-full" style={{ width: "90%" }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 pt-3 border-t border-gray-50 text-[11px] text-muted">
+                  정교한 문맥 매칭 완료
+                </div>
+              </div>
+
+              {/* 나. 음성 평가 영역 (Librosa & WPM) */}
+              <div className="rounded-[28px] bg-white p-6 border border-black/[0.02] shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-4">
+                    <Mic className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-navy text-base">음성 및 습관어</h4>
+                  <p className="text-xs text-muted mt-1">오디오 파형 전수 조사</p>
+                  
+                  <div className="mt-6 space-y-4">
+                    <div>
+                      <div className="flex justify-between text-[11px] text-muted mb-1">
+                        <span>말하는 속도 (WPM)</span>
+                        <span className="font-bold text-navy">125 단어/분 (정상)</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-muted">
+                        <span>반복 표현 ("어, 음")</span>
+                        <span className="font-bold text-red-500">4회 감지</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 pt-3 border-t border-gray-50 text-[11px] text-muted">
+                  음량 안정성 지표 안정
+                </div>
+              </div>
+
+              {/* 다. 표정 및 자세 평가 (MediaPipe & ResNet) */}
+              <div className="rounded-[28px] bg-white p-6 border border-black/[0.02] shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 mb-4">
+                    <Video className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-navy text-base">시선 및 비주얼 피드백</h4>
+                  <p className="text-xs text-muted mt-1">안구 추적 및 Face Mesh</p>
+                  
+                  <div className="mt-6 space-y-3">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span>카메라 정면 응시율</span>
+                      <span className="text-amber-500 font-bold">78%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded-full" style={{ width: "78%" }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 pt-3 border-t border-gray-50 text-[11px] text-muted">
+                  고개 숙임 타임스탬프 기록됨
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* 💡 [우측 영역] 최근 면접 다시보기 목록 및 빠른 시작 (5칸 차지) */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            
+            {/* 새로운 면접 시작 퀵 배너 */}
+            <div 
+              onClick={() => setIsInterviewing(true)}
+              className="group relative overflow-hidden rounded-[32px] bg-gradient-to-br from-navy to-navy-dark p-8 text-white shadow-lg cursor-pointer transition-all hover:shadow-xl"
+            >
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl transition-all group-hover:bg-blue-400/20" />
+              <h4 className="text-lg font-bold">새로운 연습 세션 시작하기</h4>
+              <p className="text-xs text-white/60 mt-1">웹캠과 마이크를 통해 즉시 분석을 시작합니다.</p>
+              <div className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-transform group-hover:translate-x-1">
+                <Play className="h-4 w-4 fill-white" />
+              </div>
+            </div>
+
+            {/* 면접 다시보기 타임라인 리스트 */}
+            <div className="rounded-[32px] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border border-black/[0.02] flex-1">
+              <h3 className="text-xl font-bold text-navy mb-6">최근 면접 영상 기록</h3>
+              
+              <div className="space-y-4">
+                {/* 비디오 카드 Item 1 */}
+                <div className="group flex items-center justify-between rounded-2xl border border-black/[0.04] p-4 transition-all hover:bg-bg/40 cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-12 w-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-black/[0.02]">
+                      <span className="text-[10px] font-bold text-muted">다시보기</span>
+                      <div className="absolute inset-0 bg-navy/0 group-hover:bg-navy/10 flex items-center justify-center transition-colors">
+                        <Play className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-bold text-ink">Q. 카카오 지원 동기 및 자기소개</h5>
+                      <p className="text-xs text-muted mt-1">2026.06.02 연습 완료 • 02:15</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 비디오 카드 Item 2 */}
+                <div className="group flex items-center justify-between rounded-2xl border border-black/[0.04] p-4 transition-all hover:bg-bg/40 cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-12 w-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-black/[0.02]">
+                      <span className="text-[10px] font-bold text-muted">다시보기</span>
+                      <div className="absolute inset-0 bg-navy/0 group-hover:bg-navy/10 flex items-center justify-center transition-colors">
+                        <Play className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-bold text-ink">Q. 프로젝트 중 갈등 해결 경험</h5>
+                      <p className="text-xs text-muted mt-1">2026.05.29 연습 완료 • 03:40</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </main>
+      </div>
     </div>
   );
 }
@@ -173,6 +388,10 @@ export default function NoticePage() {
     </main>
   );
 }
+</file>
+
+<file path="components/dashboard/AnalyticsSection.tsx">
+
 </file>
 
 <file path="components/dashboard/Sidebar.tsx">
@@ -258,6 +477,10 @@ export default function Topbar() {
 }
 </file>
 
+<file path="components/dashboard/VideoHistory.tsx">
+
+</file>
+
 <file path="components/landing/BoardingSection.tsx">
 "use client";
 
@@ -341,29 +564,42 @@ export default function BoardSection() {
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { ArrowRight, MonitorPlay, Target, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link"; // 💡 Next.js의 Link 컴포넌트 추가!
 
 const FEATURES = [
   {
-    icon: <MonitorPlay className="h-8 w-8 text-blue-500" />,
+    icon: "/3d-computer.png",
+    alt: "컴퓨터 3D 아이콘",
     badge: "기능소개",
     title: "인터뷰핏의\n기능을 소개합니다",
+    bgClass: "bg-gradient-to-br from-[#fef08a]/25 via-[#fef9c3]/10 to-white/50",
+    href: "/features", // 💡 기능 소개 페이지 연결
   },
   {
-    icon: <Target className="h-8 w-8 text-teal-500" />,
+    icon: "/3d-chat.png",
+    alt: "채팅 3D 아이콘",
     badge: "커뮤니티",
     title: "취준생분들과\n꿀팁과 고민을 나눠보세요",
+    bgClass: "bg-gradient-to-br from-[#bfdbfe]/25 via-[#dbeafe]/10 to-white/50",
+    href: "/community", // 💡 커뮤니티 페이지 연결
   },
   {
-    icon: <Sparkles className="h-8 w-8 text-purple-500" />,
+    icon: "/3d-thumb.png",
+    alt: "따봉 3D 아이콘",
     badge: "사용법",
     title: "인터뷰핏을\n똑똑하게 이용하는 방법",
+    bgClass: "bg-gradient-to-br from-[#bfdbfe]/25 via-[#dbeafe]/10 to-white/50",
+    href: "/how-to", // 💡 사용법 페이지 연결
   },
   {
-    icon: <ShieldCheck className="h-8 w-8 text-indigo-500" />,
+    icon: "/3d-tool.png",
+    alt: "도구 3D 아이콘",
     badge: "인터뷰핏 소개",
     title: "인터뷰핏과\n개발자들",
+    bgClass: "bg-gradient-to-br from-[#fef08a]/25 via-[#fef9c3]/10 to-white/50",
+    href: "/about", // 💡 소개 페이지 연결
   },
 ];
 
@@ -378,8 +614,7 @@ export default function IntroSection() {
   }, []);
 
   return (
-    // 배경을 아주 연한 회색(bg-gray-50 등)으로 깔고, 상하 여백(py-32)을 크게 줌
-    <section className="w-full bg-[#f8f9fa] py-32">
+    <section className="w-full bg-white py-32">
       <div className="mx-auto w-full max-w-[1280px] px-8">
         <div className="grid grid-cols-1 gap-16 lg:grid-cols-12 lg:gap-8">
           
@@ -393,32 +628,33 @@ export default function IntroSection() {
           >
             <div>
               <h2 className="text-[clamp(32px,4vw,44px)] font-bold leading-tight text-ink">
-                만나보세요!<br />
-                인터뷰핏과 함께<br />
-                <span className="text-blue-600">원더풀 라이프</span>
+                반가워요<br />
+                interviewFit과 함께<br />
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">취업 성공!</span>
               </h2>
               <p className="mt-6 text-base font-medium leading-relaxed text-muted">
-                진심을 품은 인터뷰핏<br />
+                핵심을 품은 인터뷰핏<br />
                 내가 직접 설계하는 든든한 면접
               </p>
             </div>
 
-            {/* 얇은 배너 형태로 축소된 빠른 시작 버튼 */}
-            <div className="mt-12 flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white shadow-lg">
-              <div>
-                <p className="text-sm font-semibold opacity-90">쉽고 간편한</p>
-                <p className="text-lg font-bold">모의면접 빠른 시작</p>
-              </div>
-              <Link 
+            {/* 빠른 시작 링크 버튼 */}
+            <div className="mt-10 flex items-center">
+              <a 
                 href={isLoggedIn ? "/interview" : "/login"}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-blue-600 transition-transform hover:scale-110"
+                className="group flex items-center gap-3 text-lg font-bold text-navy transition-all hover:text-blue-600"
               >
-                <ArrowRight className="h-5 w-5" />
-              </Link>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent group-hover:from-indigo-600 group-hover:to-blue-600">
+                  모의면접 빠른 시작하기
+                </span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-chip text-navy transition-transform group-hover:translate-x-1.5 group-hover:bg-blue-600 group-hover:text-white">
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </a>
             </div>
           </motion.div>
 
-          {/* 우측 4개 기능 카드 */}
+          {/* 우측 4개 기능 카드 구역 */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-7">
             {FEATURES.map((feature, idx) => (
               <motion.div
@@ -427,22 +663,37 @@ export default function IntroSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className="group flex cursor-pointer flex-col justify-between rounded-[32px] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
+                whileHover={{ y: -6 }} // 💡 마우스 올렸을 때 위로 더 부드럽게 들리는 효과 추가!
+                className="h-full"
               >
-                <div className="mb-8">{feature.icon}</div>
-                
-                <div>
-                  <span className="text-xs font-semibold text-muted">
-                    {feature.badge}
-                  </span>
-                  <h4 className="mt-2 whitespace-pre-line text-lg font-bold leading-snug text-ink">
-                    {feature.title}
-                  </h4>
-                </div>
+                {/* 💡 카드의 div 껍데기를 <Link>로 전면 변경하여 상자 전체 클릭 기능 부여 */}
+                <Link
+                  href={feature.href}
+                  className={`group flex h-full cursor-pointer flex-col justify-between rounded-[32px] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.01)] border border-black/[0.03] backdrop-blur-md transition-all duration-300 hover:shadow-[0_12px_32px_rgba(31,44,70,0.06)] ${feature.bgClass}`}
+                >
+                  {/* 깔끔하게 외부 3D 일러스트 에셋을 띄우는 공간 */}
+                  <div className="relative mb-8 h-14 w-14 transition-transform duration-300 group-hover:scale-110">
+                    <Image
+                      src={feature.icon}
+                      alt={feature.alt}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  
+                  <div>
+                    <span className="text-xs font-semibold text-muted">
+                      {feature.badge}
+                    </span>
+                    <h4 className="mt-2 whitespace-pre-line text-lg font-bold leading-snug text-ink">
+                      {feature.title}
+                    </h4>
+                  </div>
 
-                <div className="mt-8 flex items-center text-xs font-semibold text-gray-400 transition-colors group-hover:text-ink">
-                  자세히보기
-                </div>
+                  <div className="mt-8 flex items-center text-xs font-semibold text-gray-400 transition-colors group-hover:text-navy">
+                    자세히보기
+                  </div>
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -450,6 +701,29 @@ export default function IntroSection() {
         </div>
       </div>
     </section>
+  );
+}
+</file>
+
+<file path="components/login/LoginBackground.tsx">
+export default function LoginBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* 부드러운 컬러 블롭 — 너무 진하지 않게 */}
+      <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-navy/[0.08] blur-3xl" />
+      <div className="absolute -bottom-40 -right-32 h-[600px] w-[600px] rounded-full bg-[#3a4d7a]/15 blur-3xl" />
+      <div className="absolute top-1/4 right-1/3 h-[420px] w-[420px] rounded-full bg-[#5a6f9e]/10 blur-3xl" />
+
+      {/* 미세한 도트 패턴 — 거의 안 보일 정도로만 깔아서 깊이감 */}
+      <div
+        className="absolute inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, #1f2c46 1px, transparent 0)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+    </div>
   );
 }
 </file>
@@ -536,6 +810,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
         <Loader2 className="h-16 w-16 animate-spin text-emerald-400" />
         <h2 className="mt-8 text-2xl font-bold">면접 종료! AI가 데이터를 분석하고 있습니다...</h2>
         <p className="mt-4 text-white/70">시선 처리, 목소리 톤, 답변 내용을 종합적으로 평가 중입니다.</p>
+        <p className="mt-4 text-white/50">AI의 분석결과 및 피드백은 '마이페이지'를 이용해주세요.</p>
         
         <button
           onClick={() => {
@@ -862,43 +1137,196 @@ export default function Footer() {
 }
 </file>
 
-<file path="app/about/page.tsx">
-export default function FeaturesPage() {
-  return (
-    <main className="p-20 text-5xl">
-      About
-    </main>
-  );
+<file path="lib/constants.ts">
+export const MARKETING_NAV_ITEMS = [
+  { label: "기능 소개", href: "/features" },
+  { label: "커뮤니티", href: "/community" },
+  { label: "사용법", href: "/how-to" },
+  { label: "소개", href: "/about" },
+] as const;
+
+export const APP_NAV_ITEMS = [
+  { label: "대시보드", href: "/dashboard" },
+  { label: "연습 기록", href: "/history" },
+  { label: "추천 질문", href: "/questions" },
+] as const;
+
+export const HERO = {
+  title: "Practice smarter.",
+  subtitle:
+    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
+} as const;
+
+export const LIVE_STATS = {
+  users: 12847,
+  passRate: {
+    first: 52,
+    repeat: 86,
+  },
+  satisfaction: 4.8,
+} as const;
+
+export const BRAND = {
+  name: "InterviewFit",
+} as const;
+</file>
+
+<file path="lib/utils.ts">
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 </file>
 
-<file path="app/community/page.tsx">
-export default function FeaturesPage() {
-  return (
-    <main className="p-20 text-5xl">
-      Community
-    </main>
-  );
-}
+<file path="public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
 </file>
 
-<file path="app/features/page.tsx">
-export default function FeaturesPage() {
-  return (
-    <main className="p-20 text-5xl">
-      Features Page
-    </main>
-  );
-}
+<file path="public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
 </file>
 
-<file path="app/how-to/page.tsx">
-export default function FeaturesPage() {
-  return (
-    <main className="p-20 text-5xl">
-      How-to
-    </main>
-  );
+<file path="public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
 }
 </file>
 
@@ -927,8 +1355,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Video } from "lucide-react";
-import { HERO } from "@/lib/constants";
-import Image from "next/image";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -950,253 +1376,62 @@ export default function Hero() {
   };
 
   return (
-    // 배경색을 짙은 파란색으로 고정하고 시작
-    <section className="relative w-full overflow-hidden bg-[#1E3A8A] pt-32 pb-40">
+    <section className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-bg pt-20">
       
-      {/* 💡 핵심: 부드럽게 섞이는 배경 이미지 레이어 */}
-      <div className="absolute inset-0 z-0 flex justify-end pointer-events-none">
-        {/* 이미지를 우측에 배치 (화면의 70% 정도 차지하게) */}
-        <div className="relative h-full w-full md:w-[70%]">
-          <Image
-            src="/hero-bg.jpg" 
-            alt="AI 면접 분석 배경"
-            fill
-            className="object-cover object-center opacity-90"
-            priority
-          />
-        </div>
-        
-        {/* 페이드아웃 효과를 주는 그라데이션 장막 */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1E3A8A] via-[#1e40af]/95 to-transparent" />
-        
-        {/* (옵션) 상하단도 아주 살짝 부드럽게 덮어주면 전체 화면이랑 더 잘 어울림 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1E3A8A] via-transparent to-[#1E3A8A]/30" />
+      {/* 토스풍 멀티 그라데이션 블롭 배경 */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-20 -top-40 h-[650px] w-[650px] rounded-full bg-[#fef08a]/30 blur-[150px]" />
+        <div className="absolute top-10 -right-20 h-[750px] w-[750px] rounded-full bg-[#bfdbfe]/50 blur-[170px]" />
+        <div className="absolute bottom-[-150px] left-1/4 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[140px]" />
       </div>
       
-      {/* 텍스트와 버튼 영역 (z-10으로 이미지 위로 올림) */}
-      {/* 1. mx-auto는 전체 1280px 너비 기준을 잡는 역할만 하게 둠 (w-[60%] 제거) */}
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1280px] flex-col justify-center px-8">
-        
-        {/* 2. 텍스트 박스 자체의 너비를 50~55%로 제한해서 왼쪽으로 싹 밀어버림! */}
-        <div className="flex w-full flex-col items-start md:w-[55%]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: easeOut }}
-          >
-            <h1 className="text-[clamp(40px,5vw,72px)] font-bold leading-[1.2] tracking-tight text-white drop-shadow-lg">
-              {HERO.title}
-            </h1>
-            <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/90 drop-shadow-md">
-              {HERO.subtitle}
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: easeOut }}
-            className="mt-12"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleStart}
-              className="flex cursor-pointer items-center gap-3 rounded-full bg-white px-8 py-4 text-base font-bold text-blue-700 shadow-xl transition-shadow hover:shadow-2xl"
-            >
-              <Video className="h-5 w-5" />
-              지금 바로 모의면접 시작
-            </motion.button>
-          </motion.div>
-        </div>
-      </div>
-    </section> // <-- 이건 원래 있던 닫는 태그
-  );
-}
-</file>
-
-<file path="components/landing/HeroCard.tsx">
-"use client";
-
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
-import { useCounter } from "@/hooks/useCounter";
-import { LIVE_STATS } from "@/lib/constants";
-
-const easeOut = [0.22, 1, 0.36, 1] as const;
-
-// 일단 화면 띄워볼 수 있게 만든 가라 데이터 (나중에 백엔드 연동할 때 교체하면 됨!)
-const MOCK_TESTIMONIALS = [
-  { text: "인터뷰핏을 사용하고 자신감이 생겼어요.", user: "사용자 A님" },
-  { text: "시선 처리 피드백이 정말 큰 도움이 됐습니다!", user: "취준생 B님" },
-  { text: "덕분에 원하던 기업에 찰떡같이 합격했습니다!", user: "합격자 C님" },
-];
-
-// 큐브 회전 애니메이션 컴포넌트
-function TestimonialCube({ testimonials }: { testimonials: typeof MOCK_TESTIMONIALS }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
-    }, 5000); // 5초마다 다음 후기로 변경
-
-    return () => clearInterval(timer);
-  }, [testimonials.length]);
-
-  return (
-    <div className="relative h-20 w-full overflow-hidden flex items-center justify-center">
-      <AnimatePresence mode="wait">
+      {/* 메인 콘텐츠 영역 */}
+      <div className="relative z-10 mx-auto flex w-full max-w-[1280px] flex-col items-center justify-center px-8 text-center">
         <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, y: -16 }} // 위에서 등장
-          animate={{ opacity: 1, y: 0 }}   // 중앙에 안착
-          exit={{ opacity: 0, y: 16 }}     // 아래로 퇴장
-          transition={{ duration: 0.6, ease: easeOut }} 
-          className="flex flex-col items-center justify-center gap-2 px-4 absolute w-full"
+          initial={{ opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: easeOut }}
+          className="flex flex-col items-center"
         >
-          <p className="font-sans text-lg font-medium leading-relaxed text-white/90 text-center tracking-tight">
-            {testimonials[currentIndex].text}
+          <h1 className="font-serif text-[84px] font-light uppercase tracking-[-0.03em] text-navy drop-shadow-sm whitespace-nowrap">
+            Interview<span className="font-bold">fit</span>
+          </h1>
+          <p className="mt-8 text-2xl font-medium tracking-tight text-ink/80">
+            AI 분석과 함께 더욱 영리해지는 면접 연습
           </p>
-          <p className="text-xs text-white/40 font-normal">- {testimonials[currentIndex].user} -</p>
         </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
 
-export default function HeroCard() {
-  const usersCount = useCounter({
-    target: LIVE_STATS.users,
-    duration: 1500,
-    delay: 600,
-  });
-  
-  const satisfaction = useCounter({
-    target: LIVE_STATS.satisfaction,
-    duration: 1500,
-    delay: 800,
-    decimals: 1,
-  });
-
-  return (
-    <section className="mx-auto w-full max-w-[1280px] px-8 pb-24">
-      <motion.div
-        initial={{ opacity: 0, y: 32 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, delay: 0.5, ease: easeOut }}
-        className="relative mx-auto h-[380px] w-full max-w-5xl"
-      >
-        {/* 은은한 배경 글로우 효과로 카드의 무거운 느낌을 상쇄 */}
-        <div className="absolute -inset-4 rounded-[40px] bg-gradient-to-r from-navy/20 to-transparent blur-2xl opacity-50 pointer-events-none" />
-
-        {/* 입체감을 주는 서브 레이어 (뒷판 디자인 고도화) */}
-        <div className="absolute inset-x-6 -bottom-3 top-6 rounded-[32px] bg-navy/40 border border-white/5 backdrop-blur-sm pointer-events-none" />
-
-        {/* 메인 비주얼 카드 */}
-        <div className="relative h-full w-full overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#1b2538] via-navy-dark to-[#0b101a] shadow-2xl">
-          {/* 부드러운 내부 은은한 광원 효과 */}
-          <div className="absolute -left-10 -top-20 h-80 w-80 rounded-full bg-white/[0.05] blur-3xl pointer-events-none" />
-          <div className="absolute right-10 bottom-0 h-72 w-72 rounded-full bg-navy/20 blur-3xl pointer-events-none" />
-
-          {/* 상단 라이브 인디케이터 (유리 효과와 패딩으로 감싸 밸런스 조절) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
-            className="absolute top-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.2, ease: easeOut }}
+          className="mt-14"
+        >
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={handleStart}
+            className="flex cursor-pointer items-center gap-3 rounded-full bg-navy px-12 py-5 text-base font-bold text-white shadow-lg transition-colors hover:bg-navy-dark hover:shadow-xl"
           >
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/80">
-              Live
-            </span>
-          </motion.div>
+            <Video className="h-5 w-5" />
+            지금 바로 모의면접 시작
+          </motion.button>
+        </motion.div>
+      </div>
 
-          {/* 통계 3분할 레이아웃 (강제 패딩 대신 내부 정렬 구조로 변경하여 시각적 안정감 부여) */}
-          <div className="relative z-10 grid h-full grid-cols-3 items-center divide-x divide-white/[0.08] px-6 pt-6">
-            
-            {/* 1. 활성 사용자 */}
-            <StatItem delay={0.8} label="활성 사용자">
-              <div className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-white">
-                {usersCount}
-              </div>
-              <div className="mt-2.5 text-xs text-white/40 font-normal tracking-wide">현재 연습 중</div>
-            </StatItem>
-
-            {/* 2. 사용자 한줄 후기 */}
-            <StatItem delay={0.9} label="수강생 리얼 후기">
-              <TestimonialCube testimonials={MOCK_TESTIMONIALS} />
-            </StatItem>
-
-            {/* 3. 만족도 */}
-            <StatItem delay={1.0} label="사용자 만족도">
-              <div className="flex items-baseline justify-center gap-1">
-                <div className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-white">
-                  {satisfaction}
-                </div>
-                <div className="text-xl text-white/30 font-light">/5</div>
-              </div>
-              <div className="mt-2.5 text-xs text-white/40 font-normal tracking-wide">★★★★★ 기준</div>
-            </StatItem>
-
-          </div>
-        </div>
+      {/* 💡 1번 수정 사항: 토스 스타일의 계속 위아래로 튕기는 스크롤 유도 라인 화살표 */}
+      <motion.div 
+        animate={{ y: [0, 10, 0] }}
+        transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+        className="absolute bottom-10 left-1/2 z-10 -translate-x-1/2 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
+        onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="stroke-navy" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 5V19M12 19L5 12M12 19L19 12" />
+        </svg>
       </motion.div>
+
     </section>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   재사용 컴포넌트
-   ───────────────────────────────────────────── */
-
-interface StatItemProps {
-  children: React.ReactNode;
-  label: string;
-  delay: number;
-}
-
-function StatItem({ children, label, delay }: StatItemProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, delay, ease: easeOut }}
-      className="flex flex-col items-center justify-center text-center h-full py-12 px-2"
-    >
-      <div className="mb-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
-        {label}
-      </div>
-      <div className="w-full flex flex-col items-center justify-center min-h-[72px]">
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-</file>
-
-<file path="components/login/LoginBackground.tsx">
-export default function LoginBackground() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* 부드러운 컬러 블롭 — 너무 진하지 않게 */}
-      <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-navy/[0.08] blur-3xl" />
-      <div className="absolute -bottom-40 -right-32 h-[600px] w-[600px] rounded-full bg-[#3a4d7a]/15 blur-3xl" />
-      <div className="absolute top-1/4 right-1/3 h-[420px] w-[420px] rounded-full bg-[#5a6f9e]/10 blur-3xl" />
-
-      {/* 미세한 도트 패턴 — 거의 안 보일 정도로만 깔아서 깊이감 */}
-      <div
-        className="absolute inset-0 opacity-[0.025]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, #1f2c46 1px, transparent 0)",
-          backgroundSize: "28px 28px",
-        }}
-      />
-    </div>
   );
 }
 </file>
@@ -1364,7 +1599,6 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false); 
   const userName = "김은재"; 
 
-  // 페이지가 렌더링될 때 세션 스토리지 확인!
   useEffect(() => {
     const session = sessionStorage.getItem("mockSession");
     if (session === "true") {
@@ -1372,7 +1606,6 @@ export default function Navbar() {
     }
   }, []);
 
-  // 로그아웃 시 도장 지우고 상태 초기화
   const handleLogout = () => {
     sessionStorage.removeItem("mockSession");
     setIsLoggedIn(false);
@@ -1383,13 +1616,14 @@ export default function Navbar() {
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="sticky top-0 z-50 w-full bg-bg/80 backdrop-blur-md"
+      // 💡 수정: bg-bg/80 backdrop-blur-md를 빼고 완벽히 투명하게 상단에 얹어지도록 설정
+      className="absolute top-0 left-0 z-50 w-full bg-transparent"
     >
       <div className="relative mx-auto flex h-20 max-w-[1280px] items-center justify-between px-8">
         
         {/* 좌측 로고 */}
         <div className="flex w-1/3 justify-start">
-          <Link href="/" className="text-2xl font-bold tracking-tight text-ink">
+          <Link href="/" className="font-serif text-2xl font-bold tracking-tight text-ink">
             InterviewFit
           </Link>
         </div>
@@ -1503,165 +1737,42 @@ export function useCounter({
 }
 </file>
 
-<file path="lib/constants.ts">
-export const MARKETING_NAV_ITEMS = [
-  { label: "기능 소개", href: "/features" },
-  { label: "커뮤니티", href: "/community" },
-  { label: "사용법", href: "/how-to" },
-  { label: "소개", href: "/about" },
-] as const;
-
-export const APP_NAV_ITEMS = [
-  { label: "대시보드", href: "/dashboard" },
-  { label: "연습 기록", href: "/history" },
-  { label: "추천 질문", href: "/questions" },
-] as const;
-
-export const HERO = {
-  title: "Practice smarter.",
-  subtitle:
-    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
-} as const;
-
-export const LIVE_STATS = {
-  users: 12847,
-  passRate: {
-    first: 52,
-    repeat: 86,
+<file path="package.json">
+{
+  "name": "interviewfit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  satisfaction: 4.8,
-} as const;
-
-export const BRAND = {
-  name: "InterviewFit",
-} as const;
-</file>
-
-<file path="lib/utils.ts">
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
+    "lenis": "^1.3.23",
+    "lucide-react": "^1.16.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }
-</file>
-
-<file path="public/file.svg">
-<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
-</file>
-
-<file path="public/globe.svg">
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
-</file>
-
-<file path="public/vercel.svg">
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
-</file>
-
-<file path="public/window.svg">
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
-</file>
-
-<file path=".gitignore">
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-</file>
-
-<file path="AGENTS.md">
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-</file>
-
-<file path="CLAUDE.md">
-@AGENTS.md
-</file>
-
-<file path="eslint.config.mjs">
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
-
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
-
-export default eslintConfig;
-</file>
-
-<file path="next.config.ts">
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
-};
-
-export default nextConfig;
-</file>
-
-<file path="postcss.config.mjs">
-const config = {
-  plugins: {
-    "@tailwindcss/postcss": {},
-  },
-};
-
-export default config;
 </file>
 
 <file path="README.md">
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 ```
 ├─ README.md
 ├─ app
@@ -1728,43 +1839,6 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ```
 </file>
 
-<file path="tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
-}
-</file>
-
 <file path="app/globals.css">
 @import "tailwindcss";
 
@@ -1776,7 +1850,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
   --color-muted: #737373;
   --color-chip: #eceff3;
   --color-line: #e5e5e3;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  
+  /* 💡 font-sans를 satoshi로 변경! */
+  --font-sans: var(--font-satoshi), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
 }
 
@@ -1787,6 +1863,7 @@ html {
 }
 
 body {
+  /* 이제 모든 기본 텍스트는 자동으로 Satoshi 폰트가 적용됩니다. */
   background-color: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -1795,26 +1872,27 @@ body {
 
 <file path="app/layout.tsx">
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local"; // 💡 next/font/local로 변경!
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+// 1. Satoshi 폰트 설정 (기본 텍스트용)
+const satoshi = localFont({
+  src: "../public/fonts/Satoshi.ttf", // 경로 주의: app 폴더 기준
+  variable: "--font-satoshi",
   display: "swap",
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
+// 2. Playfair Display 폰트 설정 (포인트 타이틀용)
+const playfair = localFont({
+  src: "../public/fonts/PlayfairDisplay-Bold.ttf",
   variable: "--font-playfair",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: "700", // 볼드체 파일이므로 700 지정
 });
 
 export const metadata: Metadata = {
   title: "InterviewFit — Practice smarter.",
-  description:
-    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
+  description: "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
 };
 
 export default function RootLayout({
@@ -1825,7 +1903,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${playfair.variable}`}
+      // 3. html 태그에 폰트 변수 등록
+      className={`${satoshi.variable} ${playfair.variable}`}
     >
       <body>{children}</body>
     </html>
@@ -1860,40 +1939,6 @@ export default function Home() {
       <Footer />
     </main>
   );
-}
-</file>
-
-<file path="package.json">
-{
-  "name": "interviewfit",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "framer-motion": "^12.40.0",
-    "lenis": "^1.3.23",
-    "lucide-react": "^1.16.0",
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "tailwind-merge": "^3.6.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
 }
 </file>
 
