@@ -2,11 +2,20 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BRAND } from "@/lib/constants";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 export default function LoginCard() {
+  const router = useRouter();
+
+  // 가짜 로그인 처리 함수: 세션에 도장 찍고 메인으로 이동
+  const handleLogin = () => {
+    sessionStorage.setItem("mockSession", "true");
+    router.push("/");
+  };
+
   return (
     <section className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1280px] items-center justify-center px-8">
       <motion.div
@@ -28,17 +37,17 @@ export default function LoginCard() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: easeOut }}
-            className="text-center font-serif text-base font-medium tracking-tight text-navy/70"
+            className="text-center text-base font-bold tracking-tight text-navy/70"
           >
             {BRAND.name}
           </motion.p>
 
-          {/* LOGIN — 로고와 동일한 serif (Playfair) */}
+          {/* LOGIN */}
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3, ease: easeOut }}
-            className="mt-3 text-center font-serif text-5xl font-medium tracking-[-0.02em] text-navy"
+            className="mt-3 text-center text-5xl font-bold tracking-[-0.02em] text-navy"
           >
             Login
           </motion.h1>
@@ -52,8 +61,9 @@ export default function LoginCard() {
             카카오 계정으로 바로 시작하세요.
           </motion.p>
 
-          {/* 카카오 로그인 버튼 — 공식 컬러 #FEE500 / 텍스트 #191600 */}
+          {/* 카카오 로그인 버튼 (handleLogin 함수 연결 완료) */}
           <motion.button
+            onClick={handleLogin}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.55, ease: easeOut }}
@@ -64,7 +74,7 @@ export default function LoginCard() {
             카카오로 시작하기
           </motion.button>
 
-          {/* 신규 사용자 안내 — 회원가입 분리하지 않고 자연스럽게 */}
+          {/* 신규 사용자 안내 */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

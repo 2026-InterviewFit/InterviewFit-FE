@@ -9,10 +9,6 @@ interface UseCounterOptions {
   decimals?: number;    // 소수점 자리수
 }
 
-/**
- * 0에서 target까지 부드럽게 카운팅하는 훅.
- * easeOutCubic 곡선으로 끝에 가까워질수록 천천히 멈춤.
- */
 export function useCounter({
   target,
   duration = 1800,
@@ -31,7 +27,6 @@ export function useCounter({
         const elapsed = timestamp - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // easeOutCubic: 끝에 부드럽게 멈춤
         const eased = 1 - Math.pow(1 - progress, 3);
         setValue(target * eased);
 

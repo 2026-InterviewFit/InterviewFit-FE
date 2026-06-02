@@ -8,7 +8,9 @@
   --color-muted: #737373;
   --color-chip: #eceff3;
   --color-line: #e5e5e3;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  
+  /* 💡 font-sans를 satoshi로 변경! */
+  --font-sans: var(--font-satoshi), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
 }
 
@@ -19,6 +21,7 @@ html {
 }
 
 body {
+  /* 이제 모든 기본 텍스트는 자동으로 Satoshi 폰트가 적용됩니다. */
   background-color: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);

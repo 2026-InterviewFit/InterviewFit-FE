@@ -34,3 +34,68 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+```
+├─ README.md
+├─ app
+│  ├─ about
+│  │  └─ page.tsx
+│  ├─ community
+│  │  └─ page.tsx
+│  ├─ dashboard
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ features
+│  │  └─ page.tsx
+│  ├─ globals.css
+│  ├─ how-to
+│  │  └─ page.tsx
+│  ├─ layout.tsx
+│  ├─ login
+│  │  └─ page.tsx
+│  ├─ page.tsx
+│  └─ practice
+├─ components
+│  ├─ dashboard
+│  │  ├─ Sidebar.tsx
+│  │  ├─ StatCard.tsx
+│  │  └─ Topbar.tsx
+│  ├─ landing
+│  │  ├─ Hero.tsx
+│  │  ├─ HeroCard.tsx
+│  │  └─ TrustedLogos.tsx
+│  ├─ login
+│  │  ├─ LoginBackground.tsx
+│  │  └─ LoginCard.tsx
+│  ├─ practice
+│  │  └─ new
+│  │     └─ page.tsx
+│  └─ shared
+│     └─ Navbar.tsx
+├─ eslint.config.mjs
+├─ hooks
+│  └─ useCounter.ts
+├─ lib
+│  ├─ constants.ts
+│  └─ utils.ts
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ public
+│  ├─ file.svg
+│  ├─ fonts
+│  │  ├─ PlayfairDisplay-Bold.ttf
+│  │  └─ Satoshi.ttf
+│  ├─ globe.svg
+│  ├─ images
+│  │  └─ home
+│  │     ├─ next.svg
+│  │     ├─ react.svg
+│  │     └─ spring.svg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ repomix-output.xml
+└─ tsconfig.json
+
+```

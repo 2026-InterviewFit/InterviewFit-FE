@@ -1,64 +1,47 @@
-This file is a merged representation of the entire codebase, combined into a single document by Repomix.
-
-<file_summary>
-This section contains a summary of this file.
-
-<purpose>
-This file contains a packed representation of the entire repository's contents.
-It is designed to be easily consumable by AI systems for analysis, code review,
-or other automated processes.
-</purpose>
-
-<file_format>
-The content is organized as follows:
-1. This summary section
-2. Repository information
-3. Directory structure
-4. Repository files (if enabled)
-5. Multiple file entries, each consisting of:
-  - File path as an attribute
-  - Full contents of the file
-</file_format>
-
-<usage_guidelines>
-- This file should be treated as read-only. Any changes should be made to the
-  original repository files, not this packed version.
-- When processing this file, use the file path to distinguish
-  between different files in the repository.
-- Be aware that this file may contain sensitive information. Handle it with
-  the same level of security as you would the original repository.
-</usage_guidelines>
-
-<notes>
-- Some files may have been excluded based on .gitignore rules and Repomix's configuration
-- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Files matching patterns in .gitignore are excluded
-- Files matching default ignore patterns are excluded
-- Files are sorted by Git change count (files with more changes are at the bottom)
-</notes>
-
-</file_summary>
-
 <directory_structure>
 app/
   about/
     page.tsx
   community/
     page.tsx
+  faq/
+    page.tsx
   features/
     page.tsx
   how-to/
+    page.tsx
+  interview/
+    page.tsx
+  login/
+    page.tsx
+  mypage/
+    dashboard/
+      page.tsx
+  notice/
     page.tsx
   favicon.ico
   globals.css
   layout.tsx
   page.tsx
 components/
-  home/
+  dashboard/
+    Sidebar.tsx
+    StatCard.tsx
+    Topbar.tsx
+  landing/
+    BoardingSection.tsx
     Hero.tsx
     HeroCard.tsx
+    IntroSection.tsx
+  login/
+    LoginBackground.tsx
+    LoginCard.tsx
+  practice/
+    InterviewRecording.tsx
+    page.tsx
+  shared/
+    Footer.tsx
     Navbar.tsx
-    TrustedLogos.tsx
 hooks/
   useCounter.ts
 lib/
@@ -68,13 +51,9 @@ public/
   fonts/
     PlayfairDisplay-Bold.ttf
     Satoshi.ttf
-  images/
-    home/
-      next.svg
-      react.svg
-      spring.svg
   file.svg
   globe.svg
+  hero-bg.jpg
   vercel.svg
   window.svg
 .gitignore
@@ -90,6 +69,798 @@ tsconfig.json
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="app/faq/page.tsx">
+export default function FaqPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg p-8">
+      <h1 className="text-3xl font-bold text-ink">자주하는 질문 페이지 (준비 중)</h1>
+    </main>
+  );
+}
+</file>
+
+<file path="app/interview/page.tsx">
+"use client";
+
+import { useRouter } from "next/navigation";
+import InterviewRecording from "@/components/practice/InterviewRecording";
+
+export default function InterviewPage() {
+  const router = useRouter();
+
+  return (
+    // 대시보드 팝업이 아니라 아예 독립된 풀스크린 페이지로 작동해!
+    <main className="fixed inset-0 z-[100] h-screen w-screen bg-black">
+      <InterviewRecording onExit={() => router.push("/")} />
+    </main>
+  );
+}
+</file>
+
+<file path="app/mypage/dashboard/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Video } from "lucide-react";
+import Navbar from "@/components/shared/Navbar";
+import Footer from "@/components/shared/Footer";
+// 👇 2단계에서 만들 웹캠 컴포넌트 불러오기!
+import InterviewRecording from "@/components/practice/InterviewRecording";
+
+export default function DashboardPage() {
+  const [isInterviewing, setIsInterviewing] = useState(false);
+
+  // 녹화 시작 버튼을 누르면 풀스크린 웹캠 화면으로 전환!
+  if (isInterviewing) {
+    return (
+      <main className="fixed inset-0 z-[100] h-screen w-screen bg-black">
+        <InterviewRecording onExit={() => setIsInterviewing(false)} />
+      </main>
+    );
+  }
+
+  // 기본 대시보드 화면 (버튼 중앙 배치)
+  return (
+    <div className="flex min-h-screen flex-col bg-bg">
+      <Navbar />
+      
+      <main className="flex flex-1 flex-col items-center justify-center px-8 py-20">
+        <div className="w-full max-w-3xl text-center">
+          <h1 className="text-3xl font-bold text-ink">모의 면접을 시작해보세요.</h1>
+          <p className="mt-2 text-muted">
+            WEBCAM 촬영을 통해 AI 분석을 받아보세요.
+          </p>
+
+          <div className="mt-12 w-full">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsInterviewing(true)}
+              className="group relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[40px] bg-navy py-24 px-8 text-center shadow-2xl"
+            >
+              {/* 배경 장식 */}
+              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl transition-all group-hover:bg-blue-400/30" />
+              <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
+              
+              <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_0_40px_rgba(59,130,246,0.5)]">
+                <Video className="h-10 w-10 ml-1" />
+              </div>
+              
+              <h2 className="relative z-10 mt-8 text-3xl font-bold text-white">
+                새로운 모의면접 시작하기
+              </h2>
+              <p className="relative z-10 mt-4 text-white/70">
+                웹캠과 마이크를 켜고 실전과 같은 환경에서 연습해보세요.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+</file>
+
+<file path="app/notice/page.tsx">
+export default function NoticePage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg p-8">
+      <h1 className="text-3xl font-bold text-ink">공지사항 페이지 (준비 중)</h1>
+    </main>
+  );
+}
+</file>
+
+<file path="components/dashboard/Sidebar.tsx">
+export default function Sidebar() {
+  return (
+    <aside className="flex w-[240px] flex-col border-r border-black/5 bg-white px-6 py-8">
+
+      <h1 className="text-2xl font-semibold tracking-tight">
+        InterviewFit
+      </h1>
+
+      <nav className="mt-10 flex flex-col gap-2">
+
+        <button className="rounded-xl bg-black px-4 py-3 text-left text-sm font-medium text-white">
+          대시보드
+        </button>
+
+        <button className="rounded-xl px-4 py-3 text-left text-sm font-medium text-black/70 transition-colors hover:bg-black/5">
+          면접 연습
+        </button>
+
+        <button className="rounded-xl px-4 py-3 text-left text-sm font-medium text-black/70 transition-colors hover:bg-black/5">
+          분석 리포트
+        </button>
+
+        <button className="rounded-xl px-4 py-3 text-left text-sm font-medium text-black/70 transition-colors hover:bg-black/5">
+          설정
+        </button>
+
+      </nav>
+    </aside>
+  );
+}
+</file>
+
+<file path="components/dashboard/StatCard.tsx">
+interface StatCardProps {
+  title: string;
+  value: string;
+}
+
+export default function StatCard({
+  title,
+  value,
+}: StatCardProps) {
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm">
+
+      <p className="text-sm text-neutral-500">
+        {title}
+      </p>
+
+      <h3 className="mt-4 text-5xl font-semibold tracking-tight">
+        {value}
+      </h3>
+
+    </div>
+  );
+}
+</file>
+
+<file path="components/dashboard/Topbar.tsx">
+export default function Topbar() {
+  return (
+    <div className="flex items-center justify-between">
+
+      <div>
+        <p className="text-sm text-neutral-500">
+          Welcome back
+        </p>
+
+        <h2 className="mt-1 text-4xl font-semibold tracking-tight">
+          Dashboard
+        </h2>
+      </div>
+
+      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
+        은
+      </div>
+
+    </div>
+  );
+}
+</file>
+
+<file path="components/landing/BoardingSection.tsx">
+"use client";
+
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { motion } from "framer-motion";
+
+const NOTICES = [
+  { id: 1, title: "하반기 결산 안내", date: "2026.05.29" },
+  { id: 2, title: "홈페이지를 오픈하였습니다.", date: "2026.05.20" },
+];
+
+const FAQS = [
+  { id: 1, title: "모의면접 분석은 얼마나 걸리나요?", date: "2026.05.29" },
+  { id: 2, 무: "무료 이용은 어떻게 가능한가요?", date: "2026.05.20" },
+];
+
+export default function BoardSection() {
+  return (
+    <section className="mx-auto w-full max-w-[1280px] px-8">
+      <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-16">
+        
+        {/* 공지사항 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+            <h3 className="text-xl font-bold text-ink">공지사항</h3>
+            <Link href="/notice" className="flex h-8 w-8 items-center justify-center rounded-md bg-chip text-muted transition-colors hover:bg-gray-200 hover:text-ink">
+              <Plus className="h-5 w-5" />
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-4">
+            {NOTICES.map((item) => (
+              <li key={item.id} className="flex cursor-pointer items-center justify-between group">
+                <span className="text-sm font-medium text-ink group-hover:underline">
+                  {item.title}
+                </span>
+                <span className="text-xs text-muted">{item.date}</span>
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
+        {/* 자주하는 질문 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+            <h3 className="text-xl font-bold text-ink">자주하는 질문</h3>
+            <Link href="/faq" className="flex h-8 w-8 items-center justify-center rounded-md bg-chip text-muted transition-colors hover:bg-gray-200 hover:text-ink">
+              <Plus className="h-5 w-5" />
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-4">
+            {FAQS.map((item) => (
+              <li key={item.id} className="flex cursor-pointer items-center justify-between group">
+                <span className="text-sm font-medium text-ink group-hover:underline">
+                  {item.title || item.무} 
+                </span>
+                <span className="text-xs text-muted">{item.date}</span>
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="components/landing/IntroSection.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { ArrowRight, MonitorPlay, Target, ShieldCheck, Sparkles } from "lucide-react";
+
+const FEATURES = [
+  {
+    icon: <MonitorPlay className="h-8 w-8 text-blue-500" />,
+    badge: "기능소개",
+    title: "인터뷰핏의\n기능을 소개합니다",
+  },
+  {
+    icon: <Target className="h-8 w-8 text-teal-500" />,
+    badge: "커뮤니티",
+    title: "취준생분들과\n꿀팁과 고민을 나눠보세요",
+  },
+  {
+    icon: <Sparkles className="h-8 w-8 text-purple-500" />,
+    badge: "사용법",
+    title: "인터뷰핏을\n똑똑하게 이용하는 방법",
+  },
+  {
+    icon: <ShieldCheck className="h-8 w-8 text-indigo-500" />,
+    badge: "인터뷰핏 소개",
+    title: "인터뷰핏과\n개발자들",
+  },
+];
+
+export default function IntroSection() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const session = sessionStorage.getItem("mockSession");
+    if (session === "true") {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  return (
+    // 배경을 아주 연한 회색(bg-gray-50 등)으로 깔고, 상하 여백(py-32)을 크게 줌
+    <section className="w-full bg-[#f8f9fa] py-32">
+      <div className="mx-auto w-full max-w-[1280px] px-8">
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12 lg:gap-8">
+          
+          {/* 좌측 텍스트 영역 */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col justify-center lg:col-span-5 lg:pr-10"
+          >
+            <div>
+              <h2 className="text-[clamp(32px,4vw,44px)] font-bold leading-tight text-ink">
+                만나보세요!<br />
+                인터뷰핏과 함께<br />
+                <span className="text-blue-600">원더풀 라이프</span>
+              </h2>
+              <p className="mt-6 text-base font-medium leading-relaxed text-muted">
+                진심을 품은 인터뷰핏<br />
+                내가 직접 설계하는 든든한 면접
+              </p>
+            </div>
+
+            {/* 얇은 배너 형태로 축소된 빠른 시작 버튼 */}
+            <div className="mt-12 flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white shadow-lg">
+              <div>
+                <p className="text-sm font-semibold opacity-90">쉽고 간편한</p>
+                <p className="text-lg font-bold">모의면접 빠른 시작</p>
+              </div>
+              <Link 
+                href={isLoggedIn ? "/interview" : "/login"}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-blue-600 transition-transform hover:scale-110"
+              >
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* 우측 4개 기능 카드 */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-7">
+            {FEATURES.map((feature, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                className="group flex cursor-pointer flex-col justify-between rounded-[32px] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
+              >
+                <div className="mb-8">{feature.icon}</div>
+                
+                <div>
+                  <span className="text-xs font-semibold text-muted">
+                    {feature.badge}
+                  </span>
+                  <h4 className="mt-2 whitespace-pre-line text-lg font-bold leading-snug text-ink">
+                    {feature.title}
+                  </h4>
+                </div>
+
+                <div className="mt-8 flex items-center text-xs font-semibold text-gray-400 transition-colors group-hover:text-ink">
+                  자세히보기
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="components/practice/InterviewRecording.tsx">
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, Square, AlertCircle, Loader2 } from "lucide-react";
+
+type Step = "prepare" | "countdown" | "recording" | "confirmStop" | "analyzing";
+
+export default function InterviewRecording({ onExit }: { onExit: () => void }) {
+  const [step, setStep] = useState<Step>("prepare");
+  const [countdown, setCountdown] = useState(3);
+  const [time, setTime] = useState(0);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  // 1. 컴포넌트 마운트 시 브라우저 웹캠 켜기
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (error) {
+        console.error("카메라 접근 에러:", error);
+        alert("카메라와 마이크 권한을 허용해주세요!");
+        onExit(); 
+      }
+    };
+    startCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
+
+  // 2. 타이머 & 카운트다운 로직 (🔥 오류 해결된 부분!)
+  useEffect(() => {
+    // 타입을 브라우저 환경에 맞추고 초기값을 명시적으로 null로 지정
+    let interval: ReturnType<typeof setInterval> | null = null;
+    
+    if (step === "countdown") {
+      interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            setStep("recording");
+            return 3;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (step === "recording") {
+      interval = setInterval(() => {
+        setTime((prev) => prev + 1);
+      }, 1000);
+    }
+
+    // interval 값이 있을 때만 안전하게 클리어
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  // 3. AI 분석 대기 화면
+  if (step === "analyzing") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-navy text-white">
+        <Loader2 className="h-16 w-16 animate-spin text-emerald-400" />
+        <h2 className="mt-8 text-2xl font-bold">면접 종료! AI가 데이터를 분석하고 있습니다...</h2>
+        <p className="mt-4 text-white/70">시선 처리, 목소리 톤, 답변 내용을 종합적으로 평가 중입니다.</p>
+        
+        <button
+          onClick={() => {
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            onExit();
+          }}
+          className="mt-12 rounded-full border border-white/20 bg-white/10 px-8 py-3 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
+        >
+          대시보드로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  // 4. 메인 풀스크린 녹화 화면 UI
+  return (
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-black font-sans">
+      
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="absolute inset-0 h-full w-full object-cover transform -scale-x-100" 
+      />
+
+      <div className="relative z-10 flex h-full w-full flex-col p-8">
+
+        <div className="flex h-32 w-full justify-center pt-8">
+          <AnimatePresence mode="wait">
+            
+            {step === "prepare" && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex items-center rounded-full bg-black/60 px-8 py-3 text-sm font-medium text-white backdrop-blur-md"
+              >
+                카메라 렌즈를 바라보고 점선 안에 몸통을 맞춰주세요.
+              </motion.div>
+            )}
+
+            {step === "recording" && (
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center rounded-[32px] bg-[#d1f2eb] px-12 py-6 shadow-[0_10px_40px_rgba(0,0,0,0.3)] border border-white/20"
+              >
+                <h2 className="text-xl font-bold text-black">Q. 자기 소개를 해주세요.</h2>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+
+        <div className="relative flex flex-1 items-center justify-center">
+          
+          {step === "prepare" && (
+            <div className="pointer-events-none absolute h-[70%] w-[45%] rounded-[60px] border-[6px] border-dashed border-white/50" />
+          )}
+
+          {step === "countdown" && (
+            <motion.div
+              key={countdown}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.5 }}
+              transition={{ duration: 0.5 }}
+              className="text-[150px] font-bold text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
+            >
+              {countdown}
+            </motion.div>
+          )}
+
+          {step === "recording" && time === 0 && (
+            <motion.div
+              initial={{ opacity: 1, scale: 0.8 }}
+              animate={{ opacity: 0, scale: 1.5 }}
+              transition={{ duration: 1.2 }}
+              className="absolute text-6xl font-bold text-white drop-shadow-2xl"
+            >
+              면접 시작!
+            </motion.div>
+          )}
+
+          {step === "confirmStop" && (
+            <div className="w-full max-w-md rounded-[32px] bg-white p-8 text-center shadow-2xl">
+              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+              <h3 className="text-xl font-bold text-ink">면접이 중단됩니다.</h3>
+              <p className="mt-2 text-muted">카메라를 끄고 분석을 시작하시겠습니까?</p>
+              
+              <div className="mt-8 flex justify-center gap-3">
+                <button
+                  onClick={() => setStep("recording")}
+                  className="rounded-2xl bg-gray-100 px-6 py-3.5 text-sm font-bold text-ink transition-colors hover:bg-gray-200"
+                >
+                  아니요, 계속하기
+                </button>
+                <button
+                  onClick={() => setStep("analyzing")}
+                  className="rounded-2xl bg-red-500 px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                >
+                  예, 종료하기
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex h-32 w-full items-end justify-center pb-8">
+          
+          {step === "prepare" ? (
+            <button
+              onClick={() => setStep("countdown")}
+              className="rounded-full bg-blue-600 px-10 py-4 text-base font-bold text-white shadow-[0_8px_30px_rgba(37,99,235,0.4)] transition-transform hover:scale-105"
+            >
+              자세 확인 완료 (녹화 시작)
+            </button>
+          ) : (
+            step !== "confirmStop" && step !== "analyzing" && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-8 rounded-full bg-black/70 px-8 py-4 backdrop-blur-md border border-white/10"
+              >
+                <div className="flex items-center gap-3">
+                  <Mic className="h-5 w-5 text-white/70" />
+                  <div className="flex h-4 gap-1">
+                    <motion.div animate={{ height: ["40%", "100%", "40%"] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1.5 rounded-full bg-emerald-400" />
+                    <motion.div animate={{ height: ["60%", "30%", "80%"] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1.5 rounded-full bg-emerald-400" />
+                    <motion.div animate={{ height: ["30%", "90%", "50%"] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 rounded-full bg-emerald-400" />
+                  </div>
+                </div>
+
+                <div className="h-8 w-px bg-white/20" />
+
+                <div className="flex items-center gap-3">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                  <span className="font-mono text-xl font-medium tracking-widest text-white">
+                    {formatTime(time)}
+                  </span>
+                </div>
+
+                <div className="h-8 w-px bg-white/20" />
+
+                <button
+                  onClick={() => setStep("confirmStop")}
+                  className="flex items-center gap-2 rounded-full bg-red-500 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                >
+                  <Square className="h-4 w-4 fill-white" />
+                  면접 중단
+                </button>
+              </motion.div>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/practice/page.tsx">
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Navbar from "@/components/shared/Navbar";
+
+export default function PracticePage() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  const chunksRef = useRef<Blob[]>([]);
+
+  const [videoUrl, setVideoUrl] = useState("");
+
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    async function setupCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error("카메라 접근 실패:", error);
+      }
+    }
+
+    setupCamera();
+  }, []);
+
+  const startRecording = async () => {
+    const stream = videoRef.current?.srcObject as MediaStream;
+
+    if (!stream) return;
+
+    chunksRef.current = [];
+
+    const mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorderRef.current = mediaRecorder;
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunksRef.current.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, {
+        type: "video/webm",
+      });
+
+      const url = URL.createObjectURL(blob);
+
+      setVideoUrl(url);
+    };
+
+    mediaRecorder.start();
+
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+
+    setIsRecording(false);
+  };
+
+  return (
+    <main className="min-h-screen bg-bg">
+      <Navbar variant="app" />
+
+      <section className="mx-auto flex max-w-[1280px] flex-col gap-8 px-8 py-12">
+        <div>
+          <p className="text-sm text-muted">
+            INTERVIEW PRACTICE
+          </p>
+
+          <h1 className="mt-3 font-serif text-5xl">
+            면접 연습 녹화
+          </h1>
+        </div>
+
+        <div className="overflow-hidden rounded-[32px] bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="aspect-video w-full object-cover"
+          />
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={startRecording}
+            disabled={isRecording}
+            className="rounded-full bg-navy px-6 py-3 text-white disabled:opacity-50"
+          >
+            녹화 시작
+          </button>
+
+          <button
+            onClick={stopRecording}
+            disabled={!isRecording}
+            className="rounded-full bg-red-500 px-6 py-3 text-white disabled:opacity-50"
+          >
+            녹화 종료
+          </button>
+        </div>
+
+        {videoUrl && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">
+              녹화된 영상
+            </h2>
+
+            <video
+              src={videoUrl}
+              controls
+              className="aspect-video w-full rounded-[24px]"
+            />
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
+</file>
+
+<file path="components/shared/Footer.tsx">
+export default function Footer() {
+  return (
+    <footer className="w-full bg-[#333333] px-8 py-12 text-gray-400">
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-8 md:flex-row md:justify-between">
+        <div className="flex flex-col gap-2 text-sm">
+          <p className="font-bold text-white">인터뷰핏 고객센터 0101-0101</p>
+          <p>평일 오전 9시 - 오후 6시</p>
+          <p className="mt-4 text-xs">
+            서울특별시 도봉구 쌍문동 | 대표 : 공일공일<br />
+            사업자등록번호 : 0101-0101-0101 | 이메일 : dotlink@gmail.com
+          </p>
+          <p className="mt-4 text-xs">
+            © {new Date().getFullYear()} InterviewFit. All rights reserved.
+          </p>
+        </div>
+
+        <div className="flex gap-6 text-sm font-medium text-gray-300">
+          <a href="#" className="hover:text-white">이용약관</a>
+          <a href="#" className="font-bold hover:text-white">개인정보처리방침</a>
+          <a href="#" className="hover:text-white">고객센터</a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+</file>
 
 <file path="app/about/page.tsx">
 export default function FeaturesPage() {
@@ -131,50 +902,130 @@ export default function FeaturesPage() {
 }
 </file>
 
-<file path="components/home/Hero.tsx">
-"use client";
+<file path="app/login/page.tsx">
+import LoginBackground from "@/components/login/LoginBackground";
+import LoginCard from "@/components/login/LoginCard";
 
-import { motion } from "framer-motion";
-import { HERO } from "@/lib/constants";
-
-const easeOut = [0.22, 1, 0.36, 1] as const;
-
-export default function Hero() {
+export default function LoginPage() {
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-8 pt-20 pb-12 text-center">
-      <motion.h1
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.1, ease: easeOut }}
-        className="font-serif text-[clamp(64px,9vw,144px)] font-medium leading-[0.95] tracking-[-0.04em] text-ink"
-      >
-        {HERO.title}
-      </motion.h1>
-
-      <motion.p
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.3, ease: easeOut }}
-        className="mx-auto mt-8 max-w-xl text-base text-muted"
-      >
-        {HERO.subtitle}
-      </motion.p>
-    </section>
+    <main className="relative min-h-screen w-full bg-bg">
+      {/* 1. Navbar 깔끔하게 제거! */}
+      
+      <LoginBackground />
+      <div className="relative z-10">
+        <LoginCard />
+      </div>
+    </main>
   );
 }
 </file>
 
-<file path="components/home/HeroCard.tsx">
+<file path="components/landing/Hero.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Video } from "lucide-react";
+import { HERO } from "@/lib/constants";
+import Image from "next/image";
+
+const easeOut = [0.22, 1, 0.36, 1] as const;
+
+export default function Hero() {
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const session = sessionStorage.getItem("mockSession");
+    if (session === "true") setIsLoggedIn(true);
+  }, []);
+
+  const handleStart = () => {
+    if (isLoggedIn) {
+      router.push("/interview");
+    } else {
+      router.push("/login");
+    }
+  };
+
+  return (
+    // 배경색을 짙은 파란색으로 고정하고 시작
+    <section className="relative w-full overflow-hidden bg-[#1E3A8A] pt-32 pb-40">
+      
+      {/* 💡 핵심: 부드럽게 섞이는 배경 이미지 레이어 */}
+      <div className="absolute inset-0 z-0 flex justify-end pointer-events-none">
+        {/* 이미지를 우측에 배치 (화면의 70% 정도 차지하게) */}
+        <div className="relative h-full w-full md:w-[70%]">
+          <Image
+            src="/hero-bg.jpg" 
+            alt="AI 면접 분석 배경"
+            fill
+            className="object-cover object-center opacity-90"
+            priority
+          />
+        </div>
+        
+        {/* 페이드아웃 효과를 주는 그라데이션 장막 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1E3A8A] via-[#1e40af]/95 to-transparent" />
+        
+        {/* (옵션) 상하단도 아주 살짝 부드럽게 덮어주면 전체 화면이랑 더 잘 어울림 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1E3A8A] via-transparent to-[#1E3A8A]/30" />
+      </div>
+      
+      {/* 텍스트와 버튼 영역 (z-10으로 이미지 위로 올림) */}
+      {/* 1. mx-auto는 전체 1280px 너비 기준을 잡는 역할만 하게 둠 (w-[60%] 제거) */}
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1280px] flex-col justify-center px-8">
+        
+        {/* 2. 텍스트 박스 자체의 너비를 50~55%로 제한해서 왼쪽으로 싹 밀어버림! */}
+        <div className="flex w-full flex-col items-start md:w-[55%]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: easeOut }}
+          >
+            <h1 className="text-[clamp(40px,5vw,72px)] font-bold leading-[1.2] tracking-tight text-white drop-shadow-lg">
+              {HERO.title}
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/90 drop-shadow-md">
+              {HERO.subtitle}
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: easeOut }}
+            className="mt-12"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleStart}
+              className="flex cursor-pointer items-center gap-3 rounded-full bg-white px-8 py-4 text-base font-bold text-blue-700 shadow-xl transition-shadow hover:shadow-2xl"
+            >
+              <Video className="h-5 w-5" />
+              지금 바로 모의면접 시작
+            </motion.button>
+          </motion.div>
+        </div>
+      </div>
+    </section> // <-- 이건 원래 있던 닫는 태그
+  );
+}
+</file>
+
+<file path="components/landing/HeroCard.tsx">
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useCounter } from "@/hooks/useCounter";
-import { LIVE_STATS } from "@/lib/constants"; // TESTIMONIALS는 에러나니까 뺐어!
+import { LIVE_STATS } from "@/lib/constants";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
-// 🔥 일단 화면 띄워볼 수 있게 만든 가라 데이터 (나중에 백엔드 연동할 때 교체하면 됨!)
+// 일단 화면 띄워볼 수 있게 만든 가라 데이터 (나중에 백엔드 연동할 때 교체하면 됨!)
 const MOCK_TESTIMONIALS = [
   { text: "인터뷰핏을 사용하고 자신감이 생겼어요.", user: "사용자 A님" },
   { text: "시선 처리 피드백이 정말 큰 도움이 됐습니다!", user: "취준생 B님" },
@@ -198,17 +1049,16 @@ function TestimonialCube({ testimonials }: { testimonials: typeof MOCK_TESTIMONI
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0, y: -20 }} // 위에서 등장
+          initial={{ opacity: 0, y: -16 }} // 위에서 등장
           animate={{ opacity: 1, y: 0 }}   // 중앙에 안착
-          exit={{ opacity: 0, y: 20 }}     // 아래로 퇴장
-          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }} 
-          className="flex flex-col items-center justify-center gap-1.5 px-4 absolute w-full"
+          exit={{ opacity: 0, y: 16 }}     // 아래로 퇴장
+          transition={{ duration: 0.6, ease: easeOut }} 
+          className="flex flex-col items-center justify-center gap-2 px-4 absolute w-full"
         >
-          {/* font-serif(궁서체 느낌) 빼고 폰트 깔끔하게! */}
-          <p className="font-sans text-xl font-medium leading-relaxed text-white/90 text-center">
-            "{testimonials[currentIndex].text}"
+          <p className="font-sans text-lg font-medium leading-relaxed text-white/90 text-center tracking-tight">
+            {testimonials[currentIndex].text}
           </p>
-          <p className="text-xs text-white/50">- {testimonials[currentIndex].user} -</p>
+          <p className="text-xs text-white/40 font-normal">- {testimonials[currentIndex].user} -</p>
         </motion.div>
       </AnimatePresence>
     </div>
@@ -230,65 +1080,66 @@ export default function HeroCard() {
   });
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-8 pb-20">
+    <section className="mx-auto w-full max-w-[1280px] px-8 pb-24">
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, delay: 0.5, ease: easeOut }}
-        className="relative mx-auto h-[420px] w-full"
+        className="relative mx-auto h-[380px] w-full max-w-5xl"
       >
-        {/* 뒷판 */}
-        <div className="absolute bottom-0 left-0 right-0 h-[280px] rounded-[28px] bg-navy/90" />
+        {/* 은은한 배경 글로우 효과로 카드의 무거운 느낌을 상쇄 */}
+        <div className="absolute -inset-4 rounded-[40px] bg-gradient-to-r from-navy/20 to-transparent blur-2xl opacity-50 pointer-events-none" />
 
-        {/* 메인 카드 */}
-        <div className="absolute bottom-0 left-1/2 h-[420px] w-[78%] -translate-x-1/2 overflow-hidden rounded-[28px] border border-white/10 bg-navy-dark shadow-2xl">
-          {/* 배경 그라데이션 */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#3a4d7a] via-[#1f2c46] to-[#0f1729]" />
+        {/* 입체감을 주는 서브 레이어 (뒷판 디자인 고도화) */}
+        <div className="absolute inset-x-6 -bottom-3 top-6 rounded-[32px] bg-navy/40 border border-white/5 backdrop-blur-sm pointer-events-none" />
 
-          {/* 광원 효과 */}
-          <div className="absolute left-1/3 top-8 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
+        {/* 메인 비주얼 카드 */}
+        <div className="relative h-full w-full overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#1b2538] via-navy-dark to-[#0b101a] shadow-2xl">
+          {/* 부드러운 내부 은은한 광원 효과 */}
+          <div className="absolute -left-10 -top-20 h-80 w-80 rounded-full bg-white/[0.05] blur-3xl pointer-events-none" />
+          <div className="absolute right-10 bottom-0 h-72 w-72 rounded-full bg-navy/20 blur-3xl pointer-events-none" />
 
-          {/* 상단 라이브 인디케이터 */}
+          {/* 상단 라이브 인디케이터 (유리 효과와 패딩으로 감싸 밸런스 조절) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.9 }}
-            className="absolute top-8 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2"
+            className="absolute top-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md"
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
             </span>
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/70">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/80">
               Live
             </span>
           </motion.div>
 
-          {/* 통계 3분할 (정확한 1:1:1 비율 + 중앙 정렬 + 자동 구분선) */}
-          <div className="relative z-10 grid h-full grid-cols-3 items-center divide-x divide-white/10 px-8 pt-16">
+          {/* 통계 3분할 레이아웃 (강제 패딩 대신 내부 정렬 구조로 변경하여 시각적 안정감 부여) */}
+          <div className="relative z-10 grid h-full grid-cols-3 items-center divide-x divide-white/[0.08] px-6 pt-6">
             
-            {/* 1. 사용자 수 */}
+            {/* 1. 활성 사용자 */}
             <StatItem delay={0.8} label="활성 사용자">
-              <div className="font-serif text-5xl font-medium tracking-tight text-white">
+              <div className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-white">
                 {usersCount}
               </div>
-              <div className="mt-2 text-xs text-white/50">현재 연습 중</div>
+              <div className="mt-2.5 text-xs text-white/40 font-normal tracking-wide">현재 연습 중</div>
             </StatItem>
 
-            {/* 2. 사용자 한줄 후기 (큐브 애니메이션 적용!) */}
+            {/* 2. 사용자 한줄 후기 */}
             <StatItem delay={0.9} label="수강생 리얼 후기">
               <TestimonialCube testimonials={MOCK_TESTIMONIALS} />
             </StatItem>
 
             {/* 3. 만족도 */}
             <StatItem delay={1.0} label="사용자 만족도">
-              <div className="flex items-baseline justify-center gap-1.5">
-                <div className="font-serif text-5xl font-medium tracking-tight text-white">
+              <div className="flex items-baseline justify-center gap-1">
+                <div className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-white">
                   {satisfaction}
                 </div>
-                <div className="text-2xl text-white/40">/5</div>
+                <div className="text-xl text-white/30 font-light">/5</div>
               </div>
-              <div className="mt-2 text-xs text-white/50">★★★★★ 기준</div>
+              <div className="mt-2.5 text-xs text-white/40 font-normal tracking-wide">★★★★★ 기준</div>
             </StatItem>
 
           </div>
@@ -311,28 +1162,222 @@ interface StatItemProps {
 function StatItem({ children, label, delay }: StatItemProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, delay, ease: easeOut }}
-      className="flex flex-col items-center text-center px-4"
+      className="flex flex-col items-center justify-center text-center h-full py-12 px-2"
     >
-      <div className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">
+      <div className="mb-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
         {label}
       </div>
-      {children}
+      <div className="w-full flex flex-col items-center justify-center min-h-[72px]">
+        {children}
+      </div>
     </motion.div>
   );
 }
 </file>
 
-<file path="components/home/Navbar.tsx">
+<file path="components/login/LoginBackground.tsx">
+export default function LoginBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* 부드러운 컬러 블롭 — 너무 진하지 않게 */}
+      <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-navy/[0.08] blur-3xl" />
+      <div className="absolute -bottom-40 -right-32 h-[600px] w-[600px] rounded-full bg-[#3a4d7a]/15 blur-3xl" />
+      <div className="absolute top-1/4 right-1/3 h-[420px] w-[420px] rounded-full bg-[#5a6f9e]/10 blur-3xl" />
+
+      {/* 미세한 도트 패턴 — 거의 안 보일 정도로만 깔아서 깊이감 */}
+      <div
+        className="absolute inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, #1f2c46 1px, transparent 0)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="components/login/LoginCard.tsx">
 "use client";
 
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BRAND } from "@/lib/constants";
+
+const easeOut = [0.22, 1, 0.36, 1] as const;
+
+export default function LoginCard() {
+  const router = useRouter();
+
+  // 가짜 로그인 처리 함수: 세션에 도장 찍고 메인으로 이동
+  const handleLogin = () => {
+    sessionStorage.setItem("mockSession", "true");
+    router.push("/");
+  };
+
+  return (
+    <section className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1280px] items-center justify-center px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.9, ease: easeOut }}
+        className="relative w-full max-w-[440px]"
+      >
+        {/* 카드 바깥 부드러운 글로우 */}
+        <div className="pointer-events-none absolute -inset-6 rounded-[36px] bg-gradient-to-br from-white/30 to-navy/5 blur-2xl" />
+
+        {/* 글라스 카드 */}
+        <div className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white/40 px-10 py-14 shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+          {/* 상단 하이라이트 라인 */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+
+          {/* 브랜드 */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: easeOut }}
+            className="text-center text-base font-bold tracking-tight text-navy/70"
+          >
+            {BRAND.name}
+          </motion.p>
+
+          {/* LOGIN */}
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3, ease: easeOut }}
+            className="mt-3 text-center text-5xl font-bold tracking-[-0.02em] text-navy"
+          >
+            Login
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4, ease: easeOut }}
+            className="mt-4 text-center text-sm leading-relaxed text-muted"
+          >
+            카카오 계정으로 바로 시작하세요.
+          </motion.p>
+
+          {/* 카카오 로그인 버튼 (handleLogin 함수 연결 완료) */}
+          <motion.button
+            onClick={handleLogin}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.55, ease: easeOut }}
+            type="button"
+            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
+          >
+            <KakaoIcon />
+            카카오로 시작하기
+          </motion.button>
+
+          {/* 신규 사용자 안내 */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.75 }}
+            className="mt-5 text-center text-[13px] text-muted"
+          >
+            처음이신가요? 카카오 로그인 한 번으로 자동 가입됩니다.
+          </motion.p>
+
+          {/* 디바이더 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.85 }}
+            className="mt-8 h-px w-full bg-navy/10"
+          />
+
+          {/* 약관 */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+            className="mt-5 text-center text-[11px] leading-relaxed text-muted/90"
+          >
+            로그인 시{" "}
+            <Link
+              href="/terms"
+              className="underline underline-offset-2 hover:text-navy"
+            >
+              이용약관
+            </Link>{" "}
+            및{" "}
+            <Link
+              href="/privacy"
+              className="underline underline-offset-2 hover:text-navy"
+            >
+              개인정보처리방침
+            </Link>
+            에 동의합니다.
+          </motion.p>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+function KakaoIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M10 1.667c-4.602 0-8.333 2.948-8.333 6.583 0 2.358 1.572 4.428 3.937 5.59-.174.65-.628 2.348-.72 2.713-.111.454.166.448.35.326.144-.097 2.293-1.558 3.22-2.188.512.076 1.04.116 1.546.116 4.602 0 8.333-2.948 8.333-6.557C18.333 4.615 14.602 1.667 10 1.667z"
+        fill="#191600"
+      />
+    </svg>
+  );
+}
+</file>
+
+<file path="components/shared/Navbar.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { NAV_ITEMS, BRAND } from "@/lib/constants";
+import { User } from "lucide-react";
+
+const LANDING_MENUS = [
+  { label: "기능 소개", href: "/features" },
+  { label: "커뮤니티", href: "/community" },
+  { label: "사용법", href: "/how-to" },
+  { label: "소개", href: "/about" },
+];
 
 export default function Navbar() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const userName = "김은재"; 
+
+  // 페이지가 렌더링될 때 세션 스토리지 확인!
+  useEffect(() => {
+    const session = sessionStorage.getItem("mockSession");
+    if (session === "true") {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  // 로그아웃 시 도장 지우고 상태 초기화
+  const handleLogout = () => {
+    sessionStorage.removeItem("mockSession");
+    setIsLoggedIn(false);
+  };
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -12 }}
@@ -340,16 +1385,18 @@ export default function Navbar() {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="sticky top-0 z-50 w-full bg-bg/80 backdrop-blur-md"
     >
-      <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-8">
-        <Link
-          href="/"
-          className="font-serif text-2xl font-medium tracking-tight text-ink"
-        >
-          {BRAND.name}
-        </Link>
+      <div className="relative mx-auto flex h-20 max-w-[1280px] items-center justify-between px-8">
+        
+        {/* 좌측 로고 */}
+        <div className="flex w-1/3 justify-start">
+          <Link href="/" className="text-2xl font-bold tracking-tight text-ink">
+            InterviewFit
+          </Link>
+        </div>
 
-        <div className="flex items-center gap-1 rounded-full bg-chip px-2 py-2">
-          {NAV_ITEMS.map((item) => (
+        {/* 중앙 고정 메뉴 */}
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-chip px-2 py-2">
+          {LANDING_MENUS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -360,39 +1407,42 @@ export default function Navbar() {
           ))}
         </div>
 
-        <Link
-          href="/features"
-          className="flex h-10 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-medium text-white transition-transform hover:scale-[1.03]"
-        >
-          시작하기
-          <span aria-hidden>→</span>
-        </Link>
+        {/* 우측 로그인 영역 */}
+        <div className="flex w-1/3 justify-end">
+          {isLoggedIn ? (
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/mypage/dashboard"
+                className="flex items-center gap-2.5 rounded-full pl-1.5 pr-4 py-1.5 transition-colors hover:bg-gray-100"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <User className="h-4 w-4" strokeWidth={2.5} />
+                </div>
+                <span className="text-sm font-medium text-ink">
+                  <strong className="font-bold">{userName}</strong>님
+                </span>
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="rounded-full border border-line bg-white px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-ink"
+              >
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="flex h-10 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-medium text-white transition-transform hover:scale-[1.03]"
+            >
+              시작하기
+              <span aria-hidden>→</span>
+            </Link>
+          )}
+        </div>
+
       </div>
     </motion.nav>
-  );
-}
-</file>
-
-<file path="components/home/TrustedLogos.tsx">
-const LOGOS = ["Logo 1", "Logo 2", "Logo 3", "Logo 4"];
-
-export default function TrustedLogos() {
-  return (
-    <section className="mx-auto w-full max-w-[1280px] px-8 py-16">
-      <p className="mb-8 text-center text-xs font-medium uppercase tracking-widest text-muted">
-        Trusted by
-      </p>
-      <div className="flex items-center justify-center gap-16 opacity-60">
-        {LOGOS.map((logo) => (
-          <div
-            key={logo}
-            className="text-sm font-medium text-muted"
-          >
-            {logo}
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 </file>
@@ -409,10 +1459,6 @@ interface UseCounterOptions {
   decimals?: number;    // 소수점 자리수
 }
 
-/**
- * 0에서 target까지 부드럽게 카운팅하는 훅.
- * easeOutCubic 곡선으로 끝에 가까워질수록 천천히 멈춤.
- */
 export function useCounter({
   target,
   duration = 1800,
@@ -431,7 +1477,6 @@ export function useCounter({
         const elapsed = timestamp - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // easeOutCubic: 끝에 부드럽게 멈춤
         const eased = 1 - Math.pow(1 - progress, 3);
         setValue(target * eased);
 
@@ -459,11 +1504,17 @@ export function useCounter({
 </file>
 
 <file path="lib/constants.ts">
-export const NAV_ITEMS = [
+export const MARKETING_NAV_ITEMS = [
   { label: "기능 소개", href: "/features" },
   { label: "커뮤니티", href: "/community" },
   { label: "사용법", href: "/how-to" },
   { label: "소개", href: "/about" },
+] as const;
+
+export const APP_NAV_ITEMS = [
+  { label: "대시보드", href: "/dashboard" },
+  { label: "연습 기록", href: "/history" },
+  { label: "추천 질문", href: "/questions" },
 ] as const;
 
 export const HERO = {
@@ -472,15 +1523,13 @@ export const HERO = {
     "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
 } as const;
 
-// ⚠️ Mock 데이터 — 추후 백엔드 API로 교체 예정
-// 연동 시: GET /api/stats/live 같은 엔드포인트에서 받아오기
 export const LIVE_STATS = {
   users: 12847,
   passRate: {
-    first: 52,   // 1회차 사용자 평균 합격률 (%)
-    repeat: 86,  // 다회차 사용자 평균 합격률 (%)
+    first: 52,
+    repeat: 86,
   },
-  satisfaction: 4.8, // 5점 만점
+  satisfaction: 4.8,
 } as const;
 
 export const BRAND = {
@@ -494,104 +1543,6 @@ import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-}
-</file>
-
-<file path="public/images/home/next.svg">
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
-</file>
-
-<file path="public/images/home/react.svg">
-<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>React</title><path d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.41 0-.783.093-1.106.278-1.375.793-1.683 3.264-.973 6.365C1.98 8.917 0 10.42 0 12.004c0 1.59 1.99 3.097 5.043 4.03-.704 3.113-.39 5.588.988 6.38.32.187.69.275 1.102.275 1.345 0 3.107-.96 4.888-2.624 1.78 1.654 3.542 2.603 4.887 2.603.41 0 .783-.09 1.106-.275 1.374-.792 1.683-3.263.973-6.365C22.02 15.096 24 13.59 24 12.004c0-1.59-1.99-3.097-5.043-4.032.704-3.11.39-5.587-.988-6.38-.318-.184-.688-.277-1.092-.278zm-.005 1.09v.006c.225 0 .406.044.558.127.666.382.955 1.835.73 3.704-.054.46-.142.945-.25 1.44-.96-.236-2.006-.417-3.107-.534-.66-.905-1.345-1.727-2.035-2.447 1.592-1.48 3.087-2.292 4.105-2.295zm-9.77.02c1.012 0 2.514.808 4.11 2.28-.686.72-1.37 1.537-2.02 2.442-1.107.117-2.154.298-3.113.538-.112-.49-.195-.964-.254-1.42-.23-1.868.054-3.32.714-3.707.19-.09.4-.127.563-.132zm4.882 3.05c.455.468.91.992 1.36 1.564-.44-.02-.89-.034-1.345-.034-.46 0-.915.01-1.36.034.44-.572.895-1.096 1.345-1.565zM12 8.1c.74 0 1.477.034 2.202.093.406.582.802 1.203 1.183 1.86.372.64.71 1.29 1.018 1.946-.308.655-.646 1.31-1.013 1.95-.38.66-.773 1.288-1.18 1.87-.728.063-1.466.098-2.21.098-.74 0-1.477-.035-2.202-.093-.406-.582-.802-1.204-1.183-1.86-.372-.64-.71-1.29-1.018-1.946.303-.657.646-1.313 1.013-1.954.38-.66.773-1.286 1.18-1.868.728-.064 1.466-.098 2.21-.098zm-3.635.254c-.24.377-.48.763-.704 1.16-.225.39-.435.782-.635 1.174-.265-.656-.49-1.31-.676-1.947.64-.15 1.315-.283 2.015-.386zm7.26 0c.695.103 1.365.23 2.006.387-.18.632-.405 1.282-.66 1.933-.2-.39-.41-.783-.64-1.174-.225-.392-.465-.774-.705-1.146zm3.063.675c.484.15.944.317 1.375.498 1.732.74 2.852 1.708 2.852 2.476-.005.768-1.125 1.74-2.857 2.475-.42.18-.88.342-1.355.493-.28-.958-.646-1.956-1.1-2.98.45-1.017.81-2.01 1.085-2.964zm-13.395.004c.278.96.645 1.957 1.1 2.98-.45 1.017-.812 2.01-1.086 2.964-.484-.15-.944-.318-1.37-.5-1.732-.737-2.852-1.706-2.852-2.474 0-.768 1.12-1.742 2.852-2.476.42-.18.88-.342 1.356-.494zm11.678 4.28c.265.657.49 1.312.676 1.948-.64.157-1.316.29-2.016.39.24-.375.48-.762.705-1.158.225-.39.435-.788.636-1.18zm-9.945.02c.2.392.41.783.64 1.175.23.39.465.772.705 1.143-.695-.102-1.365-.23-2.006-.386.18-.63.406-1.282.66-1.933zM17.92 16.32c.112.493.2.968.254 1.423.23 1.868-.054 3.32-.714 3.708-.147.09-.338.128-.563.128-1.012 0-2.514-.807-4.11-2.28.686-.72 1.37-1.536 2.02-2.44 1.107-.118 2.154-.3 3.113-.54zm-11.83.01c.96.234 2.006.415 3.107.532.66.905 1.345 1.727 2.035 2.446-1.595 1.483-3.092 2.295-4.11 2.295-.22-.005-.406-.05-.553-.132-.666-.38-.955-1.834-.73-3.703.054-.46.142-.944.25-1.438zm4.56.64c.44.02.89.034 1.345.034.46 0 .915-.01 1.36-.034-.44.572-.895 1.095-1.345 1.565-.455-.47-.91-.993-1.36-1.565z"/></svg>
-</file>
-
-<file path="public/images/home/spring.svg">
-<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Spring</title><path d="M21.8537 1.4158a10.4504 10.4504 0 0 1-1.284 2.2471A11.9666 11.9666 0 1 0 3.8518 20.7757l.4445.3951a11.9543 11.9543 0 0 0 19.6316-8.2971c.3457-3.0126-.568-6.8649-2.0743-11.458zM5.5805 20.8745a1.0174 1.0174 0 1 1-.1482-1.4323 1.0396 1.0396 0 0 1 .1482 1.4323zm16.1991-3.5806c-2.9385 3.9263-9.2601 2.5928-13.2852 2.7904 0 0-.7161.0494-1.4323.1481 0 0 .2717-.1234.6174-.2469 2.8398-.9877 4.1732-1.1853 5.9018-2.0743 3.2349-1.6545 6.4698-5.2844 7.1118-9.0379-1.2347 3.6053-4.9881 6.7167-8.3959 7.9761-2.3459.8643-6.5685 1.7039-6.5685 1.7039l-.1729-.0988c-2.8645-1.4076-2.9632-7.6304 2.2718-9.6306 2.2966-.889 4.4696-.395 6.9637-.9877 2.6422-.6174 5.7043-2.5929 6.939-5.1857 1.3828 4.1732 3.062 10.643.0493 14.6434z"/></svg>
-</file>
-
-<file path="app/globals.css">
-@import "tailwindcss";
-
-@theme {
-  --color-bg: #f5f5f3;
-  --color-ink: #171717;
-  --color-navy: #1f2c46;
-  --color-navy-dark: #0f1729;
-  --color-muted: #737373;
-  --color-chip: #eceff3;
-  --color-line: #e5e5e3;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-serif: var(--font-playfair), Georgia, serif;
-}
-
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  scroll-behavior: smooth;
-}
-
-body {
-  background-color: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-}
-</file>
-
-<file path="app/layout.tsx">
-import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-export const metadata: Metadata = {
-  title: "InterviewFit — Practice smarter.",
-  description:
-    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${playfair.variable}`}
-    >
-      <body>{children}</body>
-    </html>
-  );
-}
-</file>
-
-<file path="app/page.tsx">
-import Navbar from "@/components/home/Navbar";
-import Hero from "@/components/home/Hero";
-import HeroCard from "@/components/home/HeroCard";
-import TrustedLogos from "@/components/home/TrustedLogos";
-
-export default function Home() {
-  return (
-    <main className="min-h-screen w-full bg-bg">
-      <Navbar />
-      <Hero />
-      <HeroCard />
-      <TrustedLogos />
-    </main>
-  );
 }
 </file>
 
@@ -698,40 +1649,6 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 </file>
 
-<file path="package.json">
-{
-  "name": "interviewfit",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "framer-motion": "^12.40.0",
-    "lenis": "^1.3.23",
-    "lucide-react": "^1.16.0",
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "tailwind-merge": "^3.6.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
-}
-</file>
-
 <file path="postcss.config.mjs">
 const config = {
   plugins: {
@@ -745,40 +1662,70 @@ export default config;
 <file path="README.md">
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+├─ README.md
+├─ app
+│  ├─ about
+│  │  └─ page.tsx
+│  ├─ community
+│  │  └─ page.tsx
+│  ├─ dashboard
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ features
+│  │  └─ page.tsx
+│  ├─ globals.css
+│  ├─ how-to
+│  │  └─ page.tsx
+│  ├─ layout.tsx
+│  ├─ login
+│  │  └─ page.tsx
+│  ├─ page.tsx
+│  └─ practice
+├─ components
+│  ├─ dashboard
+│  │  ├─ Sidebar.tsx
+│  │  ├─ StatCard.tsx
+│  │  └─ Topbar.tsx
+│  ├─ landing
+│  │  ├─ Hero.tsx
+│  │  ├─ HeroCard.tsx
+│  │  └─ TrustedLogos.tsx
+│  ├─ login
+│  │  ├─ LoginBackground.tsx
+│  │  └─ LoginCard.tsx
+│  ├─ practice
+│  │  └─ new
+│  │     └─ page.tsx
+│  └─ shared
+│     └─ Navbar.tsx
+├─ eslint.config.mjs
+├─ hooks
+│  └─ useCounter.ts
+├─ lib
+│  ├─ constants.ts
+│  └─ utils.ts
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ public
+│  ├─ file.svg
+│  ├─ fonts
+│  │  ├─ PlayfairDisplay-Bold.ttf
+│  │  └─ Satoshi.ttf
+│  ├─ globe.svg
+│  ├─ images
+│  │  └─ home
+│  │     ├─ next.svg
+│  │     ├─ react.svg
+│  │     └─ spring.svg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ repomix-output.xml
+└─ tsconfig.json
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
 </file>
 
 <file path="tsconfig.json">
@@ -815,6 +1762,138 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
     "**/*.mts"
   ],
   "exclude": ["node_modules"]
+}
+</file>
+
+<file path="app/globals.css">
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f5f5f3;
+  --color-ink: #171717;
+  --color-navy: #1f2c46;
+  --color-navy-dark: #0f1729;
+  --color-muted: #737373;
+  --color-chip: #eceff3;
+  --color-line: #e5e5e3;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+</file>
+
+<file path="app/layout.tsx">
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+  title: "InterviewFit — Practice smarter.",
+  description:
+    "AI-powered interview coaching that analyzes your tone, gaze, and answers.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${inter.variable} ${playfair.variable}`}
+    >
+      <body>{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="app/page.tsx">
+import Navbar from "@/components/shared/Navbar";
+import Hero from "@/components/landing/Hero";
+import IntroSection from "@/components/landing/IntroSection";
+// ❌ StatsBanner import 삭제 완료!
+import BoardSection from "@/components/landing/BoardingSection";
+import Footer from "@/components/shared/Footer";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen w-full font-sans bg-white">
+      <Navbar />
+
+      <div className="flex flex-col w-full">
+        <Hero />
+        <IntroSection />
+        {/* ❌ <StatsBanner /> 삭제 완료! */}
+        
+        {/* BoardSection(공지사항) 위아래에 숨통 트이는 여백(py-24) 추가 */}
+        <div className="py-24 w-full bg-white">
+          <BoardSection />
+        </div>
+      </div>
+
+      <Footer />
+    </main>
+  );
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "interviewfit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
+    "lenis": "^1.3.23",
+    "lucide-react": "^1.16.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }
 </file>
 
