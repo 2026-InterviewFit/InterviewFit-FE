@@ -11,7 +11,7 @@ const NOTICES = [
 
 const FAQS = [
   { id: 1, title: "모의면접 분석은 얼마나 걸리나요?", date: "2026.05.29" },
-  { id: 2, 무: "무료 이용은 어떻게 가능한가요?", date: "2026.05.20" },
+  { id: 2, title: "무료 이용은 어떻게 가능한가요?", date: "2026.05.20" },
 ];
 
 export default function BoardSection() {
@@ -61,7 +61,7 @@ export default function BoardSection() {
             {FAQS.map((item) => (
               <li key={item.id} className="flex cursor-pointer items-center justify-between group">
                 <span className="text-sm font-medium text-ink group-hover:underline">
-                  {item.title || item.무} 
+                  {item.title}
                 </span>
                 <span className="text-xs text-muted">{item.date}</span>
               </li>

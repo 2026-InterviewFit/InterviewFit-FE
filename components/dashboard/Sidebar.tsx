@@ -1,66 +1,66 @@
 "use client";
 
-import { LayoutDashboard, Video, FileText, Settings, LogOut } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+  onMenuClick?: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
-  const menus = [
-    { id: "dashboard", label: "대시보드", icon: <LayoutDashboard className="h-4 w-4 shrink-0" /> },
-    { id: "practice", label: "면접 연습", icon: <Video className="h-4 w-4 shrink-0" /> },
-    { id: "report", label: "분석 리포트", icon: <FileText className="h-4 w-4 shrink-0" /> },
-    { id: "settings", label: "설정", icon: <Settings className="h-4 w-4 shrink-0" /> },
-  ];
+export default function Sidebar({ onMenuClick }: SidebarProps) {
+  const pathname = usePathname();
 
   const handleLogout = () => {
     sessionStorage.removeItem("mockSession");
     window.location.href = "/";
   };
 
-  return (
-    // 💡 반응형 포인트: 기본 너비는 80px(아이콘만), 큰 화면(md 이상)에서 260px로 확장!
-    <aside className="flex w-[80px] md:w-[260px] flex-col border-r border-black/[0.04] bg-white px-3 md:px-6 py-8 justify-between shrink-0 transition-all duration-300">
-      <div>
-        {/* 로고도 작은 화면에서는 대문자 I만 보이고 큰 화면에서 전체 노출 */}
-        <h1 className="text-xl md:text-2xl font-serif font-bold tracking-tight text-navy text-center md:text-left md:px-4">
-          I<span className="hidden md:inline">nterview</span><span className="font-light">F<span className="hidden md:inline">it</span></span>
-        </h1>
+  const menuItems = [
+    { name: "대시보드", path: "/mypage/dashboard" },
+    { name: "면접 연습", path: "/practice" }, 
+    { name: "설정", path: "/mypage/settings" },
+  ];
 
-        <nav className="mt-12 flex flex-col gap-1.5">
-          {menus.map((menu) => {
-            const isActive = activeTab === menu.id;
+  return (
+    // 💡 배경을 dark:bg-[#111827]로 연동하고 테두리도 어둡게 처리!
+    <aside className="flex w-[240px] shrink-0 flex-col justify-between border-r border-black/5 dark:border-white/5 bg-white dark:bg-[#111827] px-6 py-8 h-full min-h-screen transition-colors duration-300">
+      <div>
+        <Link href="/" className="text-2xl font-semibold tracking-tight text-ink hover:text-blue-600 transition-colors">
+          InterviewFit
+        </Link>
+
+        <nav className="mt-10 flex flex-col gap-2">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.path || pathname?.startsWith(item.path + "/");
+            
             return (
-              <button
-                key={menu.id}
-                onClick={() => setActiveTab(menu.id)}
-                // 💡 작은 화면에서는 중앙 정렬, 큰 화면에서는 좌측 정렬
-                className={`flex items-center justify-center md:justify-start gap-3.5 rounded-2xl p-3.5 md:px-4 md:py-3.5 text-sm font-semibold transition-all duration-200 ${
-                  isActive
-                    ? "bg-navy text-white shadow-md shadow-navy/10"
-                    : "text-muted hover:bg-black/[0.02] hover:text-ink"
+              <Link
+                key={item.name}
+                href={item.path}
+                onClick={onMenuClick}
+                className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+                  isActive 
+                    ? "bg-black text-white dark:bg-white dark:text-black" // 활성화 시 흑백 반전
+                    : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5" // 비활성화 시 색상
                 }`}
-                title={menu.label}
               >
-                {menu.icon}
-                {/* 💡 핵심: 작은 화면에서는 글씨를 숨김(hidden), md 크기 이상에서만 노출(inline) */}
-                <span className="hidden md:inline">{menu.label}</span>
-              </button>
+                {item.name}
+              </Link>
             );
           })}
         </nav>
       </div>
 
-      <button 
-        onClick={handleLogout}
-        className="flex items-center justify-center md:justify-start gap-3.5 rounded-2xl p-3.5 md:px-4 md:py-3.5 text-sm font-semibold text-red-500/80 hover:bg-red-50/50 transition-colors text-left"
-        title="로그아웃"
-      >
-        <LogOut className="h-4 w-4 shrink-0" />
-        <span className="hidden md:inline">로그아웃</span>
-      </button>
+      <div className="mb-4">
+        <button 
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+        >
+          <LogOut className="h-4 w-4" />
+          로그아웃
+        </button>
+      </div>
     </aside>
   );
 }
