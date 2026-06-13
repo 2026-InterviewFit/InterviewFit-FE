@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Mic, Square, ChevronRight, HelpCircle, Briefcase } from "lucide-react";
+import { Mic, Square, ChevronRight, HelpCircle, Briefcase, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  analyzeEyeBlinking,
+  type EyeBlinkingAnalyzeResponse,
+} from "@/lib/api";
 
 type Step = "jobSelect" | "prepare" | "countdown" | "recording" | "confirmStop" | "analyzing";
 
@@ -88,6 +92,8 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [tipIdx, setTipIdx] = useState(0);
   const [analysisProgress, setAnalysisProgress] = useState(1);
+  const [analysisResult, setAnalysisResult] = useState<EyeBlinkingAnalyzeResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState("");
 
   // refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -101,6 +107,8 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const currentColors = CATEGORY_COLORS[selectedCategory];
   const currentQuestions =
     QUESTIONS_BY_CATEGORY[selectedCategory] ?? QUESTIONS_BY_CATEGORY["IT/개발"];
+
+  const eyeBlinkingData = analysisResult?.result ?? analysisResult?.data;
 
   // ── 카메라 초기화 (컴포넌트 마운트 시 바로 시작 → 배경 미리보기) ─
   useEffect(() => {
@@ -128,7 +136,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── MediaRecorder: recording 시작 / analyzing 시 종료 ──────────
+  // ── MediaRecorder: recording 시작 / analyzing 시 종료 + Spring 분석 API 호출 ─
   useEffect(() => {
     if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
       chunksRef.current = [];
@@ -144,14 +152,42 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     }
 
     if (step === "analyzing" && mediaRecorderRef.current?.state === "recording") {
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        console.log(`✅ 녹화 완료: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
-        // TODO: 서버 AI 분석 API 전송
-        // const formData = new FormData();
-        // formData.append("video", blob, "interview.webm");
-        // fetch("/api/analyze", { method: "POST", body: formData });
+      setAnalysisResult(null);
+      setAnalysisError("");
+      setAnalysisProgress(1);
+
+      mediaRecorderRef.current.onstop = async () => {
+        try {
+          const blob = new Blob(chunksRef.current, { type: "video/webm" });
+          console.log(`✅ 녹화 완료: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
+
+          if (blob.size === 0) {
+            throw new Error("녹화된 영상 파일이 비어 있습니다.");
+          }
+
+          // FE는 Spring만 호출한다.
+          // Spring이 FastAPI 호출과 DB 저장을 담당한다.
+          // userId/interviewId는 실제 로그인/면접 세션 연동 후 전달하면 된다.
+          const result = await analyzeEyeBlinking({
+            file: blob,
+          });
+
+          console.log("눈 깜빡임 분석 결과:", result);
+          setAnalysisResult(result);
+          setAnalysisProgress(100);
+        } catch (error) {
+          console.error(error);
+          setAnalysisProgress(100);
+          setAnalysisError(
+            error instanceof Error
+              ? error.message
+              : "눈 깜빡임 분석 중 알 수 없는 오류가 발생했습니다."
+          );
+        } finally {
+          mediaRecorderRef.current = null;
+        }
       };
+
       mediaRecorderRef.current.stop();
     }
   }, [step]);
@@ -184,9 +220,12 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
 
     const progressInterval = setInterval(() => {
       setAnalysisProgress((prev) => {
-        if (prev >= 99) { clearInterval(progressInterval); return 99; }
+        if (prev >= 95) {
+          clearInterval(progressInterval);
+          return 95;
+        }
         const increment = prev > 80 ? 1 : Math.floor(Math.random() * 8) + 3;
-        return Math.min(prev + increment, 99);
+        return Math.min(prev + increment, 95);
       });
     }, 400);
 
@@ -222,43 +261,94 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
           <div className="absolute bottom-[-150px] left-1/4 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[130px]" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center max-w-xl text-center space-y-8 w-full">
+        <div className="relative z-10 flex flex-col items-center max-w-2xl text-center space-y-8 w-full">
           <div className="relative flex items-center justify-center w-28 h-28">
             <div className="absolute inset-0 rounded-full border-4 border-black/[0.04]" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-transparent animate-[spin_2s_linear_infinite]" />
-            <span className="font-serif text-xl font-bold tracking-tight text-navy">
-              {analysisProgress}%
-            </span>
+            {!analysisResult && !analysisError && (
+              <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-transparent animate-[spin_2s_linear_infinite]" />
+            )}
+            {analysisResult && <CheckCircle2 className="h-12 w-12 text-emerald-500" />}
+            {analysisError && <AlertCircle className="h-12 w-12 text-red-500" />}
+            {!analysisResult && !analysisError && (
+              <span className="font-serif text-xl font-bold tracking-tight text-navy">
+                {analysisProgress}%
+              </span>
+            )}
           </div>
 
           <div className="space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-navy">
-              면접 촬영 완료! AI 데이터 정밀 분석 중...
+              {analysisResult
+                ? "눈 깜빡임 분석 완료"
+                : analysisError
+                  ? "분석 중 오류가 발생했습니다"
+                  : "면접 촬영 완료! AI 데이터 정밀 분석 중..."}
             </h2>
             <p className="text-sm text-muted">
-              <span className="font-bold text-navy">{selectedJob}</span> 직무 기준으로 시선 처리, 발화 패턴, 논리 구조를 종합 평가하고 있습니다.
+              <span className="font-bold text-navy">{selectedJob}</span> 직무 기준으로 녹화 영상을 Spring으로 전송하고, Spring이 FastAPI 분석을 요청합니다.
             </p>
           </div>
 
-          <div className="w-full bg-white/70 border border-black/[0.04] backdrop-blur-md rounded-[32px] p-8 text-center min-h-[160px] flex flex-col items-center justify-center overflow-hidden shadow-sm">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tipIdx}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                className="flex flex-col items-center space-y-3"
-              >
-                <span className="inline-block text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  {LOADING_TIPS[tipIdx].category}
-                </span>
-                <p className="text-sm font-semibold leading-relaxed text-navy max-w-md">
-                  {LOADING_TIPS[tipIdx].text}
+          {!analysisResult && !analysisError && (
+            <div className="w-full bg-white/70 border border-black/[0.04] backdrop-blur-md rounded-[32px] p-8 text-center min-h-[160px] flex flex-col items-center justify-center overflow-hidden shadow-sm">
+              <Loader2 className="mb-4 h-8 w-8 animate-spin text-blue-500" />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tipIdx}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  className="flex flex-col items-center space-y-3"
+                >
+                  <span className="inline-block text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                    {LOADING_TIPS[tipIdx].category}
+                  </span>
+                  <p className="text-sm font-semibold leading-relaxed text-navy max-w-md">
+                    {LOADING_TIPS[tipIdx].text}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {analysisResult && (
+            <div className="w-full rounded-[32px] bg-white/80 p-8 text-left shadow-sm border border-black/[0.04] backdrop-blur-md">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="rounded-2xl bg-blue-50 p-5">
+                  <p className="text-xs font-bold text-blue-600">깜빡임 횟수</p>
+                  <p className="mt-2 text-2xl font-bold text-navy">
+                    {eyeBlinkingData?.blink_count ?? "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 p-5">
+                  <p className="text-xs font-bold text-emerald-600">분당 깜빡임</p>
+                  <p className="mt-2 text-2xl font-bold text-navy">
+                    {eyeBlinkingData?.blink_rate ?? eyeBlinkingData?.blinks_per_minute ?? "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-purple-50 p-5">
+                  <p className="text-xs font-bold text-purple-600">점수</p>
+                  <p className="mt-2 text-2xl font-bold text-navy">
+                    {eyeBlinkingData?.score ?? "-"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl bg-gray-50 p-5">
+                <p className="text-xs font-bold text-gray-500">피드백</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-navy">
+                  {eyeBlinkingData?.feedback ?? eyeBlinkingData?.evaluation ?? analysisResult.message ?? "분석 결과가 저장되었습니다."}
                 </p>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              </div>
+            </div>
+          )}
+
+          {analysisError && (
+            <div className="w-full rounded-[28px] border border-red-100 bg-red-50 p-6 text-left text-sm font-semibold leading-relaxed text-red-600">
+              {analysisError}
+            </div>
+          )}
 
           <button
             onClick={handleFinalExit}
