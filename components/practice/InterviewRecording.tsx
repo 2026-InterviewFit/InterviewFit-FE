@@ -298,7 +298,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  transition={{ duration: 0.6 }}
                   className="flex flex-col items-center space-y-3"
                 >
                   <span className="inline-block text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -382,7 +382,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.45 }}
             className="w-full max-w-sm bg-white rounded-[32px] shadow-2xl border border-white/30 p-8"
           >
             {/* 헤더 */}

@@ -263,7 +263,7 @@ export default function AboutPage() {
                       initial={{ rotateY: -90, opacity: 0 }}
                       animate={{ rotateY: 0, opacity: 1 }}
                       exit={{ rotateY: 90, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      transition={{ duration: 0.3 }}
                       className="rounded-[24px] bg-white dark:bg-[#1e293b] border border-black/[0.03] dark:border-white/[0.05] p-6 shadow-sm flex flex-col items-center text-center gap-4"
                     >
                       <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${member.color} flex items-center justify-center text-white shadow-lg`}>
@@ -296,7 +296,7 @@ export default function AboutPage() {
                       initial={{ rotateY: -90, opacity: 0 }}
                       animate={{ rotateY: 0, opacity: 1 }}
                       exit={{ rotateY: 90, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      transition={{ duration: 0.3 }}
                       className={`rounded-[24px] bg-gradient-to-br ${member.color} p-6 shadow-lg flex flex-col justify-between min-h-[280px]`}
                     >
                       <div>

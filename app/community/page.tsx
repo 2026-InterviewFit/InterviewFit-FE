@@ -185,7 +185,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.5, delay: i * 0.07 },
   }),
 };
 
@@ -217,7 +217,7 @@ export default function CommunityPage() {
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8 }}
           className="relative z-10 mx-auto max-w-[1280px] flex flex-col md:flex-row md:items-end justify-between gap-8"
         >
           <div>
