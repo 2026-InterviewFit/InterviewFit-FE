@@ -8,13 +8,20 @@ export type JobRole = {
 };
 
 export type VideoUploadResponse = {
-  message: string;
+  message?: string;
 
   /**
    * Spring VideoService가 MinIO에 저장한 objectKey.
    * 예: videos/uuid_interview.webm
    */
-  videoUrl: string;
+  videoUrl?: string;
+
+  /**
+   * 팀원 VideoService 응답에서 objectKey로 올 수도 있어서 같이 대응.
+   */
+  objectKey?: string;
+
+  [key: string]: unknown;
 };
 
 export type EyeBlinkingRawResult = {
@@ -132,6 +139,27 @@ export async function analyzeEyeBlinkingByVideoUrl(params: {
   return response.json();
 }
 
+export async function uploadVideo(params: {
+  file: File | Blob;
+  fileName?: string;
+}): Promise<VideoUploadResponse> {
+  const formData = new FormData();
+
+  formData.append("file", params.file, params.fileName ?? "interview.webm");
+
+  const response = await fetch(`${API_BASE_URL}/videos/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`영상 업로드 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
 export async function analyzeEyeBlinking(params: {
   file: Blob;
   userId?: number;
@@ -225,3 +253,4 @@ export async function createFollowUpQuestion(params: {
 
   return response.json();
 }
+
