@@ -7,6 +7,12 @@ export type JobRole = {
   name: string;
 };
 
+export type VideoUploadResponse = {
+  videoUrl?: string;
+  objectKey?: string;
+  [key: string]: unknown;
+};
+
 export type EyeBlinkingRawResult = {
   total_frames?: number;
   fps?: number;
@@ -85,6 +91,27 @@ export async function createFollowUpQuestion(params: {
   return response.json();
 }
 
+export async function uploadVideo(params: {
+  file: File | Blob;
+  fileName?: string;
+}): Promise<VideoUploadResponse> {
+  const formData = new FormData();
+
+  formData.append("file", params.file, params.fileName ?? "interview.webm");
+
+  const response = await fetch(`${API_BASE_URL}/videos/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`영상 업로드 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
 export async function analyzeEyeBlinking(params: {
   file: Blob;
   userId?: number;
@@ -117,3 +144,4 @@ export async function analyzeEyeBlinking(params: {
 
   return response.json();
 }
+

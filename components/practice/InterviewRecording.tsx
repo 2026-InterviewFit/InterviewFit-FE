@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mic, Square, ChevronRight, HelpCircle, Briefcase, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   analyzeEyeBlinking,
+  uploadVideo,
   type EyeBlinkingAnalyzeResponse,
 } from "@/lib/api";
 
