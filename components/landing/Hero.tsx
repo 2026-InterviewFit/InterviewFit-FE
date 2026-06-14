@@ -71,7 +71,7 @@ export default function Hero() {
       {/* 스크롤 유도 라인 화살표 */}
       <motion.div 
         animate={{ y: [0, 10, 0] }}
-        transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+        transition={{ repeat: Infinity, duration: 1.8 }}
         className="absolute bottom-8 md:bottom-10 left-1/2 z-10 -translate-x-1/2 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
         onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
       >

@@ -134,7 +134,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 28 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, delay: i * 0.1 },
   }),
 };
 
@@ -160,7 +160,7 @@ export default function HowToPage() {
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8 }}
           className="relative z-10 mx-auto max-w-[1280px] text-center flex flex-col items-center"
         >
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-sm font-bold tracking-wide mb-6 border border-orange-100 dark:border-orange-800 backdrop-blur-md">
@@ -336,7 +336,7 @@ export default function HowToPage() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25, ease: "easeInOut" }}
+                          transition={{ duration: 0.25 }}
                           className="overflow-hidden"
                         >
                           <p className="px-7 pb-6 text-sm text-muted dark:text-gray-400 leading-relaxed">
