@@ -24,6 +24,18 @@ export type VideoUploadResponse = {
   [key: string]: unknown;
 };
 
+export type QuestionRequest = {
+  count: number;
+  jobRoleId: number;
+  coverLetter?: string;
+};
+
+export type QuestionDto = {
+  id: number;
+  question: string;
+  jobName: string;
+};
+
 export type EyeBlinkingRawResult = {
   total_frames?: number;
   fps?: number;
@@ -254,3 +266,30 @@ export async function createFollowUpQuestion(params: {
   return response.json();
 }
 
+export async function createQuestions(
+  request: QuestionRequest
+): Promise<QuestionDto[]> {
+  console.log("질문 생성 요청", request);
+
+  const response = await fetch(`${API_BASE_URL}/api/question/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  console.log("질문 생성 응답 상태", response.status);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("질문 생성 실패", errorText);
+    throw new Error(`질문 생성 실패: ${errorText}`);
+  }
+
+  const data: QuestionDto[] = await response.json();
+
+  console.log("질문 생성 응답", data);
+
+  return data;
+}
