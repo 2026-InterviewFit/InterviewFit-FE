@@ -30,7 +30,15 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
 
   // 직무 선택 상태
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<number | null>(null);
+
+  // 현재 선택된 직무 객체 찾기
+  const selectedJobData = jobRoles.find((job) => job.id === selectedJob);
+  // 중복 없는 대분류 카테고리 추출
+  const uniqueCategories = Array.from(new Set(jobRoles.map((job) => job.category)));
+  // 선택된 대분류에 속하는 세부 직무만 필터링
+  const filteredJobs = jobRoles.filter((job) => job.category === selectedCategory);
 
   // 면접 진행 상태
   const [step, setStep] = useState<Step>("jobSelect");
@@ -59,10 +67,13 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     const fetchJobRoles = async () => {
       try {
         const data = await getJobRoles();
-
         console.log("직무 목록 조회 성공", data);
-
         setJobRoles(data);
+        // 데이터를 불러온 후 첫 번째 카테고리를 기본값으로 자동 선택
+        if (data.length > 0) {
+          const categories = Array.from(new Set(data.map((job) => job.category)));
+          setSelectedCategory(categories[0]);
+        }
       } catch (error) {
         console.error("직무 목록 조회 실패", error);
       }
@@ -121,44 +132,26 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
           const blob = new Blob(chunksRef.current, {
             type: mediaRecorderRef.current?.mimeType || "video/webm",
           });
-          console.log("녹화 chunks 개수:", chunksRef.current.length);
-          console.log("녹화 blob size:", blob.size);
-          console.log("녹화 blob type:", blob.type);
 
           if (blob.size === 0) {
             throw new Error("녹화된 영상 파일이 비어 있습니다.");
           }
 
-          /**
-           * 1단계: 팀원 VideoService에 영상 저장 요청
-           *
-           * 기존에는 eye-blink API가 영상을 직접 업로드받았지만,
-           * 지금은 팀원 코드에 /videos/upload → MinIO 저장 → videoUrl 반환 흐름이 있다.
-           * 따라서 FE는 먼저 /videos/upload를 호출해서 영상 저장 방식을 팀원 코드와 통일한다.
-           */
           const uploadResult = await uploadInterviewVideo({
             file: blob,
           });
           
-          console.log("영상 업로드 결과:", uploadResult);
-          
-          const videoUrl =
-            uploadResult.videoUrl ??
-            uploadResult.objectKey;
+          const videoUrl = uploadResult.videoUrl ?? uploadResult.objectKey;
           
           if (!videoUrl) {
             throw new Error("영상 업로드 응답에 videoUrl/objectKey가 없습니다.");
           }
-          
-          console.log("분석에 넘기는 videoUrl:", videoUrl);
           
           setAnalysisProgress(55);
           
           const result = await analyzeEyeBlinkingByVideoUrl({
             videoUrl,
           });
-
-          console.log("눈 깜빡임 분석 결과:", result);
 
           if (typeof window !== "undefined") {
             localStorage.setItem(
@@ -189,6 +182,12 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
       };
 
       mediaRecorderRef.current.stop();
+
+      // 카메라 백그라운드 트랙 완전 종료 (웹캠 불빛 꺼짐)
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
     }
   }, [step]);
 
@@ -243,11 +242,8 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
         jobRoleId: selectedJob,
       });
 
-      console.log("질문 조회 성공", response);
-
       setQuestions(response);
       setCurrentQuestionIdx(0);
-
       setStep("prepare");
     } catch (error) {
       console.error("질문 조회 실패", error);
@@ -271,9 +267,9 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   };
 
   const handleFinalExit = () => {
-  streamRef.current?.getTracks().forEach((track) => track.stop());
-  onExit(); // ← router.push 대신 prop 사용
-};
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    onExit(); 
+  };
 
   // ── 분석 화면 (별도 풀스크린) ─────────────────────────────────
   if (step === "analyzing") {
@@ -309,7 +305,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   : "면접 촬영 완료! AI 데이터 정밀 분석 중..."}
             </h2>
             <p className="text-sm text-muted">
-              <span className="font-bold text-navy">{selectedJob}</span> 직무 기준으로 녹화 영상을 Spring으로 전송하고, Spring이 FastAPI 분석을 요청합니다.
+              <span className="font-bold text-navy">{selectedJobData?.name || selectedJob}</span> 직무 기준으로 녹화 영상을 Spring으로 전송하고, Spring이 FastAPI 분석을 요청합니다.
             </p>
           </div>
 
@@ -407,10 +403,10 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="w-full max-w-sm bg-white rounded-[32px] shadow-2xl border border-white/30 p-8"
+            className="w-full max-w-[420px] bg-white rounded-[32px] shadow-2xl border border-white/30 p-8"
           >
             {/* 헤더 */}
-            <div className="flex items-center gap-3 mb-7">
+            <div className="flex items-center gap-3 mb-6">
               <div className="h-10 w-10 rounded-2xl bg-navy flex items-center justify-center shrink-0">
                 <Briefcase className="h-5 w-5 text-white" />
               </div>
@@ -419,61 +415,79 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   직무를 선택해 주세요
                 </h2>
                 <p className="text-xs text-muted mt-0.5">
-                  직무에 맞는 면접 질문이 출제됩니다
+                  계열을 먼저 선택하면 세부 직무가 나타납니다.
                 </p>
               </div>
             </div>
 
-            {/* 카테고리 탭 */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="grid grid-cols-2 gap-2 mb-6"
-              >
-                {jobRoles.map((job) => {
-                  const isSelected = selectedJob === job.id;
+            {/* 대분류 탭 (스크롤 가능) */}
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-hide">
+              {uniqueCategories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedCategory(category);
+                    setSelectedJob(null); // 카테고리 변경 시 선택된 직무 초기화
+                  }}
+                  className={`shrink-0 px-4 py-2.5 rounded-full text-xs font-bold transition-colors ${
+                    selectedCategory === category
+                      ? "bg-navy text-white shadow-md shadow-navy/10"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
 
-                  return (
-                    <button
-                      key={job.id}
-                      onClick={() => setSelectedJob(job.id)}
-                      className={`py-3 px-3 rounded-xl text-sm font-semibold border-2 transition-all duration-200 text-left ${
-                        isSelected
-                          ? "border-navy bg-blue-50 text-navy"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 bg-white"
-                      }`}
-                    >
-                      <span
-                        className={`block w-2 h-2 rounded-full mb-1.5 ${
-                          isSelected ? "bg-navy" : "bg-gray-300"
+            {/* 세부 직무 칩(Chip) 영역 */}
+            <div className="mb-8 min-h-[140px]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={selectedCategory}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.2 }}
+                  className="grid grid-cols-2 gap-2.5 content-start"
+                >
+                  {filteredJobs.length > 0 ? (
+                    filteredJobs.map((job) => (
+                      <button
+                        key={job.id}
+                        onClick={() => setSelectedJob(job.id)}
+                        className={`px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all border-2 flex items-center justify-between group ${
+                          selectedJob === job.id
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100"
                         }`}
-                      />
-
-                      <div>{job.name}</div>
-
-                      <div className="text-xs text-gray-400 mt-1">
-                        {job.category}
-                      </div>
-                    </button>
-                  );
-                })}
-              </motion.div>
-            </AnimatePresence>
+                      >
+                        <span className="truncate pr-2">{job.name}</span>
+                        {selectedJob === job.id && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-500" />
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center text-xs text-gray-400 py-6">
+                      데이터를 불러오는 중입니다...
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
             {/* 시작 버튼 — 직무 선택 전까지 비활성화 */}
             <button
               disabled={!selectedJob}
               onClick={() => handleStartInterview()}
-              className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 ${
+              className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4.5 text-sm font-bold transition-all duration-200 ${
                 selectedJob
-                  ? "bg-navy text-white hover:bg-navy-dark shadow-md shadow-navy/20 hover:-translate-y-0.5"
+                  ? "bg-navy text-white hover:bg-navy-dark shadow-lg shadow-navy/20 hover:-translate-y-0.5"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {selectedJob ? `${jobRoles.find(job => job.id === selectedJob)?.name} 면접 시작하기` : "직무를 선택해 주세요"}
+              {selectedJobData ? `${selectedJobData.name} 면접 시작하기` : "세부 직무를 선택해 주세요"}
               {selectedJob && <ChevronRight className="h-4 w-4" />}
             </button>
           </motion.div>
@@ -496,13 +510,13 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   className="flex flex-col items-center gap-2"
                 >
                   <div className="flex items-center gap-2 rounded-full bg-black/60 px-8 py-3 text-sm font-medium text-white backdrop-blur-md border border-white/10">
-                    아이콘 라인에 상체를 맞춰주세요.
+                    아이콘에 얼굴을 맞춰주세요.
                   </div>
-                  {/* 선택된 직무 배지 */}
+                  {/* 선택된 직무명 표기 */}
                   <div className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white border border-white/20">
-                    <span className="opacity-70">{jobRoles.at(selectedJob!)?.name}</span>
+                    <span className="opacity-70">{selectedJobData?.category}</span>
                     <span className="opacity-40">·</span>
-                    <span>{jobRoles.at(selectedJob!)?.name}</span>
+                    <span>{selectedJobData?.name}</span>
                   </div>
                 </motion.div>
               )}
@@ -519,7 +533,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                       AI Live Question
                     </span>
                     <span className="text-[10px] font-bold text-gray-400">
-                      {jobRoles.at(selectedJob!)?.category} · {jobRoles.at(selectedJob!)?.name}
+                      {selectedJobData?.category} · {selectedJobData?.name}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-navy mt-1 leading-snug">
@@ -536,19 +550,22 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 0.5 }}
-                className="pointer-events-none w-[500px] h-[500px] text-white flex items-center justify-center drop-shadow-2xl"
+                // 화면 잘림 해결: 고정 px 대신 화면 비율에 맞는 반응형 크기(vmin) 적용
+                className="pointer-events-none w-[45vmin] h-[45vmin] max-w-[500px] max-h-[500px] text-white flex items-center justify-center drop-shadow-2xl"
               >
+                {/* 십자가 안내선 (SVG) */}
                 <svg
                   width="100%"
                   height="100%"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="0.8"
-                  strokeDasharray="5 5"
+                  strokeWidth="0.5"
+                  strokeDasharray="1.5 3"
                 >
-                  <circle cx="12" cy="7" r="4.2" />
-                  <path d="M3,21 C3,15.5 7,13 12,13 C17,13 21,15.5 21,21" strokeLinecap="round" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <line x1="12" y1="2" x2="12" y2="22" />
+                  <circle cx="12" cy="12" r="3" strokeDasharray="none" />
                 </svg>
               </motion.div>
             )}
@@ -661,4 +678,3 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     </div>
   );
 }
-
