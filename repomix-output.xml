@@ -71,6 +71,7 @@ app/
 components/
   dashboard/
     AnalyticsSection.tsx
+    LatestEyeBlinkingCard.tsx
     Sidebar.tsx
     StatCard.tsx
     Topbar.tsx
@@ -126,172 +127,6 @@ export default function FaqPage() {
     <main className="flex min-h-screen items-center justify-center bg-bg p-8">
       <h1 className="text-3xl font-bold text-ink">자주하는 질문 페이지 (준비 중)</h1>
     </main>
-  );
-}
-</file>
-
-<file path="app/mypage/settings/page.tsx">
-"use client";
-
-import { useState, useEffect } from "react";
-import { useTheme } from "next-themes"; 
-import Sidebar from "@/components/dashboard/Sidebar";
-import Topbar from "@/components/dashboard/Topbar";
-import { User, Monitor, Mic, Moon, Menu, X, Camera } from "lucide-react";
-
-export default function SettingsPage() {
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
-  
-  const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && theme === "dark";
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-bg font-sans text-ink relative transition-colors duration-300">
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
-      <div className={`
-        fixed inset-y-0 left-0 z-50 transform bg-white dark:bg-[#111827] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:shrink-0
-        ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      `}>
-        <Sidebar onMenuClick={() => setIsMobileSidebarOpen(false)} />
-        <button 
-          className="absolute top-6 right-4 lg:hidden rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        >
-          <X className="h-5 w-5 text-muted" />
-        </button>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-y-auto w-full">
-        <div className="flex items-center px-6 pt-6 lg:px-10 lg:pt-8 w-full">
-          <button 
-            className="mr-4 lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-            onClick={() => setIsMobileSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6 text-navy" />
-          </button>
-          <div className="flex-1">
-            <Topbar />
-          </div>
-        </div>
-
-        <main className="px-6 pb-12 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full max-w-4xl mx-auto">
-          <div className="flex flex-col gap-8 animate-in fade-in duration-300">
-            
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-navy">설정</h2>
-              <p className="mt-2 text-sm text-muted">계정 정보 및 기기, 디스플레이 환경을 설정합니다.</p>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              
-              {/* 계정 관리 */}
-              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg"><User className="h-5 w-5" /></div>
-                  <h3 className="text-lg font-bold text-navy">계정 관리</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-line/50">
-                    <div>
-                      <p className="font-medium text-ink">연결된 계정</p>
-                      <p className="text-xs text-muted mt-1">카카오 소셜 로그인 연동 중</p>
-                    </div>
-                    <span className="px-3 py-1 bg-[#FEE500] text-[#191600] text-xs font-bold rounded-full">Kakao</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-line/50">
-                    <div>
-                      <p className="font-medium text-ink">이름</p>
-                    </div>
-                    <p className="text-sm font-bold text-navy">김은재</p>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <p className="font-medium text-ink">계정 탈퇴</p>
-                    <button className="text-xs font-medium text-red-500 hover:text-red-600">탈퇴하기</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 기기 및 하드웨어 설정 */}
-              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg"><Monitor className="h-5 w-5" /></div>
-                  <h3 className="text-lg font-bold text-navy">기기 및 권한 설정</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-line/50">
-                    <div className="flex items-center gap-3">
-                      <Camera className="h-5 w-5 text-muted" />
-                      <div>
-                        <p className="font-medium text-ink">웹캠(카메라) 권한</p>
-                        <p className="text-xs text-muted mt-1">면접 분석을 위한 필수 권한입니다.</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setCameraEnabled(!cameraEnabled)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${cameraEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${cameraEnabled ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <div className="flex items-center gap-3">
-                      <Mic className="h-5 w-5 text-muted" />
-                      <div>
-                        <p className="font-medium text-ink">마이크 권한</p>
-                        <p className="text-xs text-muted mt-1">음성 분석 및 속도 측정을 위해 필요합니다.</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setMicEnabled(!micEnabled)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${micEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${micEnabled ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 디스플레이 및 접근성 (고대비 모드 제거됨) */}
-              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg"><Moon className="h-5 w-5" /></div>
-                  <h3 className="text-lg font-bold text-navy dark:text-white">테마 설정</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3">
-                    <div>
-                      <p className="font-medium text-ink dark:text-white">🦉 심야/새벽 집중 모드</p>
-                      <p className="text-xs text-muted dark:text-gray-400 mt-1">늦은 시간 눈의 피로를 덜어주는 다크 테마를 적용합니다.</p>
-                    </div>
-                    <button 
-                      onClick={() => setTheme(isDark ? "light" : "dark")}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${isDark ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${isDark ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
   );
 }
 </file>
@@ -412,6 +247,98 @@ export default function PracticeLandingPage() {
         </main>
       </div>
     </div>
+  );
+}
+</file>
+
+<file path="components/dashboard/LatestEyeBlinkingCard.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+
+type EyeBlinkingResult = {
+  blink_count?: number;
+  blink_rate?: number;
+  blinks_per_minute?: number;
+  score?: number;
+  feedback?: string;
+  evaluation?: string;
+};
+
+type StoredEyeBlinkingAnalysis = {
+  message?: string;
+  reportId?: number;
+  result?: EyeBlinkingResult;
+  savedAt?: string;
+};
+
+export default function LatestEyeBlinkingCard() {
+  const [analysis, setAnalysis] = useState<StoredEyeBlinkingAnalysis | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("latestEyeBlinkingAnalysis");
+
+    if (!raw) {
+      return;
+    }
+
+    try {
+      setAnalysis(JSON.parse(raw));
+    } catch {
+      localStorage.removeItem("latestEyeBlinkingAnalysis");
+    }
+  }, []);
+
+  const result = analysis?.result;
+
+  return (
+    <section className="rounded-2xl border bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold">눈 깜빡임 분석 결과</h2>
+
+      {!result ? (
+        <p className="mt-4 text-sm text-gray-500">
+          아직 저장된 눈 깜빡임 분석 결과가 없습니다.
+        </p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">깜빡임 횟수</p>
+              <p className="mt-1 text-2xl font-bold">
+                {result.blink_count ?? "-"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">분당 깜빡임</p>
+              <p className="mt-1 text-2xl font-bold">
+                {result.blink_rate ?? result.blinks_per_minute ?? "-"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">점수</p>
+              <p className="mt-1 text-2xl font-bold">
+                {result.score ?? "-"}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-sm text-gray-500">피드백</p>
+            <p className="mt-1 text-sm">
+              {result.feedback ?? result.evaluation ?? analysis.message ?? "분석 결과가 저장되었습니다."}
+            </p>
+          </div>
+
+          {analysis.savedAt && (
+            <p className="text-xs text-gray-400">
+              저장 시간: {new Date(analysis.savedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 </file>
@@ -662,209 +589,6 @@ export default config;
 }
 </file>
 
-<file path="app/features/page.tsx">
-"use client";
-
-import { motion } from "framer-motion";
-import Navbar from "@/components/shared/Navbar";
-import Footer from "@/components/shared/Footer";
-import { Camera, Mic, FileText, Activity, CheckCircle, ArrowRight } from "lucide-react";
-import Link from "next/link";
-import type { Variants } from "framer-motion";
-
-// ✅ ease 배열을 [number, number, number, number] 튜플로 명시 → 타입 오류 해결
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
-};
-
-export default function FeaturesPage() {
-  return (
-    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300">
-      <Navbar />
-
-      {/* 1. 히어로 섹션 — 바이올렛 + 민트 + 코랄 */}
-      <section className="relative flex h-screen w-full items-center justify-center overflow-hidden px-6 text-center pt-20">
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-10 md:-left-20 -top-20 md:-top-40 h-[400px] md:h-[650px] w-[400px] md:w-[650px] rounded-full bg-[#ddd6fe]/40 blur-[100px] md:blur-[150px]" />
-          <div className="absolute top-10 -right-10 md:-right-20 h-[500px] md:h-[750px] w-[500px] md:w-[750px] rounded-full bg-[#99f6e4]/35 blur-[120px] md:blur-[170px]" />
-          <div className="absolute bottom-[-100px] md:bottom-[-150px] left-1/4 h-[400px] md:h-[600px] w-[400px] md:w-[600px] rounded-full bg-[#fca5a5]/25 blur-[100px] md:blur-[140px]" />
-        </div>
-
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="relative z-10 max-w-3xl"
-        >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/60 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-sm font-bold tracking-wide mb-6 border border-violet-100 dark:border-violet-800 backdrop-blur-md">
-            CORE FEATURES
-          </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white tracking-tight leading-tight">
-            면접의 모든 순간을<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-teal-500">데이터로 완벽하게 분석하다</span>
-          </h1>
-          <p className="mt-6 text-lg text-muted dark:text-gray-400 leading-relaxed break-keep max-w-2xl mx-auto">
-            인터뷰핏은 단순한 녹화 도구가 아닙니다. 당신의 시선, 목소리의 떨림, 그리고 답변의 논리 구조까지 3D AI 엔진이 정밀하게 스캔하여 합격의 지름길을 안내합니다.
-          </p>
-        </motion.div>
-      </section>
-
-      {/* 2. 기능 스크롤텔링 */}
-      <section className="w-full max-w-[1280px] mx-auto px-6 py-20 flex flex-col gap-32">
-
-        {/* 기능 1: 시각 분석 */}
-        <motion.div
-          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
-          className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20"
-        >
-          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <Camera className="h-6 w-6" />
-            </div>
-            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug">
-              AI가 당신의 눈동자와<br />자세를 추적합니다.
-            </h2>
-            <p className="text-muted dark:text-gray-400 leading-relaxed">
-              카메라 정면 응시율, 고개 숙임 빈도, 그리고 미세한 표정 변화까지. Face Mesh 기술을 통해 면접관에게 신뢰감을 주는 최적의 비주얼 피드백을 제공합니다.
-            </p>
-            <ul className="space-y-3 mt-4">
-              {["초당 30프레임 안구 추적 및 화면 이탈 감지", "코/턱/어깨 좌표 기반 자세 불안정 및 고개 숙임 분석", "입가 비대칭 및 부정적 감정(불안, 화남 등) 비율 측정"].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm font-medium text-ink dark:text-gray-300 leading-relaxed">
-                  <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" /> {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-br from-emerald-100/50 to-white dark:from-[#1e293b] dark:to-[#0f1729] border border-black/5 dark:border-white/10 shadow-lg p-8 overflow-hidden flex items-center justify-center">
-            <div className="relative z-10 w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-black/5 dark:border-white/10 p-6">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">VISUAL TRACKING</span>
-                <span className="text-2xl font-bold text-navy dark:text-white">82%</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 w-[82%] rounded-full" />
-              </div>
-              <p className="mt-4 text-xs text-center text-muted dark:text-gray-400">카메라 정면 응시율이 우수합니다.</p>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* 기능 2: 청각 분석 */}
-        <motion.div
-          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
-          className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20"
-        >
-          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
-            <div className="h-12 w-12 rounded-2xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-              <Mic className="h-6 w-6" />
-            </div>
-            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug">
-              떨리는 목소리와 침묵의<br />순간도 놓치지 않습니다.
-            </h2>
-            <p className="text-muted dark:text-gray-400 leading-relaxed">
-              긴장하면 말이 빨라지거나 침묵이 길어지나요? 분당 발화 단어 수(WPM)와 오디오 파형 분석으로 가장 안정적인 목소리 톤과 템포를 찾아드립니다.
-            </p>
-            <ul className="space-y-3 mt-4">
-              {["실시간 WPM(발화 속도) 측정 및 적절성 판정", "3초 이상 무음 구간(침묵) 탐지 및 흐름 단절 분석", '"어, 음" 등 무의미한 습관어 횟수 카운팅', "오디오 파형 진폭 분석을 통한 음량 편차 안정성 체크"].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm font-medium text-ink dark:text-gray-300 leading-relaxed">
-                  <CheckCircle className="h-5 w-5 text-amber-500 shrink-0" /> {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-          {/* ✅ aspect-video 제거 → max-h 고정, 바 높이 px 단위 */}
-          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-bl from-amber-100/50 to-white dark:from-[#1e293b] dark:to-[#0f1729] border border-black/5 dark:border-white/10 shadow-lg p-8 overflow-hidden flex items-center justify-center">
-            <div className="relative z-10 w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-black/5 dark:border-white/10 p-6">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">AUDIO ANALYSIS</span>
-                <Activity className="h-5 w-5 text-amber-500" />
-              </div>
-              <div className="flex items-end gap-1 h-12 w-full">
-                {[19, 34, 22, 43, 29, 38, 24, 48, 31, 14].map((heightPx, i) => (
-                  <div key={i} className="flex-1 bg-amber-400 rounded-t-sm opacity-80" style={{ height: `${heightPx}px` }} />
-                ))}
-              </div>
-              <div className="flex justify-between mt-4 text-xs font-bold text-navy dark:text-white">
-                <span>125 WPM</span>
-                <span className="text-red-500">습관어 4회 감지</span>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* 기능 3: 논리 분석 */}
-        <motion.div
-          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
-          className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20"
-        >
-          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
-            <div className="h-12 w-12 rounded-2xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-              <FileText className="h-6 w-6" />
-            </div>
-            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug">
-              STAR 기법으로<br />답변의 구조를 완성합니다.
-            </h2>
-            <p className="text-muted dark:text-gray-400 leading-relaxed">
-              사용자의 육성 답변을 텍스트로 변환(STT)한 뒤, 상황(S), 과제(T), 행동(A), 결과(R) 구조에 맞게 잘 말했는지 AI가 문맥을 뜯어보고 논리성을 평가합니다.
-            </p>
-            <ul className="space-y-3 mt-4">
-              {["Whisper STT 기반 정밀 텍스트 변환", "STAR 구조 매칭률 분석 및 직무 핵심 키워드 추출", "답변 내용을 기반으로 한 압박 꼬리 질문(Follow-up) 자동 생성"].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm font-medium text-ink dark:text-gray-300 leading-relaxed">
-                  <CheckCircle className="h-5 w-5 text-purple-500 shrink-0" /> {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-br from-purple-100/50 to-white dark:from-[#1e293b] dark:to-[#0f1729] border border-black/5 dark:border-white/10 shadow-lg p-8 overflow-hidden flex items-center justify-center">
-            <div className="relative z-10 w-full max-w-sm bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-black/5 dark:border-white/10 p-6 flex flex-col gap-3">
-              {[
-                { label: "S/T", text: "프로젝트 기간이 촉박한 상황에서..." },
-                { label: "A",   text: "우선순위를 정해 팀원들과 역할을 분담하고..." },
-                { label: "R",   text: "성공적으로 런칭하여 우수상을 받았습니다." },
-              ].map((row) => (
-                <div key={row.label} className="flex gap-3 items-start p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20">
-                  <div className="px-2 py-1 bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 text-[10px] font-bold rounded">{row.label}</div>
-                  <p className="text-xs text-navy dark:text-gray-300 leading-relaxed">{row.text}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-
-      </section>
-
-      {/* 3. CTA */}
-      <motion.section
-        initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-        className="w-full max-w-[1280px] mx-auto px-6 py-24 mb-12 flex flex-col items-center text-center"
-      >
-        <h2 className="text-3xl font-bold text-navy dark:text-white mb-8">이제 직접 경험해 볼 차례입니다.</h2>
-        <Link
-          href="/practice"
-          className="flex items-center gap-3 bg-navy dark:bg-white text-white dark:text-navy px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl"
-        >
-          모의면접 스튜디오 입장하기
-          <ArrowRight className="h-5 w-5" />
-        </Link>
-      </motion.section>
-
-      <Footer />
-    </main>
-  );
-}
-</file>
-
 <file path="app/interview/page.tsx">
 "use client";
 
@@ -897,6 +621,288 @@ export default function LoginPage() {
         <LoginCard />
       </div>
     </main>
+  );
+}
+</file>
+
+<file path="app/mypage/settings/page.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes"; 
+import Sidebar from "@/components/dashboard/Sidebar";
+import Topbar from "@/components/dashboard/Topbar";
+import { User, Monitor, Mic, Moon, Menu, X, Camera, Briefcase, RefreshCcw } from "lucide-react";
+
+const JOB_CATEGORIES = [
+  { label: "IT/개발", jobs: ["프론트엔드", "백엔드", "AI", "데이터분석"] },
+  { label: "비즈니스", jobs: ["마케팅", "인사", "재무·회계"] },
+  { label: "디자인", jobs: ["UX/UI 디자이너", "영상 제작", "그래픽 디자이너"] },
+];
+
+export default function SettingsPage() {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
+  
+  const [jobCategory, setJobCategory] = useState("IT/개발");
+  const [jobName, setJobName] = useState("프론트엔드");
+  
+  // 💡 [추가] 저장 상태를 알려주는 메시지 상태
+  const [saveMessage, setSaveMessage] = useState("");
+  
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+    const savedCat = localStorage.getItem("userCategory");
+    const savedJob = localStorage.getItem("userJob");
+    if (savedCat) setJobCategory(savedCat);
+    if (savedJob) setJobName(savedJob);
+  }, []);
+
+  const isDark = mounted && theme === "dark";
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cat = e.target.value;
+    setJobCategory(cat);
+    const firstJob = JOB_CATEGORIES.find(c => c.label === cat)?.jobs[0] || "";
+    setJobName(firstJob);
+  };
+
+  const handleJobChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setJobName(e.target.value);
+  };
+
+  // 💡 [추가] 사용자가 직접 저장 버튼을 눌렀을 때만 로컬스토리지에 반영
+  const handleSaveJobSettings = () => {
+    localStorage.setItem("userCategory", jobCategory);
+    localStorage.setItem("userJob", jobName);
+    
+    // 저장 완료 피드백을 2.5초간 보여줍니다.
+    setSaveMessage("저장 완료!");
+    setTimeout(() => {
+      setSaveMessage("");
+    }, 2500);
+  };
+
+  // 💡 [추가] 시연을 위한 완벽 초기화 기능 (최초 팝업 다시 띄우기)
+  const handleResetPopup = () => {
+    if (window.confirm("직무 설정을 초기화하시겠습니까?\n다음 면접 연습 시작 시 최초 직무 선택 팝업이 다시 나타납니다.")) {
+      localStorage.removeItem("userCategory");
+      localStorage.removeItem("userJob");
+      alert("초기화되었습니다. 연습 스튜디오 입장 시 팝업이 나타납니다.");
+    }
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-bg font-sans text-ink relative transition-colors duration-300">
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      <div className={`
+        fixed inset-y-0 left-0 z-50 transform bg-white dark:bg-[#111827] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:shrink-0
+        ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}>
+        <Sidebar onMenuClick={() => setIsMobileSidebarOpen(false)} />
+        <button 
+          className="absolute top-6 right-4 lg:hidden rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        >
+          <X className="h-5 w-5 text-muted" />
+        </button>
+      </div>
+
+      <div className="flex flex-1 flex-col overflow-y-auto w-full">
+        <div className="flex items-center px-6 pt-6 lg:px-10 lg:pt-8 w-full">
+          <button 
+            className="mr-4 lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            onClick={() => setIsMobileSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6 text-navy" />
+          </button>
+          <div className="flex-1">
+            <Topbar />
+          </div>
+        </div>
+
+        <main className="px-6 pb-12 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full max-w-4xl mx-auto">
+          <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+            
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-navy">설정</h2>
+              <p className="mt-2 text-sm text-muted">계정 정보 및 기기, 디스플레이 환경을 설정합니다.</p>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              
+              {/* 계정 관리 */}
+              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg"><User className="h-5 w-5" /></div>
+                  <h3 className="text-lg font-bold text-navy">계정 관리</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3 border-b border-line/50">
+                    <div>
+                      <p className="font-medium text-ink">연결된 계정</p>
+                      <p className="text-xs text-muted mt-1">카카오 소셜 로그인 연동 중</p>
+                    </div>
+                    <span className="px-3 py-1 bg-[#FEE500] text-[#191600] text-xs font-bold rounded-full">Kakao</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-line/50">
+                    <div>
+                      <p className="font-medium text-ink">이름</p>
+                    </div>
+                    <p className="text-sm font-bold text-navy">김은재</p>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <p className="font-medium text-ink">계정 탈퇴</p>
+                    <button className="text-xs font-medium text-red-500 hover:text-red-600">탈퇴하기</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── [수정] 면접 직무 설정 (저장 및 초기화 버튼 추가) ── */}
+              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                    <Briefcase className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-navy">면접 직무 설정</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3 border-b border-line/50">
+                    <div>
+                      <p className="font-medium text-ink">대분류 카테고리</p>
+                      <p className="text-xs text-muted mt-1">모의면접의 기본 직군입니다.</p>
+                    </div>
+                    <select
+                      value={jobCategory}
+                      onChange={handleCategoryChange}
+                      className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                    >
+                      {JOB_CATEGORIES.map(cat => (
+                        <option key={cat.label} value={cat.label}>{cat.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-between items-center py-3 border-b border-line/50">
+                    <div>
+                      <p className="font-medium text-ink">세부 희망 직무</p>
+                      <p className="text-xs text-muted mt-1">질문 생성에 참고될 직무입니다.</p>
+                    </div>
+                    <select
+                      value={jobName}
+                      onChange={handleJobChange}
+                      className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                    >
+                      {JOB_CATEGORIES.find(c => c.label === jobCategory)?.jobs.map(job => (
+                        <option key={job} value={job}>{job}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 💡 [추가] 설정 저장 및 초기화 액션 영역 */}
+                  <div className="flex justify-between items-center pt-4">
+                    <button 
+                      onClick={handleResetPopup}
+                      className="flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-500 transition-colors"
+                    >
+                      <RefreshCcw className="h-3 w-3" />
+                      최초 팝업 다시 보기 (초기화)
+                    </button>
+                    
+                    <div className="flex items-center gap-4">
+                      {saveMessage && (
+                        <span className="text-sm font-bold text-emerald-500 animate-in fade-in duration-300">
+                          {saveMessage}
+                        </span>
+                      )}
+                      <button 
+                        onClick={handleSaveJobSettings}
+                        className="rounded-xl bg-navy px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-navy-dark transition-colors"
+                      >
+                        변경사항 저장
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 기기 및 하드웨어 설정 */}
+              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg"><Monitor className="h-5 w-5" /></div>
+                  <h3 className="text-lg font-bold text-navy">기기 및 권한 설정</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3 border-b border-line/50">
+                    <div className="flex items-center gap-3">
+                      <Camera className="h-5 w-5 text-muted" />
+                      <div>
+                        <p className="font-medium text-ink">웹캠(카메라) 권한</p>
+                        <p className="text-xs text-muted mt-1">면접 분석을 위한 필수 권한입니다.</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setCameraEnabled(!cameraEnabled)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${cameraEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${cameraEnabled ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
+                    </button>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <div className="flex items-center gap-3">
+                      <Mic className="h-5 w-5 text-muted" />
+                      <div>
+                        <p className="font-medium text-ink">마이크 권한</p>
+                        <p className="text-xs text-muted mt-1">음성 분석 및 속도 측정을 위해 필요합니다.</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setMicEnabled(!micEnabled)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${micEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${micEnabled ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 디스플레이 설정 */}
+              <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] dark:border-white/[0.05] transition-colors duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg"><Moon className="h-5 w-5" /></div>
+                  <h3 className="text-lg font-bold text-navy dark:text-white">테마 설정</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3">
+                    <div>
+                      <p className="font-medium text-ink dark:text-white">🦉 심야/새벽 집중 모드</p>
+                      <p className="text-xs text-muted dark:text-gray-400 mt-1">늦은 시간 눈의 피로를 덜어주는 다크 테마를 적용합니다.</p>
+                    </div>
+                    <button 
+                      onClick={() => setTheme(isDark ? "light" : "dark")}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${isDark ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${isDark ? "left-6.5 translate-x-[2px]" : "left-0.5"}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
 </file>
@@ -1459,155 +1465,6 @@ function KakaoIcon() {
 }
 </file>
 
-<file path="lib/api.ts">
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
-export type JobRole = {
-  id: number;
-  category: string;
-  name: string;
-};
-
-export type VideoUploadResponse = {
-  videoUrl?: string;
-  objectKey?: string;
-  [key: string]: unknown;
-};
-
-export type EyeBlinkingRawResult = {
-  total_frames?: number;
-  fps?: number;
-  duration_seconds?: number;
-  face_detected_frames?: number;
-  blink_count?: number;
-  blinks_per_minute?: number;
-  average_ear?: number;
-  blink_timestamps?: number[];
-  evaluation?: string;
-  blink_rate?: number;
-  score?: number;
-  feedback?: string;
-  [key: string]: unknown;
-};
-
-export type EyeBlinkingAnalyzeResponse = {
-  message?: string;
-  reportId?: number;
-  result?: EyeBlinkingRawResult;
-  data?: EyeBlinkingRawResult;
-  [key: string]: unknown;
-};
-
-export type FollowUpCreateResponse = {
-  message?: string;
-  followUpQuestionId?: number;
-  followUpQuestion?: string;
-  follow_up_question?: string;
-  [key: string]: unknown;
-};
-
-export async function getJobRoles(): Promise<JobRole[]> {
-  const response = await fetch(`${API_BASE_URL}/api/job-role/all`, {
-    method: "GET",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`직무 목록 조회 실패: ${errorText}`);
-  }
-
-  return response.json();
-}
-
-export async function createFollowUpQuestion(params: {
-  jobRoleId?: number;
-  job?: string;
-  originalQuestion: string;
-  answer: string;
-  interviewStyle?: string;
-  userId?: number;
-  interviewId?: number;
-}): Promise<FollowUpCreateResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/followup/create`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      jobRoleId: params.jobRoleId,
-      job: params.job,
-      original_question: params.originalQuestion,
-      answer: params.answer,
-      interview_style: params.interviewStyle ?? "normal",
-      userId: params.userId,
-      interviewId: params.interviewId,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`꼬리질문 생성 실패: ${errorText}`);
-  }
-
-  return response.json();
-}
-
-export async function uploadVideo(params: {
-  file: File | Blob;
-  fileName?: string;
-}): Promise<VideoUploadResponse> {
-  const formData = new FormData();
-
-  formData.append("file", params.file, params.fileName ?? "interview.webm");
-
-  const response = await fetch(`${API_BASE_URL}/videos/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`영상 업로드 실패: ${errorText}`);
-  }
-
-  return response.json();
-}
-
-export async function analyzeEyeBlinking(params: {
-  file: Blob;
-  userId?: number;
-  interviewId?: number;
-}): Promise<EyeBlinkingAnalyzeResponse> {
-  const formData = new FormData();
-
-  formData.append("file", params.file, "interview.webm");
-
-  if (params.userId !== undefined) {
-    formData.append("userId", String(params.userId));
-  }
-
-  if (params.interviewId !== undefined) {
-    formData.append("interviewId", String(params.interviewId));
-  }
-
-  const response = await fetch(
-    `${API_BASE_URL}/api/eye-blinking/analyze/upload`,
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`눈 깜빡임 분석 실패: ${errorText}`);
-  }
-
-  return response.json();
-}
-</file>
-
 <file path=".gitignore">
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
@@ -1757,1119 +1614,195 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ```
 </file>
 
-<file path="app/about/page.tsx">
+<file path="app/features/page.tsx">
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { Variants } from "framer-motion";
-import Navbar from "@/components/shared/Navbar";
-import Footer from "@/components/shared/Footer";
-import Link from "next/link";
-import {
-  Coffee, GitBranch, Zap, Heart,
-  ArrowRight, Code2, Brain,
-  BarChart3, Layers, Server, Cpu,
-} from "lucide-react";
-
-// ─── 타입 ────────────────────────────────────────────────────────
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: EASE },
-  }),
-};
-
-// ─── 팀원 데이터 ──────────────────────────────────────────────────
-const TEAM = [
-  {
-    role: "Backend Lead 👑",
-    roleKo: "팀장",
-    name: "현진",
-    icon: <Layers className="h-8 w-8" />,
-    color: "from-emerald-400 to-teal-500",
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    mbti: "INTP",
-    coffeeCount: "하루 3잔 (팀장이니까)",
-    darkHistory: "최종 면접에서 '팀장 경험 있으세요?'에 5분째 대답 못함",
-    quote: "코드는 혼자 짜는 게 아닙니다. 팀이 함께 설계하는 겁니다.",
-    tags: ["Spring", "Node.js", "AWS"],
-  },
-  {
-    role: "AI Engineer",
-    roleKo: "백엔드 현진",
-    name: "현진",
-    icon: <Brain className="h-8 w-8" />,
-    color: "from-violet-400 to-purple-500",
-    bg: "bg-violet-50 dark:bg-violet-900/20",
-    mbti: "ENFP",
-    coffeeCount: "새벽 2시에도 마심",
-    darkHistory: "'딥러닝이 뭔지 설명해보세요'에 오버피팅 얘기만 10분 함",
-    quote: "데이터는 거짓말을 하지 않습니다. 다만 우리가 잘못 읽을 뿐이죠.",
-    tags: ["PyTorch", "OpenCV", "Whisper"],
-  },
-  {
-    role: "Backend Developer",
-    roleKo: "백엔드 보영",
-    name: "보영",
-    icon: <Server className="h-8 w-8" />,
-    color: "from-rose-400 to-pink-500",
-    bg: "bg-rose-50 dark:bg-rose-900/20",
-    mbti: "INFP",
-    coffeeCount: "커피대신 냉수마찰",
-    darkHistory: "서버 배포하다 실수로 프로덕션 DB 날릴 뻔함 (다행히 백업 있었음)",
-    quote: "조용히 돌아가는 API가 가장 아름다운 코드입니다.",
-    tags: ["Spring", "MySQL", "Docker"],
-  },
-  {
-    role: "Backend / AI",
-    roleKo: "백엔드 예은",
-    name: "예은",
-    icon: <Cpu className="h-8 w-8" />,
-    color: "from-amber-400 to-orange-500",
-    bg: "bg-amber-50 dark:bg-amber-900/20",
-    mbti: "ISTJ",
-    coffeeCount: "커피 대신 녹차",
-    darkHistory: "면접 전날 밤새 준비하다가 면접 당일 지각, 그래도 합격함 (전설)",
-    quote: "백엔드와 AI 사이 어딘가에서 오늘도 디버깅 중입니다.",
-    tags: ["Python", "FastAPI", "SQL"],
-  },
-  {
-    role: "Frontend Developer",
-    roleKo: "프론트엔드 은재",
-    name: "은재",
-    icon: <Code2 className="h-8 w-8" />,
-    color: "from-blue-400 to-indigo-500",
-    bg: "bg-blue-50 dark:bg-blue-900/20",
-    mbti: "ENFJ",
-    coffeeCount: "메가리카노로는 부족해",
-    darkHistory: '"1분 자기소개 해보세요"라는 말에 긴장해서 자기 이름을 틀림',
-    quote: "사용자가 아름답다고 느끼는 화면을 만드는 게 제 존재 이유입니다.",
-    tags: ["React", "TypeScript", "Tailwind"],
-  }
-];
-
-const STATS = [
-  { icon: <Coffee className="h-6 w-6" />,    value: "1,247잔",  label: "팀 누적 커피 소비량",   color: "text-amber-400"  },
-  { icon: <GitBranch className="h-6 w-6" />, value: "834회",    label: "GitHub 커밋",           color: "text-blue-400"   },
-  { icon: <Zap className="h-6 w-6" />,       value: "새벽 3시", label: "평균 퇴근(?) 시간",     color: "text-yellow-400" },
-  { icon: <Heart className="h-6 w-6" />,     value: "5명",      label: "함께 고군분투한 팀원",  color: "text-rose-400"   },
-];
-
-const STORY_ITEMS = [
-  {
-    emoji: "😰",
-    title: "우리도 취준생이었습니다",
-    desc: "포트폴리오는 있는데 말이 안 나오고, 말은 나오는데 논리가 없고. 면접이 끝난 뒤 '그 질문에 이렇게 말할걸' 하는 후회를 반복했습니다.",
-  },
-  {
-    emoji: "💡",
-    title: "연습할 공간이 없다는 걸 깨달았습니다",
-    desc: "스터디원에게 부탁하는 것도 한계가 있고, 혼자 거울 앞에서 연습하는 건 피드백이 없었습니다. 객관적인 시각이 필요했지만 어디에도 없었어요.",
-  },
-  {
-    emoji: "🛠️",
-    title: "그래서 직접 만들기 시작했습니다",
-    desc: "졸업 프로젝트이지만 단순 과제로 만들고 싶지 않았습니다. 우리처럼 불안해하는 누군가에게 실제로 도움이 되는 서비스를 만들자고 다짐했습니다.",
-  },
-  {
-    emoji: "🚀",
-    title: "밤새워 만들었습니다, 진짜로",
-    desc: "새벽 2시 편의점 삼각김밥, 카페인 쩐 눈, 깃허브 커밋 메시지에 욕설 포함. 그래도 화면에 결과가 뜨는 순간만큼은 모두 같이 소리질렀습니다.",
-  },
-];
-
-export default function AboutPage() {
-  const [flipped, setFlipped] = useState<number | null>(null);
-
-  return (
-    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300">
-      <Navbar />
-
-      {/* ── 히어로 ── pt/pb 줄여서 아래 섹션과 간격 좁힘 */}
-<section className="relative flex h-screen w-full items-center justify-center overflow-hidden px-6 pt-20">
-
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-20 -top-10 h-[500px] w-[500px] rounded-full bg-[#fecdd3]/35 blur-[140px]" />
-          <div className="absolute -right-20 top-10 h-[520px] w-[520px] rounded-full bg-[#fde68a]/30 blur-[150px]" />
-          <div className="absolute bottom-0 left-1/3 h-[380px] w-[380px] rounded-full bg-[#e9d5ff]/30 blur-[120px]" />
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: EASE }}
-          className="relative z-10 mx-auto max-w-[1280px] flex flex-col items-center text-center"
-        >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-sm font-bold tracking-wide mb-5 border border-rose-100 dark:border-rose-800 backdrop-blur-md">
-            ABOUT US
-          </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white leading-tight">
-            취준생의 불안을{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-amber-400">
-              우리도 압니다
-            </span>
-          </h1>
-          <p className="mt-5 text-base md:text-lg text-muted dark:text-gray-400 leading-relaxed max-w-xl">
-            인터뷰핏은 화려한 스타트업이 만든 서비스가 아닙니다.<br />
-            취업 걱정을 안고 밤샘 코딩하는 학생 개발자들이 만든, 진짜 이야기입니다.
-          </p>
-        </motion.div>
-      </section>
-
-      {/* ── 스토리 타임라인 ── 세로 단일 컬럼 레이아웃으로 통일 */}
-<section className="mx-auto w-full max-w-[860px] px-6 pt-4 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-10 text-center"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-white">
-            우리가 인터뷰핏을 만든 이유
-          </h2>
-        </motion.div>
-
-        {/* 타임라인: 왼쪽 이모지 노드 + 오른쪽 카드 */}
-        <div className="relative flex flex-col gap-6">
-          {/* 세로 연결선 */}
-          <div className="absolute left-[27px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-transparent via-line dark:via-white/10 to-transparent" />
-
-          {STORY_ITEMS.map((item, i) => (
-            <motion.div
-              key={i}
-              custom={i}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-40px" }}
-              variants={fadeUp}
-              className="relative flex items-start gap-5"
-            >
-              {/* 이모지 노드 */}
-              <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#1e293b] border-2 border-line dark:border-white/10 shadow-sm text-2xl">
-                {item.emoji}
-              </div>
-
-              {/* 카드 */}
-              <div className="flex-1 rounded-[20px] bg-white dark:bg-[#1e293b] border border-black/[0.03] dark:border-white/[0.05] p-6 shadow-sm">
-                <h3 className="text-base font-bold text-navy dark:text-white mb-1.5">{item.title}</h3>
-                <p className="text-sm text-muted dark:text-gray-400 leading-relaxed">{item.desc}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 수치 배너 ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="rounded-[32px] bg-[#1f2937] dark:bg-[#1e293b] p-10 md:p-12 relative overflow-hidden"
-        >
-          <div className="absolute -top-20 -right-20 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 text-center mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-white">숫자로 보는 인터뷰핏 개발 여정</h2>
-            <p className="mt-1.5 text-white/50 text-sm">졸업 프로젝트지만, 진심은 졸업급입니다</p>
-          </div>
-
-          <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-6">
-            {STATS.map((stat, i) => (
-              <motion.div
-                key={i} custom={i} initial="hidden" whileInView="visible"
-                viewport={{ once: true }} variants={fadeUp}
-                className="flex flex-col items-center text-center gap-2"
-              >
-                <div className={stat.color}>{stat.icon}</div>
-                <p className="text-2xl md:text-3xl font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-white/50 leading-relaxed">{stat.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── 팀원 카드 ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }} className="mb-8 text-center"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-white">팀원 소개</h2>
-          <p className="mt-2 text-sm text-muted dark:text-gray-400">
-            카드를 클릭하면 면접 흑역사가 공개됩니다 👀
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-          {TEAM.map((member, i) => (
-            <motion.div
-              key={i} custom={i} initial="hidden" whileInView="visible"
-              viewport={{ once: true, margin: "-40px" }} variants={fadeUp}
-              className="cursor-pointer"
-              onClick={() => setFlipped(flipped === i ? null : i)}
-            >
-              <div className="relative w-full" style={{ perspective: "1000px" }}>
-                <AnimatePresence mode="wait" initial={false}>
-                  {flipped !== i ? (
-                    <motion.div
-                      key="front"
-                      initial={{ rotateY: -90, opacity: 0 }}
-                      animate={{ rotateY: 0, opacity: 1 }}
-                      exit={{ rotateY: 90, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="rounded-[24px] bg-white dark:bg-[#1e293b] border border-black/[0.03] dark:border-white/[0.05] p-6 shadow-sm flex flex-col items-center text-center gap-4"
-                    >
-                      <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${member.color} flex items-center justify-center text-white shadow-lg`}>
-                        {member.icon}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-muted dark:text-gray-400 mb-0.5">{member.role}</p>
-                        <p className="text-lg font-bold text-navy dark:text-white">{member.roleKo}</p>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-1.5">
-                        {member.tags.map((tag) => (
-                          <span key={tag} className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${member.bg} text-navy dark:text-white`}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="w-full pt-3 border-t border-line dark:border-white/10 flex justify-between text-xs text-muted dark:text-gray-400">
-                        <span>MBTI</span>
-                        <span className="font-bold text-navy dark:text-white">{member.mbti}</span>
-                      </div>
-                      <div className="w-full flex justify-between text-xs text-muted dark:text-gray-400">
-                        <span>☕ 커피</span>
-                        <span className="font-bold text-navy dark:text-white text-right">{member.coffeeCount}</span>
-                      </div>
-                      <p className="text-[11px] text-muted dark:text-gray-500">탭해서 흑역사 보기 →</p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="back"
-                      initial={{ rotateY: -90, opacity: 0 }}
-                      animate={{ rotateY: 0, opacity: 1 }}
-                      exit={{ rotateY: 90, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className={`rounded-[24px] bg-gradient-to-br ${member.color} p-6 shadow-lg flex flex-col justify-between min-h-[280px]`}
-                    >
-                      <div>
-                        <p className="text-[10px] font-black text-white/70 tracking-widest uppercase mb-3">
-                          😱 면접 최악의 흑역사
-                        </p>
-                        <p className="text-sm font-bold text-white leading-relaxed">
-                          &ldquo;{member.darkHistory}&rdquo;
-                        </p>
-                      </div>
-                      <div className="mt-6 pt-4 border-t border-white/20">
-                        <p className="text-xs text-white/70 italic leading-relaxed">&ldquo;{member.quote}&rdquo;</p>
-                        <p className="text-[10px] text-white/50 mt-2 text-right">— {member.roleKo}</p>
-                      </div>
-                      <p className="text-[11px] text-white/60 mt-4 text-center">탭해서 돌아가기 ↩</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 마지막 CTA ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="rounded-[32px] bg-gradient-to-br from-rose-50 to-amber-50 dark:from-[#1e293b] dark:to-[#1e293b] border border-rose-100/60 dark:border-white/[0.05] p-10 md:p-14 text-center relative overflow-hidden"
-        >
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full bg-rose-200/30 blur-3xl" />
-            <div className="absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-amber-200/30 blur-3xl" />
-          </div>
-          <div className="relative z-10">
-            <p className="text-3xl mb-3">🙏</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-white leading-snug">
-              이 서비스를 사용해 주셔서 감사합니다
-            </h2>
-            <p className="mt-4 text-muted dark:text-gray-400 text-sm md:text-base leading-relaxed max-w-xl mx-auto">
-              우리도 아직 취업을 준비하고 있습니다. 인터뷰핏이 여러분의 합격에 조금이라도 도움이 된다면, 그게 저희에게는 가장 큰 보람입니다.
-            </p>
-            <Link
-              href="/practice"
-              className="mt-8 inline-flex items-center gap-3 rounded-full bg-navy dark:bg-white text-white dark:text-navy px-10 py-4 font-bold text-base hover:scale-105 transition-transform shadow-lg"
-            >
-              지금 바로 연습 시작하기
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </div>
-        </motion.div>
-      </section>
-
-      <Footer />
-    </main>
-  );
-}
-</file>
-
-<file path="app/community/page.tsx">
-"use client";
-
-import { useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
-import {
-  ThumbsUp, MessageCircle, Eye, Flame, CheckCircle2,
-  Lightbulb, Building2, PenLine, ChevronRight, Award,
-} from "lucide-react";
-
-// ─── 타입 ───────────────────────────────────────────────────────
-type Category = "전체" | "합격 후기" | "면접 후기" | "꿀팁 공유" | "기업 정보";
-
-interface Post {
-  id: number;
-  category: Exclude<Category, "전체">;
-  company: string;
-  title: string;
-  excerpt: string;
-  author: string;
-  date: string;
-  views: number;
-  likes: number;
-  comments: number;
-  isPinned?: boolean;
-  isHot?: boolean;
-}
-
-// ─── 카테고리 설정 ───────────────────────────────────────────────
-const CATEGORIES: { label: Category; icon: React.ReactNode; color: string }[] = [
-  { label: "전체", icon: null, color: "" },
-  {
-    label: "합격 후기",
-    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-    color: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/20 dark:border-emerald-800",
-  },
-  {
-    label: "면접 후기",
-    icon: <MessageCircle className="h-3.5 w-3.5" />,
-    color: "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-800",
-  },
-  {
-    label: "꿀팁 공유",
-    icon: <Lightbulb className="h-3.5 w-3.5" />,
-    color: "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-900/20 dark:border-amber-800",
-  },
-  {
-    label: "기업 정보",
-    icon: <Building2 className="h-3.5 w-3.5" />,
-    color: "text-purple-600 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-900/20 dark:border-purple-800",
-  },
-];
-
-// ─── 목 데이터 ────────────────────────────────────────────────────
-const MOCK_POSTS: Post[] = [
-  {
-    id: 1,
-    category: "합격 후기",
-    company: "네이버",
-    title: "네이버 신입 프론트엔드 최종 합격했습니다 🎉 면접 3번 후기 총정리",
-    excerpt:
-      "코테 → 1차 실무 → 2차 임원 면접까지 전 과정을 공유합니다. 인터뷰핏으로 두 달 연습한 결과 시선처리 점수가 68점 → 91점까지 올랐어요.",
-    author: "익명",
-    date: "2026.06.04",
-    views: 4821,
-    likes: 312,
-    comments: 47,
-    isPinned: true,
-    isHot: true,
-  },
-  {
-    id: 2,
-    category: "합격 후기",
-    company: "카카오",
-    title: "카카오 공채 백엔드 합격 후기 — 압박 질문 대처법이 핵심이었어요",
-    excerpt:
-      "2차 면접에서 '왜 카카오여야 하나요?'라는 질문에 버벅였는데 덕분에 연습해뒀던 답변 구조로 커버했습니다. STAR 기법이 정말 효과적이에요.",
-    author: "익명",
-    date: "2026.06.01",
-    views: 3104,
-    likes: 198,
-    comments: 33,
-    isHot: true,
-  },
-  {
-    id: 3,
-    category: "면접 후기",
-    company: "토스",
-    title: "토스 UX 디자이너 1차 면접 후기 — 포트폴리오 질문이 80%였어요",
-    excerpt:
-      "포트폴리오 각 프로젝트의 의사결정 근거를 파고드는 질문이 많았습니다. 직접 그 과정에 대해 논리적으로 설명할 수 있도록 준비하시길 추천드려요.",
-    author: "익명",
-    date: "2026.05.29",
-    views: 2287,
-    likes: 141,
-    comments: 28,
-  },
-  {
-    id: 4,
-    category: "꿀팁 공유",
-    company: "",
-    title: "인터뷰핏으로 WPM 측정하면서 발견한 나쁜 습관 TOP 3",
-    excerpt:
-      "'그니까', '뭐랄까', '좋은 것 같습니다' — AI가 잡아준 습관어 3가지를 고쳤더니 면접관 반응이 완전히 달라졌어요. 구체적인 교정법도 공유합니다.",
-    author: "익명",
-    date: "2026.05.27",
-    views: 1893,
-    likes: 227,
-    comments: 61,
-    isHot: true,
-  },
-  {
-    id: 5,
-    category: "기업 정보",
-    company: "라인",
-    title: "라인 2026 하반기 채용 일정 & 면접 프로세스 정리",
-    excerpt:
-      "공식 채용 공고 기반으로 코딩테스트 → 1차 직무 → 2차 컬쳐핏 면접 순서와 각 단계별 팁을 정리했습니다. 지원 예정이신 분들 참고하세요!",
-    author: "익명",
-    date: "2026.05.25",
-    views: 3412,
-    likes: 189,
-    comments: 22,
-  },
-  {
-    id: 6,
-    category: "면접 후기",
-    company: "당근",
-    title: "당근마켓 데이터분석가 면접 — 실제 데이터 케이스 스터디 나왔습니다",
-    excerpt:
-      "가상의 사용자 이탈 데이터를 주고 분석 방향을 즉석에서 제안하는 문제가 나왔어요. SQL보다 인사이트 도출 능력을 더 중요하게 보는 느낌이었습니다.",
-    author: "익명",
-    date: "2026.05.22",
-    views: 1654,
-    likes: 98,
-    comments: 19,
-  },
-  {
-    id: 7,
-    category: "꿀팁 공유",
-    company: "",
-    title: "면접 전날 밤 루틴 공유 — 이것만 해도 긴장이 반으로 줄어요",
-    excerpt:
-      "거울 앞 5분 발성 연습, 지원 직무 JD 3번 정독, 그리고 인터뷰핏으로 가장 약한 질문 하나만 집중 연습. 단순하지만 효과 확실해요.",
-    author: "익명",
-    date: "2026.05.20",
-    views: 2109,
-    likes: 174,
-    comments: 39,
-  },
-  {
-    id: 8,
-    category: "합격 후기",
-    company: "쿠팡",
-    title: "쿠팡 AI 엔지니어 최종 합격 — 6개월 준비 여정 회고",
-    excerpt:
-      "서류 탈락만 12번. 그래도 포기 안 하고 면접 피드백을 하나하나 분석했어요. 인터뷰핏의 논리성 분석이 답변 구조를 잡는 데 가장 도움됐습니다.",
-    author: "익명",
-    date: "2026.05.18",
-    views: 5233,
-    likes: 441,
-    comments: 72,
-    isHot: true,
-  },
-];
-
-// ─── 카테고리 배지 컴포넌트 ──────────────────────────────────────
-function CategoryBadge({ category }: { category: Exclude<Category, "전체"> }) {
-  const cfg = CATEGORIES.find((c) => c.label === category);
-  return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${cfg?.color}`}>
-      {cfg?.icon}
-      {category}
-    </span>
-  );
-}
-
-// ─── 숫자 포맷 ───────────────────────────────────────────────────
-function fmt(n: number) {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.5, delay: i * 0.07 },
-  }),
-};
-
-// ─── 메인 페이지 ─────────────────────────────────────────────────
-export default function CommunityPage() {
-  const [activeCategory, setActiveCategory] = useState<Category>("전체");
-
-  const filtered =
-    activeCategory === "전체"
-      ? MOCK_POSTS
-      : MOCK_POSTS.filter((p) => p.category === activeCategory);
-
-  const pinned = filtered.filter((p) => p.isPinned);
-  const normal = filtered.filter((p) => !p.isPinned);
-
-  return (
-    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300">
-      <Navbar />
-
-      {/* ── 히어로 섹션 ─────────────────────────────────────────── */}
-      <section className="relative w-full pt-32 pb-20 px-6 overflow-hidden">
-        {/* 배경 블롭 — 커뮤니티 전용 컬러(스카이 + 라임 + 피치) */}
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-20 -top-20 h-[500px] w-[500px] rounded-full bg-[#bae6fd]/35 blur-[130px]" />
-          <div className="absolute -right-20 top-0 h-[600px] w-[600px] rounded-full bg-[#bbf7d0]/30 blur-[150px]" />
-          <div className="absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-[#fed7aa]/25 blur-[120px]" />
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 mx-auto max-w-[1280px] flex flex-col md:flex-row md:items-end justify-between gap-8"
-        >
-          <div>
-            <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 text-sm font-bold tracking-wide mb-5 border border-sky-100 dark:border-sky-800 backdrop-blur-md">
-              COMMUNITY
-            </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-navy dark:text-white leading-tight">
-              혼자 하는 취준의<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-emerald-500">
-                외로움을 달래는 공간
-              </span>
-            </h1>
-            <p className="mt-4 text-base text-muted dark:text-gray-400 leading-relaxed max-w-xl">
-              실제 면접을 다녀온 취준생들의 생생한 후기와 합격 노하우를 공유합니다.<br />
-              우리 모두의 경험이 모여 더 나은 준비가 됩니다.
-            </p>
-          </div>
-
-          {/* 통계 칩 3개 */}
-          <div className="flex gap-3 shrink-0 flex-wrap">
-            {[
-              { label: "누적 후기", value: "2,841", icon: <MessageCircle className="h-4 w-4" /> },
-              { label: "이번 주 합격", value: "38명", icon: <Award className="h-4 w-4" /> },
-              { label: "실시간 접속", value: "127명", icon: <Flame className="h-4 w-4" /> },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="flex items-center gap-3 rounded-2xl bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border border-black/[0.04] dark:border-white/[0.06] px-5 py-3.5 shadow-sm"
-              >
-                <div className="text-sky-500 dark:text-sky-400">{s.icon}</div>
-                <div>
-                  <p className="text-[10px] text-muted dark:text-gray-400 font-medium">{s.label}</p>
-                  <p className="text-base font-bold text-navy dark:text-white">{s.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── 본문 영역 ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-24">
-
-        {/* 필터 탭 + 글쓰기 버튼 */}
-        <div className="flex items-center justify-between gap-4 flex-wrap mb-8">
-          <div className="flex items-center gap-2 flex-wrap">
-            {CATEGORIES.map(({ label, icon, color }) => (
-              <button
-                key={label}
-                onClick={() => setActiveCategory(label)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
-                  activeCategory === label
-                    ? label === "전체"
-                      ? "bg-navy text-white border-navy dark:bg-white dark:text-navy dark:border-white"
-                      : `${color} border`
-                    : "bg-white dark:bg-[#1e293b] text-muted dark:text-gray-400 border-line dark:border-white/10 hover:text-ink dark:hover:text-white"
-                }`}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <button className="flex items-center gap-2 rounded-2xl bg-navy dark:bg-white px-5 py-2.5 text-sm font-bold text-white dark:text-navy shadow-sm hover:opacity-90 transition-opacity shrink-0">
-            <PenLine className="h-4 w-4" />
-            후기 작성하기
-          </button>
-        </div>
-
-        {/* 고정 게시물 (핀) */}
-        {pinned.length > 0 && (
-          <div className="mb-4 flex flex-col gap-3">
-            {pinned.map((post, i) => (
-              <PostCard key={post.id} post={post} index={i} isPinnedSection />
-            ))}
-          </div>
-        )}
-
-        {/* 일반 게시물 */}
-        <div className="flex flex-col gap-3">
-          {normal.map((post, i) => (
-            <PostCard key={post.id} post={post} index={i + pinned.length} />
-          ))}
-        </div>
-
-        {/* 더보기 버튼 */}
-        <div className="mt-10 flex justify-center">
-          <button className="flex items-center gap-2 rounded-full border border-line dark:border-white/10 bg-white dark:bg-[#1e293b] px-8 py-3.5 text-sm font-medium text-muted dark:text-gray-400 hover:text-ink dark:hover:text-white transition-colors shadow-sm">
-            더 많은 후기 보기
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
-
-      <Footer />
-    </main>
-  );
-}
-
-// ─── 게시물 카드 컴포넌트 ────────────────────────────────────────
-function PostCard({
-  post,
-  index,
-  isPinnedSection = false,
-}: {
-  post: Post;
-  index: number;
-  isPinnedSection?: boolean;
-}) {
-  return (
-    <motion.div
-      custom={index}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-30px" }}
-      variants={fadeUp}
-      whileHover={{ y: -2 }}
-      className={`group cursor-pointer rounded-[20px] bg-white dark:bg-[#1e293b] border transition-all shadow-sm hover:shadow-md
-        ${isPinnedSection
-          ? "border-blue-100 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-900/10"
-          : "border-black/[0.03] dark:border-white/[0.05]"
-        }
-      `}
-    >
-      <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
-
-        {/* 왼쪽: 카테고리 + 제목 + 발췌 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            {isPinnedSection && (
-              <span className="text-[10px] font-bold text-blue-500 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">
-                📌 고정
-              </span>
-            )}
-            <CategoryBadge category={post.category} />
-            {post.company && (
-              <span className="text-[11px] font-semibold text-muted dark:text-gray-400 bg-chip dark:bg-[#0f1729] px-2.5 py-1 rounded-full">
-                {post.company}
-              </span>
-            )}
-            {post.isHot && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-orange-500">
-                <Flame className="h-3 w-3" /> HOT
-              </span>
-            )}
-          </div>
-
-          <h3 className="text-base font-bold text-navy dark:text-white leading-snug line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            {post.title}
-          </h3>
-          <p className="mt-1.5 text-sm text-muted dark:text-gray-400 line-clamp-1 leading-relaxed">
-            {post.excerpt}
-          </p>
-        </div>
-
-        {/* 오른쪽: 날짜 + 통계 */}
-        <div className="flex sm:flex-col items-center sm:items-end gap-4 sm:gap-2 shrink-0">
-          <span className="text-xs text-muted dark:text-gray-500">{post.date}</span>
-          <div className="flex items-center gap-3 text-xs text-muted dark:text-gray-500">
-            <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" /> {fmt(post.views)}
-            </span>
-            <span className="flex items-center gap-1">
-              <ThumbsUp className="h-3.5 w-3.5" /> {fmt(post.likes)}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="h-3.5 w-3.5" /> {post.comments}
-            </span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-</file>
-
-<file path="app/how-to/page.tsx">
-"use client";
-
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Navbar from "@/components/shared/Navbar";
-import Footer from "@/components/shared/Footer";
+import { Camera, Mic, FileText, Activity, CheckCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import {
-  Camera, Briefcase, Mic2, ChevronDown,
-  ArrowRight, CheckCircle, Wifi, Volume2, MonitorSmartphone,
-} from "lucide-react";
+import type { Variants } from "framer-motion";
 
-// ─── 3단계 튜토리얼 데이터 ────────────────────────────────────────
-const STEPS = [
-  {
-    number: "01",
-    label: "STEP 1",
-    title: "장비 세팅",
-    subtitle: "카메라 · 마이크 권한 허용",
-    icon: <Camera className="h-7 w-7" />,
-    color: {
-      badge: "text-sky-600 bg-sky-50 border-sky-200 dark:text-sky-400 dark:bg-sky-900/20 dark:border-sky-800",
-      icon: "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400",
-      number: "text-sky-200 dark:text-sky-900",
-      glow: "from-sky-100/60 to-white dark:from-sky-900/10 dark:to-[#1e293b]",
-      dot: "bg-sky-500",
-    },
-    checks: [
-      "브라우저 상단의 카메라 아이콘을 클릭해 권한을 허용합니다.",
-      "마이크도 함께 허용해 주세요. 음성 분석에 필수입니다.",
-      "역광을 피해 얼굴에 조명이 잘 들어오는 장소를 선택하세요.",
-      "조용한 환경에서 진행하면 음성 인식 정확도가 높아집니다.",
-    ],
-  },
-  {
-    number: "02",
-    label: "STEP 2",
-    title: "직무 & 질문 선택",
-    subtitle: "원하는 기업 · 직무의 기출 문제 고르기",
-    icon: <Briefcase className="h-7 w-7" />,
-    color: {
-      badge: "text-violet-600 bg-violet-50 border-violet-200 dark:text-violet-400 dark:bg-violet-900/20 dark:border-violet-800",
-      icon: "bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400",
-      number: "text-violet-200 dark:text-violet-900",
-      glow: "from-violet-100/60 to-white dark:from-violet-900/10 dark:to-[#1e293b]",
-      dot: "bg-violet-500",
-    },
-    checks: [
-      "IT/개발, 비즈니스, 디자인 중 본인 직군을 선택합니다.",
-      "세부 직무(프론트엔드, 마케팅 등)를 골라 맞춤 질문을 받으세요.",
-      "질문은 실제 기출 데이터 기반으로 AI가 자동 생성합니다.",
-      "원하는 기업을 지정하면 해당 기업 특화 질문이 포함됩니다.",
-    ],
-  },
-  {
-    number: "03",
-    label: "STEP 3",
-    title: "실전처럼 말하기",
-    subtitle: "AI 피드백으로 완성도 높이기",
-    icon: <Mic2 className="h-7 w-7" />,
-    color: {
-      badge: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/20 dark:border-emerald-800",
-      icon: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
-      number: "text-emerald-200 dark:text-emerald-900",
-      glow: "from-emerald-100/60 to-white dark:from-emerald-900/10 dark:to-[#1e293b]",
-      dot: "bg-emerald-500",
-    },
-    checks: [
-      "카운트다운 이후 질문이 화면에 표시되면 바로 답변을 시작합니다.",
-      "답변이 끝나면 '답변 완료' 버튼을 눌러 다음 질문으로 넘어갑니다.",
-      "모든 질문을 마치면 AI가 시선·발화 속도·논리성을 자동 분석합니다.",
-      "대시보드에서 상세 리포트와 개선 포인트를 확인하세요.",
-    ],
-  },
-];
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-// ─── FAQ 데이터 ───────────────────────────────────────────────────
-const FAQS = [
-  {
-    category: "🎥 카메라 · 화면",
-    items: [
-      {
-        q: "카메라가 켜지지 않아요.",
-        a: "브라우저 주소창 왼쪽의 자물쇠(또는 카메라) 아이콘을 클릭한 뒤, 카메라 권한을 '허용'으로 변경하고 페이지를 새로고침 해주세요. Chrome 기준으로 설정 → 개인정보 보호 → 사이트 설정 → 카메라에서도 변경할 수 있습니다.",
-      },
-      {
-        q: "화면이 좌우 반전되어 보여요. 정상인가요?",
-        a: "네, 정상입니다. 인터뷰핏은 자연스러운 면접 환경을 위해 카메라 미러링(좌우 반전)을 기본으로 적용합니다. 실제 녹화 분석은 반전 없는 원본 데이터로 처리됩니다.",
-      },
-    ],
-  },
-  {
-    category: "🎤 마이크 · 음성",
-    items: [
-      {
-        q: "마이크 소리가 인식되지 않아요.",
-        a: "카메라 권한과 동일하게 브라우저에서 마이크 권한을 허용해 주세요. 노트북 내장 마이크보다 유선 이어폰이나 헤드셋을 사용하면 인식률이 훨씬 높아집니다. macOS의 경우 시스템 환경설정 → 보안 및 개인 정보 → 마이크 항목도 확인하세요.",
-      },
-      {
-        q: "주변 소음이 심한데 괜찮을까요?",
-        a: "AI 음성 분석의 정확도를 위해 가능한 조용한 환경을 권장합니다. 소음이 많은 환경에서는 WPM(발화 속도) 측정과 무음 구간 감지의 정확도가 떨어질 수 있습니다.",
-      },
-    ],
-  },
-  {
-    category: "📊 분석 결과",
-    items: [
-      {
-        q: "분석 결과는 얼마나 기다려야 하나요?",
-        a: "면접 영상 길이에 따라 다르지만, 보통 30초~2분 이내에 대시보드에서 확인하실 수 있습니다. 분석 중에는 유용한 면접 팁도 함께 제공되니 잠시 기다려 주세요!",
-      },
-      {
-        q: "이전 면접 기록은 어디서 확인하나요?",
-        a: "상단 메뉴 또는 사이드바의 '대시보드'로 이동하시면 지금까지의 모든 촬영 회차별 분석 리포트를 날짜순으로 확인하실 수 있습니다.",
-      },
-    ],
-  },
-  {
-    category: "🔧 기타",
-    items: [
-      {
-        q: "모바일에서도 사용할 수 있나요?",
-        a: "현재 인터뷰핏은 데스크톱(PC/노트북) 환경에 최적화되어 있습니다. 모바일 브라우저에서도 기본 기능은 작동하지만, 카메라 각도와 화면 크기 특성상 PC 사용을 강력히 권장드립니다.",
-      },
-      {
-        q: "면접 영상이 외부에 저장되거나 공개되나요?",
-        a: "아니요. 촬영된 영상은 분석 목적으로만 사용되며, 외부 서버에 영구 저장되거나 제3자에게 공개되지 않습니다. 자세한 내용은 개인정보처리방침을 참고해 주세요.",
-      },
-    ],
-  },
-];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.6, delay: i * 0.1 },
-  }),
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
 };
 
-export default function HowToPage() {
-  const [openFaq, setOpenFaq] = useState<string | null>(null);
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+};
 
-  const toggleFaq = (key: string) =>
-    setOpenFaq((prev) => (prev === key ? null : key));
-
+export default function FeaturesPage() {
   return (
-    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300">
+    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300 overflow-x-hidden">
       <Navbar />
 
-      {/* ── 히어로 섹션 ─────────────────────────────────────────── */}
-      <section className="relative w-full pt-36 pb-24 px-6 overflow-hidden">
-        {/* 배경 블롭 — 사용법 전용: 코럴 + 바나나 + 민트 */}
+      {/* 1. 히어로 섹션 — 메인 페이지의 블루/퍼플/옐로우 블러 유지 */}
+      <section className="relative flex h-screen w-full items-center justify-center px-6 text-center pt-20">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-20 top-0 h-[560px] w-[560px] rounded-full bg-[#fed7aa]/35 blur-[140px]" />
-          <div className="absolute -right-10 -top-10 h-[600px] w-[600px] rounded-full bg-[#fef9c3]/40 blur-[150px]" />
-          <div className="absolute bottom-0 left-1/2 h-[400px] w-[400px] rounded-full bg-[#bbf7d0]/25 blur-[120px]" />
+          <div className="absolute -left-10 md:-left-20 -top-20 md:-top-40 h-[400px] md:h-[650px] w-[400px] md:w-[650px] rounded-full bg-[#fef08a]/30 blur-[100px] md:blur-[150px]" />
+          <div className="absolute top-10 -right-10 md:-right-20 h-[500px] md:h-[750px] w-[500px] md:w-[750px] rounded-full bg-[#bfdbfe]/40 blur-[120px] md:blur-[170px]" />
+          <div className="absolute bottom-[-100px] left-1/4 h-[400px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[100px]" />
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 mx-auto max-w-[1280px] text-center flex flex-col items-center"
+          initial="hidden" animate="visible" variants={fadeInUp}
+          className="relative z-10 max-w-3xl"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-sm font-bold tracking-wide mb-6 border border-orange-100 dark:border-orange-800 backdrop-blur-md">
-            HOW TO USE
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-navy/30 text-blue-600 dark:text-blue-300 text-xs font-bold tracking-widest mb-6 border border-blue-100 dark:border-blue-800 backdrop-blur-md shadow-sm">
+            CORE FEATURES
           </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white leading-tight">
-            누구나{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-400">
-              3분 안에
-            </span>{" "}
-            마스터하는<br />인터뷰핏 사용법
+          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white tracking-tight leading-tight">
+            면접의 모든 순간을<br />
+            데이터로 완벽하게 분석하다
           </h1>
-          <p className="mt-6 text-base md:text-lg text-muted dark:text-gray-400 leading-relaxed max-w-2xl">
-            복잡한 줄글 매뉴얼은 없습니다. 딱 3단계만 따라오시면 바로 AI 모의면접을 시작할 수 있습니다.
+          <p className="mt-6 text-base md:text-lg text-navy/70 dark:text-gray-300 leading-relaxed break-keep max-w-2xl mx-auto font-medium">
+            인터뷰핏은 단순한 녹화 도구가 아닙니다. 당신의 시선, 목소리의 떨림, 그리고 답변의 논리 구조까지 3D AI 엔진이 정밀하게 스캔하여 합격의 지름길을 안내합니다.
           </p>
         </motion.div>
       </section>
 
-      {/* ── 3단계 튜토리얼 ─────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-28">
+      {/* 2. 기능 스크롤텔링 */}
+      <section className="w-full max-w-[1280px] mx-auto px-6 py-20 flex flex-col gap-32">
 
-        {/* 스텝 연결 라인 + 카드 그리드 */}
-        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
-
-          {/* 데스크톱용 점선 연결선 */}
-          <div className="hidden md:block absolute top-[52px] left-[calc(33.33%-24px)] right-[calc(33.33%-24px)] h-px border-t-2 border-dashed border-gray-200 dark:border-white/10 z-0" />
-
-          {STEPS.map((step, i) => (
-            <motion.div
-              key={step.number}
-              custom={i}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={fadeUp}
-              className={`relative z-10 rounded-[28px] bg-gradient-to-br ${step.color.glow} border border-black/[0.04] dark:border-white/[0.05] p-8 shadow-sm overflow-hidden transition-all hover:-translate-y-1 hover:shadow-md`}
-            >
-              {/* 배경 큰 숫자 */}
-              <span className={`pointer-events-none absolute -right-3 -bottom-5 text-[120px] font-black leading-none select-none ${step.color.number}`}>
-                {step.number}
-              </span>
-
-              {/* 스텝 배지 */}
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${step.color.badge} mb-6`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${step.color.dot}`} />
-                {step.label}
-              </span>
-
-              {/* 아이콘 */}
-              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-5 ${step.color.icon}`}>
-                {step.icon}
-              </div>
-
-              {/* 제목 */}
-              <h3 className="text-2xl font-bold text-navy dark:text-white">{step.title}</h3>
-              <p className="mt-1 text-sm text-muted dark:text-gray-400">{step.subtitle}</p>
-
-              {/* 체크리스트 */}
-              <ul className="mt-6 flex flex-col gap-3 relative z-10">
-                {step.checks.map((check, j) => (
-                  <li key={j} className="flex items-start gap-2.5 text-sm text-ink dark:text-gray-300 leading-relaxed">
-                    <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
-                    {check}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* CTA 버튼 */}
+        {/* 기능 1: 시각 분석 (블루 테마) */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-14 flex justify-center"
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer} className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20"
         >
-          <Link
-            href="/practice"
-            className="flex items-center gap-3 rounded-full bg-navy dark:bg-white text-white dark:text-navy px-10 py-5 font-bold text-base hover:scale-105 transition-transform shadow-xl"
-          >
-            지금 바로 시작하기
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* ── 시스템 요구사항 배너 ──────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="rounded-[28px] bg-[#1f2937] dark:bg-[#1e293b] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex-1 relative z-10">
-            <h3 className="text-xl font-bold text-white mb-2">원활한 사용을 위한 환경 안내</h3>
-            <p className="text-sm text-white/60 leading-relaxed">
-              인터뷰핏은 최신 브라우저와 안정적인 인터넷 환경에서 가장 잘 작동합니다.
+          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
+            <div className="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Camera className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug tracking-tight">
+              AI가 당신의 눈동자와<br />자세를 추적합니다.
+            </h2>
+            <p className="text-navy/70 dark:text-gray-400 leading-relaxed font-medium">
+              카메라 정면 응시율, 고개 숙임 빈도, 그리고 미세한 표정 변화까지. Face Mesh 기술을 통해 면접관에게 신뢰감을 주는 최적의 비주얼 피드백을 제공합니다.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-4 relative z-10 shrink-0">
-            {[
-              { icon: <MonitorSmartphone className="h-5 w-5" />, label: "Chrome / Edge / Safari", sub: "최신 버전 권장" },
-              { icon: <Wifi className="h-5 w-5" />, label: "10Mbps 이상", sub: "안정적인 인터넷" },
-              { icon: <Volume2 className="h-5 w-5" />, label: "웹캠 + 마이크", sub: "하드웨어 필수" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-2xl bg-white/10 px-5 py-3.5">
-                <div className="text-blue-400">{item.icon}</div>
-                <div>
-                  <p className="text-sm font-bold text-white">{item.label}</p>
-                  <p className="text-xs text-white/50">{item.sub}</p>
-                </div>
+            <ul className="space-y-3 mt-4">
+              {["초당 30프레임 안구 추적 및 화면 이탈 감지", "코/턱/어깨 좌표 기반 자세 불안정 및 고개 숙임 분석", "입가 비대칭 및 부정적 감정 비율 측정"].map((item, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm font-medium text-navy/80 dark:text-gray-300 leading-relaxed">
+                  <CheckCircle className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" /> {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-br from-blue-50/80 to-white/40 dark:from-[#1e293b] p-8 overflow-hidden flex items-center justify-center border border-white/60 shadow-sm">
+            <div className="relative z-10 w-full max-w-sm bg-white/90 dark:bg-[#1e293b] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 backdrop-blur-md p-6">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xs font-bold text-blue-400 tracking-wider">VISUAL TRACKING</span>
+                <span className="text-2xl font-bold text-navy dark:text-white">82%</span>
               </div>
-            ))}
-          </div>
+              <div className="h-1.5 w-full bg-blue-100/50 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 w-[82%] rounded-full" />
+              </div>
+              <p className="mt-4 text-xs text-center text-navy/60 font-medium">카메라 정면 응시율이 우수합니다.</p>
+            </div>
+          </motion.div>
         </motion.div>
-      </section>
 
-      {/* ── FAQ 아코디언 섹션 ────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1280px] px-6 pb-28">
+        {/* 기능 2: 청각 분석 (퍼플 테마) */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-10 text-center"
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer} className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20"
         >
-          <h2 className="text-3xl font-bold text-navy dark:text-white">자주 묻는 질문</h2>
-          <p className="mt-2 text-muted dark:text-gray-400 text-sm">
-            문제가 해결되지 않으면 고객센터로 문의해 주세요.
-          </p>
+          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
+            <div className="h-12 w-12 rounded-2xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <Mic className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug tracking-tight">
+              떨리는 목소리와 침묵의<br />순간도 놓치지 않습니다.
+            </h2>
+            <p className="text-navy/70 dark:text-gray-400 leading-relaxed font-medium">
+              긴장하면 말이 빨라지거나 침묵이 길어지나요? 분당 발화 단어 수(WPM)와 오디오 파형 분석으로 가장 안정적인 목소리 톤과 템포를 찾아드립니다.
+            </p>
+            <ul className="space-y-3 mt-4">
+              {["실시간 WPM 측정 및 적절성 판정", "3초 이상 무음 구간 탐지 및 흐름 단절 분석", '"어, 음" 등 무의미한 습관어 횟수 카운팅'].map((item, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm font-medium text-navy/80 dark:text-gray-300 leading-relaxed">
+                  <CheckCircle className="h-5 w-5 text-purple-500 shrink-0 mt-0.5" /> {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-br from-purple-50/80 to-white/40 dark:from-[#1e293b] p-8 overflow-hidden flex items-center justify-center border border-white/60 shadow-sm">
+            <div className="relative z-10 w-full max-w-sm bg-white/90 dark:bg-[#1e293b] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 backdrop-blur-md p-6">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xs font-bold text-purple-400 tracking-wider">AUDIO ANALYSIS</span>
+                <Activity className="h-4 w-4 text-purple-500" />
+              </div>
+              <div className="flex items-end gap-1.5 h-12 w-full">
+                {[19, 34, 22, 43, 29, 38, 24, 48, 31, 14].map((heightPx, i) => (
+                  <div key={i} className="flex-1 bg-purple-400 rounded-t-sm opacity-80" style={{ height: `${heightPx}px` }} />
+                ))}
+              </div>
+              <div className="flex justify-between mt-4 text-xs font-bold text-navy dark:text-white">
+                <span>125 WPM</span>
+                <span className="text-purple-400">습관어 4회 감지</span>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
-        <div className="flex flex-col gap-4">
-          {FAQS.map((group, gi) => (
-            <motion.div
-              key={gi}
-              custom={gi}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-40px" }}
-              variants={fadeUp}
-              className="rounded-[24px] bg-white dark:bg-[#1e293b] border border-black/[0.03] dark:border-white/[0.05] overflow-hidden shadow-sm"
-            >
-              {/* 카테고리 헤더 */}
-              <div className="px-7 py-4 border-b border-line/60 dark:border-white/[0.05]">
-                <p className="text-sm font-bold text-muted dark:text-gray-400">{group.category}</p>
-              </div>
+        {/* 기능 3: 논리 분석 (옐로우/앰버 테마) */}
+        <motion.div
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
+          variants={staggerContainer} className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20"
+        >
+          <motion.div variants={fadeInUp} className="flex-1 space-y-6">
+            <div className="h-12 w-12 rounded-2xl bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+              <FileText className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold text-navy dark:text-white leading-snug tracking-tight">
+              STAR 기법으로<br />답변의 구조를 완성합니다.
+            </h2>
+            <p className="text-navy/70 dark:text-gray-400 leading-relaxed font-medium">
+              사용자의 육성 답변을 텍스트로 변환(STT)한 뒤, 상황(S), 과제(T), 행동(A), 결과(R) 구조에 맞게 잘 말했는지 AI가 문맥을 뜯어보고 논리성을 평가합니다.
+            </p>
+            <ul className="space-y-3 mt-4">
+              {["Whisper STT 기반 정밀 텍스트 변환", "STAR 구조 매칭률 분석 및 직무 핵심 키워드 추출", "답변 내용을 기반으로 한 압박 꼬리 질문 자동 생성"].map((item, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm font-medium text-navy/80 dark:text-gray-300 leading-relaxed">
+                  <CheckCircle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" /> {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+          <motion.div variants={fadeInUp} className="flex-1 w-full max-h-[360px] rounded-[32px] bg-gradient-to-br from-yellow-50/80 to-white/40 dark:from-[#1e293b] p-8 overflow-hidden flex items-center justify-center border border-white/60 shadow-sm">
+            <div className="relative z-10 w-full max-w-sm bg-white/90 dark:bg-[#1e293b] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 backdrop-blur-md p-6 flex flex-col gap-2.5">
+              {[
+                { label: "S/T", text: "프로젝트 기간이 촉박한 상황에서..." },
+                { label: "A",   text: "우선순위를 정해 팀원들과 역할을 분담하고..." },
+                { label: "R",   text: "성공적으로 런칭하여 우수상을 받았습니다." },
+              ].map((row) => (
+                <div key={row.label} className="flex gap-3 items-start p-2.5 rounded-xl bg-yellow-50/50 dark:bg-neutral-800/50">
+                  <div className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold rounded">{row.label}</div>
+                  <p className="text-xs text-navy/80 dark:text-gray-300 leading-relaxed font-medium">{row.text}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
 
-              {/* FAQ 아이템 */}
-              {group.items.map((item, ii) => {
-                const key = `${gi}-${ii}`;
-                const isOpen = openFaq === key;
-                return (
-                  <div key={ii} className="border-b border-line/50 dark:border-white/[0.04] last:border-b-0">
-                    <button
-                      onClick={() => toggleFaq(key)}
-                      className="w-full flex items-center justify-between px-7 py-5 text-left gap-4 hover:bg-gray-50/70 dark:hover:bg-white/[0.03] transition-colors"
-                    >
-                      <span className="text-sm font-semibold text-navy dark:text-white leading-relaxed">
-                        {item.q}
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 text-muted dark:text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="overflow-hidden"
-                        >
-                          <p className="px-7 pb-6 text-sm text-muted dark:text-gray-400 leading-relaxed">
-                            {item.a}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-            </motion.div>
-          ))}
-        </div>
       </section>
+
+      {/* 3. CTA */}
+      <motion.section
+        initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+        className="w-full max-w-[1280px] mx-auto px-6 py-24 mb-12 flex flex-col items-center text-center"
+      >
+        <h2 className="text-3xl font-bold text-navy dark:text-white mb-8 tracking-tight">이제 직접 경험해 볼 차례입니다.</h2>
+        <Link
+          href="/practice"
+          className="flex items-center gap-3 bg-navy dark:bg-white text-white dark:text-navy px-10 py-4.5 rounded-full font-bold text-[15px] hover:scale-105 transition-transform shadow-[0_8px_30px_rgba(31,44,70,0.15)]"
+        >
+          모의면접 스튜디오 입장하기
+          <ArrowRight className="h-5 w-5" />
+        </Link>
+      </motion.section>
 
       <Footer />
     </main>
@@ -3314,6 +2247,610 @@ export function useCounter({
 }
 </file>
 
+<file path="app/about/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Variants } from "framer-motion";
+import Navbar from "@/components/shared/Navbar";
+import Footer from "@/components/shared/Footer";
+import Link from "next/link";
+import { Coffee, GitBranch, Zap, Heart, ArrowRight, Code2, Brain, Layers, Server, Cpu } from "lucide-react";
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.55, delay: i * 0.1, ease: EASE } }),
+};
+
+const TEAM = [
+  { role: "Backend Lead", roleKo: "팀장 현진", name: "현진", icon: <Layers className="h-6 w-6" />, mbti: "INTP", tags: ["Spring", "AWS"], glow: "from-blue-200/50", color: "text-blue-600" },
+  { role: "AI Engineer", roleKo: "AI 현진", name: "현진", icon: <Brain className="h-6 w-6" />, mbti: "ENFP", tags: ["PyTorch", "OpenCV"], glow: "from-purple-200/50", color: "text-purple-600" },
+  { role: "Backend Developer", roleKo: "백엔드 보영", name: "보영", icon: <Server className="h-6 w-6" />, mbti: "INFP", tags: ["Spring", "Docker"], glow: "from-blue-200/50", color: "text-blue-600" },
+  { role: "Backend / AI", roleKo: "백엔드 예은", name: "예은", icon: <Cpu className="h-6 w-6" />, mbti: "ISTJ", tags: ["Python", "FastAPI"], glow: "from-yellow-200/50", color: "text-yellow-600" },
+  { role: "Frontend Developer", roleKo: "프론트엔드 은재", name: "은재", icon: <Code2 className="h-6 w-6" />, mbti: "ENFJ", tags: ["React", "TypeScript"], glow: "from-blue-200/50", color: "text-blue-600" }
+];
+
+const STATS = [
+  { icon: <Coffee className="h-6 w-6" />, value: "1,247잔", label: "팀 누적 커피 소비량", color: "text-yellow-400" },
+  { icon: <GitBranch className="h-6 w-6" />, value: "834회", label: "GitHub 커밋", color: "text-blue-400" },
+  { icon: <Zap className="h-6 w-6" />, value: "새벽 3시", label: "평균 퇴근(?) 시간", color: "text-purple-400" },
+  { icon: <Heart className="h-6 w-6" />, value: "5명", label: "함께 고군분투한 팀원", color: "text-pink-400" },
+];
+
+const STORY_ITEMS = [
+  { emoji: "😰", title: "우리도 취준생이었습니다", desc: "포트폴리오는 있는데 말이 안 나오고, 말은 나오는데 논리가 없고. 면접이 끝난 뒤 '그 질문에 이렇게 말할걸' 하는 후회를 반복했습니다." },
+  { emoji: "💡", title: "연습할 공간이 없다는 걸 깨달았습니다", desc: "스터디원에게 부탁하는 것도 한계가 있고, 혼자 거울 앞에서 연습하는 건 피드백이 없었습니다. 객관적인 시각이 필요했지만 어디에도 없었어요." },
+  { emoji: "🛠️", title: "그래서 직접 만들기 시작했습니다", desc: "단순 과제로 만들고 싶지 않았습니다. 우리처럼 불안해하는 누군가에게 실제로 도움이 되는 서비스를 만들자고 다짐했습니다." },
+  { emoji: "🚀", title: "밤새워 만들었습니다, 진짜로", desc: "새벽 2시 편의점 삼각김밥, 카페인 쩐 눈. 그래도 화면에 결과가 뜨는 순간만큼은 모두 같이 소리질렀습니다." },
+];
+
+export default function AboutPage() {
+  const [flipped, setFlipped] = useState<number | null>(null);
+
+  return (
+    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300">
+      <Navbar />
+
+      <section className="relative flex h-screen w-full items-center justify-center px-6 pt-20">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-20 -top-10 h-[500px] w-[500px] rounded-full bg-[#fef08a]/30 blur-[140px]" />
+          <div className="absolute -right-20 top-10 h-[520px] w-[520px] rounded-full bg-[#bfdbfe]/30 blur-[150px]" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE }}
+          className="relative z-10 mx-auto max-w-[1280px] flex flex-col items-center text-center"
+        >
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-navy/30 text-blue-600 text-xs font-bold tracking-widest mb-5 border border-white/50 backdrop-blur-md shadow-sm">
+            ABOUT US
+          </span>
+          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white leading-tight tracking-tight">
+            취준생의 불안을 <span className="text-blue-500">우리도 압니다</span>
+          </h1>
+          <p className="mt-6 text-base md:text-lg text-navy/70 dark:text-gray-400 leading-relaxed max-w-xl font-medium">
+            인터뷰핏은 화려한 스타트업이 만든 서비스가 아닙니다.<br />
+            취업 걱정을 안고 밤샘 코딩하는 학생 개발자들이 만든, 진짜 이야기입니다.
+          </p>
+        </motion.div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[860px] px-6 pt-4 pb-16">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-white tracking-tight">우리가 인터뷰핏을 만든 이유</h2>
+        </motion.div>
+
+        <div className="relative flex flex-col gap-6">
+          <div className="absolute left-[27px] top-4 bottom-4 w-px bg-black/10 dark:bg-white/10" />
+          {STORY_ITEMS.map((item, i) => (
+            <motion.div key={i} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-40px" }} variants={fadeUp} className="relative flex items-start gap-5">
+              <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#1e293b] border border-black/5 shadow-sm text-2xl">
+                {item.emoji}
+              </div>
+              <div className="flex-1 rounded-[20px] bg-white dark:bg-[#1e293b] border border-black/[0.03] p-6 shadow-sm">
+                <h3 className="text-base font-bold text-navy dark:text-white mb-1.5">{item.title}</h3>
+                <p className="text-sm text-navy/60 dark:text-gray-400 leading-relaxed font-medium">{item.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="rounded-[32px] bg-navy dark:bg-[#1e293b] p-10 md:p-12 relative overflow-hidden shadow-xl"
+        >
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 text-center mb-10">
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">숫자로 보는 인터뷰핏 개발 여정</h2>
+            <p className="mt-1.5 text-blue-100/60 text-sm font-medium">졸업 프로젝트지만, 진심은 졸업급입니다</p>
+          </div>
+
+          <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map((stat, i) => (
+              <motion.div key={i} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="flex flex-col items-center text-center gap-2">
+                <div className={stat.color}>{stat.icon}</div>
+                <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">{stat.value}</p>
+                <p className="text-xs text-blue-100/60 font-medium">{stat.label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-20">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-white tracking-tight">팀원 소개</h2>
+          <p className="mt-2 text-sm text-navy/60 dark:text-gray-400 font-medium">카드를 클릭하면 면접 흑역사가 공개됩니다 👀</p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          {TEAM.map((member, i) => (
+            <div key={i} className="cursor-pointer" onClick={() => setFlipped(flipped === i ? null : i)}>
+              <div className="relative w-full" style={{ perspective: "1000px" }}>
+                <AnimatePresence mode="wait" initial={false}>
+                  {flipped !== i ? (
+                    <motion.div
+                      key="front" initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 90, opacity: 0 }} transition={{ duration: 0.3 }}
+                      className="rounded-[24px] bg-white dark:bg-[#1e293b] border border-black/[0.04] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col items-center text-center gap-4 min-h-[260px] relative overflow-hidden"
+                    >
+                      <div className={`absolute top-0 left-0 w-24 h-24 bg-gradient-to-br ${member.glow} to-transparent blur-xl pointer-events-none`} />
+                      <div className={`h-12 w-12 rounded-xl bg-white shadow-sm flex items-center justify-center ${member.color} relative z-10`}>
+                        {member.icon}
+                      </div>
+                      <div className="relative z-10">
+                        <p className="text-[10px] font-bold text-navy/40 mb-0.5">{member.role}</p>
+                        <p className="text-lg font-bold text-navy tracking-tight">{member.roleKo}</p>
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap justify-center relative z-10">
+                        {member.tags.map(t => <span key={t} className="text-[9px] font-bold px-2 py-0.5 bg-gray-50 border border-black/5 rounded text-navy/60">{t}</span>)}
+                      </div>
+                      <div className="w-full pt-4 border-t border-black/5 mt-auto flex justify-between text-[11px] text-navy/50 font-medium">
+                        <span>MBTI</span>
+                        <span className="font-bold text-navy">{member.mbti}</span>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="back" initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 90, opacity: 0 }} transition={{ duration: 0.3 }}
+                      className="rounded-[24px] bg-navy p-6 shadow-lg flex flex-col justify-between min-h-[260px] text-white"
+                    >
+                      <div>
+                        <p className="text-[9px] font-bold text-blue-300 tracking-wider mb-2">EPISODE</p>
+                        <p className="text-sm font-semibold leading-relaxed text-white">팀원 흑역사 데이터가 곧 공개됩니다!</p>
+                      </div>
+                      <div className="border-t border-white/10 pt-3">
+                        <p className="text-[10px] text-blue-100/60 italic leading-relaxed">"조용히 돌아가는 API가 가장 아름답습니다."</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="rounded-[32px] bg-white border border-black/[0.03] p-10 md:p-14 text-center shadow-sm"
+        >
+          <div className="relative z-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy leading-snug tracking-tight">
+              이 서비스를 사용해 주셔서 감사합니다
+            </h2>
+            <p className="mt-4 text-navy/60 text-sm md:text-base leading-relaxed max-w-xl mx-auto font-medium">
+              우리도 아직 취업을 준비하고 있습니다. 인터뷰핏이 여러분의 합격에 조금이라도 도움이 된다면, 그게 저희에게는 가장 큰 보람입니다.
+            </p>
+            <Link
+              href="/practice"
+              className="mt-8 inline-flex items-center gap-3 rounded-full bg-navy text-white px-10 py-4.5 font-bold text-[15px] hover:bg-blue-600 transition-colors shadow-lg shadow-navy/20"
+            >
+              지금 바로 연습 시작하기
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </motion.div>
+      </section>
+
+      <Footer />
+    </main>
+  );
+}
+</file>
+
+<file path="app/community/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import Navbar from "@/components/shared/Navbar";
+import Footer from "@/components/shared/Footer";
+import { ThumbsUp, MessageCircle, Eye, Flame, CheckCircle2, Lightbulb, Building2, PenLine, ChevronRight, Award } from "lucide-react";
+
+type Category = "전체" | "합격 후기" | "면접 후기" | "꿀팁 공유" | "기업 정보";
+
+interface Post {
+  id: number;
+  category: Exclude<Category, "전체">;
+  company: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  date: string;
+  views: number;
+  likes: number;
+  comments: number;
+  isPinned?: boolean;
+  isHot?: boolean;
+}
+
+const CATEGORIES: { label: Category; icon: React.ReactNode }[] = [
+  { label: "전체", icon: null },
+  { label: "합격 후기", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+  { label: "면접 후기", icon: <MessageCircle className="h-3.5 w-3.5" /> },
+  { label: "꿀팁 공유", icon: <Lightbulb className="h-3.5 w-3.5" /> },
+  { label: "기업 정보", icon: <Building2 className="h-3.5 w-3.5" /> },
+];
+
+const MOCK_POSTS: Post[] = [
+  {
+    id: 1, category: "합격 후기", company: "네이버",
+    title: "네이버 신입 프론트엔드 최종 합격했습니다 🎉 면접 3번 후기 총정리",
+    excerpt: "코테 → 1차 실무 → 2차 임원 면접까지 전 과정을 공유합니다. 인터뷰핏으로 두 달 연습한 결과 시선처리 점수가 올랐어요.",
+    author: "익명", date: "2026.06.04", views: 4821, likes: 312, comments: 47, isPinned: true, isHot: true,
+  },
+  {
+    id: 2, category: "합격 후기", company: "카카오",
+    title: "카카오 공채 백엔드 합격 후기 — 압박 질문 대처법이 핵심이었어요",
+    excerpt: "2차 면접에서 '왜 카카오여야 하나요?'라는 질문에 버벅였는데 덕분에 연습해뒀던 답변 구조로 커버했습니다. STAR 기법이 정말 효과적이에요.",
+    author: "익명", date: "2026.06.01", views: 3104, likes: 198, comments: 33, isHot: true,
+  },
+  {
+    id: 3, category: "면접 후기", company: "토스",
+    title: "토스 UX 디자이너 1차 면접 후기 — 포트폴리오 질문이 80%였어요",
+    excerpt: "포트폴리오 각 프로젝트의 의사결정 근거를 파고드는 질문이 많았습니다. 직접 그 과정에 대해 논리적으로 설명할 수 있도록 준비하시길 추천드려요.",
+    author: "익명", date: "2026.05.29", views: 2287, likes: 141, comments: 28,
+  },
+];
+
+function CategoryBadge({ category }: { category: Exclude<Category, "전체"> }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+      {category}
+    </span>
+  );
+}
+
+function fmt(n: number) {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: i * 0.05 } }),
+};
+
+export default function CommunityPage() {
+  const [activeCategory, setActiveCategory] = useState<Category>("전체");
+
+  const filtered = activeCategory === "전체" ? MOCK_POSTS : MOCK_POSTS.filter((p) => p.category === activeCategory);
+  const pinned = filtered.filter((p) => p.isPinned);
+  const normal = filtered.filter((p) => !p.isPinned);
+
+  return (
+    <main className="relative min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300 overflow-x-hidden">
+      <Navbar />
+
+      {/* 💡 배경 블롭을 컨텐츠 섹션 제약 없이 위쪽에 크게 깔고, 밑으로 갈수록 부드럽게 지워지도록 마스크(gradient)를 추가했습니다. */}
+      <div className="pointer-events-none absolute top-0 left-0 w-full h-[900px] z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg dark:to-[#0f1729] z-10" />
+        <div className="absolute -left-20 -top-20 h-[600px] w-[600px] rounded-full bg-[#bfdbfe]/50 blur-[150px]" />
+        <div className="absolute -right-20 top-0 h-[700px] w-[700px] rounded-full bg-[#fef08a]/40 blur-[160px]" />
+      </div>
+
+      {/* 💡 기존 pt-32 pb-16 을 pt-40 pb-24 로 늘려 위아래 여백을 확보하고 답답함을 없앴습니다. */}
+      <section className="relative z-10 w-full pt-40 pb-24 px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+          className="mx-auto max-w-[1280px] flex flex-col md:flex-row md:items-end justify-between gap-10"
+        >
+          <div>
+            <span className="inline-block px-4 py-1.5 rounded-full bg-white/60 dark:bg-navy/30 text-blue-600 dark:text-blue-400 text-xs font-bold tracking-widest mb-5 border border-white/50 backdrop-blur-md shadow-sm">
+              COMMUNITY
+            </span>
+            <h1 className="text-4xl md:text-5xl font-bold text-navy dark:text-white leading-tight tracking-tight">
+              혼자 하는 취준의<br />외로움을 달래는 공간
+            </h1>
+            <p className="mt-5 text-base text-navy/70 dark:text-gray-400 leading-relaxed max-w-xl font-medium">
+              실제 면접을 다녀온 취준생들의 생생한 후기와 합격 노하우를 공유합니다.<br />우리 모두의 경험이 모여 더 나은 준비가 됩니다.
+            </p>
+          </div>
+
+          <div className="flex gap-3 shrink-0 flex-wrap">
+            {[
+              { label: "누적 후기", value: "2,841", icon: <MessageCircle className="h-4 w-4" />, color: "text-blue-500" },
+              { label: "이번 주 합격", value: "38명", icon: <Award className="h-4 w-4" />, color: "text-purple-500" },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-4 rounded-3xl bg-white/80 dark:bg-[#1e293b]/80 border border-black/[0.03] px-6 py-4 shadow-sm backdrop-blur-md">
+                <div className={s.color}>{s.icon}</div>
+                <div>
+                  <p className="text-[11px] text-navy/50 font-medium mb-0.5">{s.label}</p>
+                  <p className="text-lg font-bold text-navy dark:text-white">{s.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* 💡 컨텐츠 섹션 상단 여백 추가로 탭과의 거리 확보 */}
+      <section className="relative z-10 mx-auto w-full max-w-[1280px] px-6 pb-24">
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-8">
+          <div className="flex items-center gap-2 flex-wrap">
+            {CATEGORIES.map(({ label, icon }) => (
+              <button
+                key={label} onClick={() => setActiveCategory(label)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+                  activeCategory === label
+                    ? "bg-navy text-white border-navy dark:bg-white dark:text-navy"
+                    : "bg-white dark:bg-[#1e293b] text-navy/60 border-black/5 hover:border-black/10"
+                }`}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+
+          <button className="flex items-center gap-2 rounded-xl bg-navy dark:bg-white px-5 py-2.5 text-sm font-bold text-white dark:text-navy shadow-sm hover:opacity-90 transition-opacity shrink-0">
+            <PenLine className="h-4 w-4" /> 후기 작성하기
+          </button>
+        </div>
+
+        {pinned.length > 0 && (
+          <div className="mb-4 flex flex-col gap-3">
+            {pinned.map((post, i) => (
+              <PostCard key={post.id} post={post} index={i} isPinnedSection />
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3">
+          {normal.map((post, i) => (
+            <PostCard key={post.id} post={post} index={i + pinned.length} />
+          ))}
+        </div>
+
+        <div className="mt-12 flex justify-center">
+          <button className="flex items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-[#1e293b] px-8 py-4 text-sm font-semibold text-navy/60 hover:text-navy transition-colors shadow-sm">
+            더 많은 후기 보기 <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  );
+}
+
+function PostCard({ post, index, isPinnedSection = false }: { post: Post; index: number; isPinnedSection?: boolean }) {
+  return (
+    <motion.div
+      custom={index} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-30px" }}
+      variants={fadeUp} whileHover={{ y: -2 }}
+      className={`group cursor-pointer rounded-2xl bg-white dark:bg-[#1e293b] border transition-all shadow-sm
+        ${isPinnedSection ? "border-blue-100 bg-gradient-to-r from-blue-50/50 to-purple-50/20" : "border-black/[0.04] dark:border-white/[0.04] hover:shadow-md hover:border-blue-200"}
+      `}
+    >
+      <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            {isPinnedSection && <span className="text-[10px] font-bold text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-md">📌 공지</span>}
+            <CategoryBadge category={post.category} />
+            {post.company && <span className="text-[11px] font-semibold text-navy/50 pl-1 border-l border-black/10 ml-1">{post.company}</span>}
+            {post.isHot && <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">HOT</span>}
+          </div>
+          <h3 className="text-base font-bold text-navy dark:text-white leading-snug line-clamp-1 tracking-tight group-hover:text-blue-600 transition-colors">
+            {post.title}
+          </h3>
+          <p className="mt-1.5 text-sm text-navy/60 dark:text-neutral-400 line-clamp-1 font-medium">{post.excerpt}</p>
+        </div>
+        <div className="flex sm:flex-col items-center sm:items-end gap-4 sm:gap-2 shrink-0 text-xs text-navy/50 font-medium">
+          <span>{post.date}</span>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {fmt(post.views)}</span>
+            <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {fmt(post.likes)}</span>
+            <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /> {post.comments}</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+</file>
+
+<file path="app/how-to/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@/components/shared/Navbar";
+import Footer from "@/components/shared/Footer";
+import Link from "next/link";
+import { Camera, Briefcase, Mic2, ChevronDown, ArrowRight, CheckCircle, Wifi, Volume2, MonitorSmartphone } from "lucide-react";
+
+const STEPS = [
+  {
+    number: "01", label: "STEP 1", title: "장비 세팅", subtitle: "카메라 · 마이크 권한 허용",
+    icon: <Camera className="h-6 w-6" />,
+    bgClass: "bg-blue-50/50 border-blue-100/50",
+    iconColor: "text-blue-600 bg-white",
+    numColor: "text-blue-100",
+  },
+  {
+    number: "02", label: "STEP 2", title: "직무 & 질문 선택", subtitle: "원하는 기업 · 직무의 기출 문제 고르기",
+    icon: <Briefcase className="h-6 w-6" />,
+    bgClass: "bg-purple-50/50 border-purple-100/50",
+    iconColor: "text-purple-600 bg-white",
+    numColor: "text-purple-100",
+  },
+  {
+    number: "03", label: "STEP 3", title: "실전처럼 말하기", subtitle: "AI 피드백으로 완성도 높이기",
+    icon: <Mic2 className="h-6 w-6" />,
+    bgClass: "bg-yellow-50/50 border-yellow-100/50",
+    iconColor: "text-yellow-600 bg-white",
+    numColor: "text-yellow-100/80",
+  },
+];
+
+const FAQS = [
+  {
+    category: "카메라 · 화면",
+    items: [
+      { q: "카메라가 켜지지 않아요.", a: "브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭한 뒤, 카메라 권한을 '허용'으로 변경하고 새로고침 해주세요." },
+      { q: "화면이 좌우 반전되어 보여요.", a: "자연스러운 면접 환경을 위해 카메라 미러링이 적용됩니다. 실제 녹화 분석은 원본 데이터로 처리됩니다." },
+    ],
+  },
+  {
+    category: "마이크 · 음성",
+    items: [
+      { q: "마이크 소리가 인식되지 않아요.", a: "마이크 권한을 허용해 주세요. 이어폰이나 헤드셋을 사용하면 인식률이 높아집니다." },
+      { q: "주변 소음이 심한데 괜찮을까요?", a: "조용한 환경을 권장합니다. 소음이 많으면 WPM 측정과 무음 구간 감지의 정확도가 떨어질 수 있습니다." },
+    ],
+  },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { duration: 0.6, delay: i * 0.1 },
+  }),
+};
+
+export default function HowToPage() {
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const toggleFaq = (key: string) => setOpenFaq((prev) => (prev === key ? null : key));
+
+  return (
+    <main className="min-h-screen w-full font-sans bg-bg dark:bg-[#0f1729] transition-colors duration-300 overflow-hidden">
+      <Navbar />
+
+      <section className="relative w-full pt-36 pb-24 px-6 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-20 top-0 h-[560px] w-[560px] rounded-full bg-[#bfdbfe]/30 blur-[140px]" />
+          <div className="absolute -right-10 -top-10 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[150px]" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+          className="relative z-10 mx-auto max-w-[1280px] text-center flex flex-col items-center"
+        >
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/70 dark:bg-navy/30 text-purple-600 dark:text-purple-400 text-xs font-bold tracking-widest mb-6 border border-white/50 backdrop-blur-md shadow-sm">
+            HOW TO USE
+          </span>
+          <h1 className="text-4xl md:text-6xl font-bold text-navy dark:text-white leading-tight tracking-tight">
+            누구나 3분 안에 마스터하는<br />인터뷰핏 사용법
+          </h1>
+          <p className="mt-6 text-base md:text-lg text-navy/70 dark:text-neutral-400 leading-relaxed max-w-2xl font-medium">
+            복잡한 대형 가이드는 걷어내고, 핵심적인 스튜디오 진행 프로세스 3단계만 요약했습니다.
+          </p>
+        </motion.div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-28">
+        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="hidden md:block absolute top-[52px] left-[calc(33.33%-24px)] right-[calc(33.33%-24px)] h-px border-t border-dashed border-black/10 dark:border-neutral-700 z-0" />
+
+          {STEPS.map((step, i) => (
+            <motion.div
+              key={step.number} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={fadeUp}
+              className={`relative z-10 rounded-[28px] ${step.bgClass} border p-8 shadow-sm overflow-hidden transition-all hover:-translate-y-1 hover:shadow-md`}
+            >
+              <span className={`pointer-events-none absolute -right-2 -bottom-5 text-[120px] font-black leading-none select-none ${step.numColor} font-serif`}>
+                {step.number}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/60 text-navy mb-6 shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-navy" />
+                {step.label}
+              </span>
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-5 shadow-sm ${step.iconColor}`}>
+                {step.icon}
+              </div>
+              <h3 className="text-2xl font-bold text-navy dark:text-white tracking-tight">{step.title}</h3>
+              <p className="mt-1 text-sm text-navy/70 font-medium">{step.subtitle}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }} className="mt-14 flex justify-center">
+          <Link
+            href="/practice"
+            className="flex items-center gap-3 rounded-full bg-navy dark:bg-white text-white dark:text-navy px-10 py-5 font-bold text-[15px] hover:scale-105 transition-transform shadow-lg shadow-navy/20"
+          >
+            지금 바로 시작하기 <ArrowRight className="h-5 w-5" />
+          </Link>
+        </motion.div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="rounded-[28px] bg-navy dark:bg-[#1e293b] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden shadow-xl"
+        >
+          <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex-1 relative z-10">
+            <h3 className="text-xl font-bold text-white mb-2 tracking-tight">원활한 사용을 위한 환경 안내</h3>
+            <p className="text-sm text-blue-100/70 leading-relaxed font-medium">
+              인터뷰핏은 최신 브라우저와 안정적인 인터넷 환경에서 가장 잘 작동합니다.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4 relative z-10 shrink-0">
+            {[
+              { icon: <MonitorSmartphone className="h-5 w-5" />, label: "Chrome / Safari", sub: "최신 버전 권장" },
+              { icon: <Wifi className="h-5 w-5" />, label: "10Mbps 이상", sub: "안정적인 인터넷" },
+              { icon: <Volume2 className="h-5 w-5" />, label: "웹캠 + 마이크", sub: "하드웨어 필수" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-2xl bg-white/10 px-5 py-3.5 backdrop-blur-sm border border-white/5">
+                <div className="text-blue-300">{item.icon}</div>
+                <div>
+                  <p className="text-sm font-bold text-white">{item.label}</p>
+                  <p className="text-xs text-blue-100/60 font-medium">{item.sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1280px] px-6 pb-28">
+        <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10 text-center">
+          <h2 className="text-3xl font-bold text-navy dark:text-white tracking-tight">자주 묻는 질문</h2>
+          <p className="mt-2 text-navy/60 dark:text-neutral-400 text-sm font-medium">문제가 해결되지 않으면 고객센터로 문의해 주세요.</p>
+        </motion.div>
+
+        <div className="flex flex-col gap-4">
+          {FAQS.map((group, gi) => (
+            <motion.div key={gi} custom={gi} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-40px" }} variants={fadeUp} className="rounded-[24px] bg-white dark:bg-[#1e293b] border border-black/[0.04] dark:border-white/[0.04] overflow-hidden shadow-sm">
+              <div className="px-7 py-4 border-b border-black/5 dark:border-white/[0.05]">
+                <p className="text-xs font-bold text-navy/50 dark:text-neutral-500">{group.category}</p>
+              </div>
+              {group.items.map((item, ii) => {
+                const key = `${gi}-${ii}`;
+                const isOpen = openFaq === key;
+                return (
+                  <div key={ii} className="border-b border-black/5 dark:border-white/[0.04] last:border-b-0">
+                    <button
+                      onClick={() => toggleFaq(key)}
+                      className="w-full flex items-center justify-between px-7 py-5 text-left gap-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                    >
+                      <span className="text-sm font-bold text-navy dark:text-white leading-relaxed">{item.q}</span>
+                      <ChevronDown className={`h-4 w-4 text-navy/40 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                          <p className="px-7 pb-6 text-sm text-navy/70 dark:text-neutral-400 leading-relaxed font-medium">{item.a}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  );
+}
+</file>
+
 <file path="app/globals.css">
 @import "tailwindcss";
 
@@ -3684,6 +3221,243 @@ export default function Navbar() {
 }
 </file>
 
+<file path="lib/api.ts">
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+export type JobRole = {
+  id: number;
+  category: string;
+  name: string;
+};
+
+export type VideoUploadResponse = {
+  message: string;
+
+  /**
+   * Spring VideoService가 MinIO에 저장한 objectKey.
+   * 예: videos/uuid_interview.webm
+   */
+  videoUrl: string;
+
+  /**
+   * 혹시 BE 응답 필드명이 objectKey로 올 경우 대비
+   */
+  objectKey?: string;
+};
+
+export type QuestionRequest = {
+  count: number;
+  jobRoleId: number;
+  coverLetter?: string;
+};
+
+export type Question = {
+  id: number;
+  question: string;
+  jobName: string;
+};
+
+export type EyeBlinkingRawResult = {
+  total_frames?: number;
+  fps?: number;
+  duration_seconds?: number;
+  face_detected_frames?: number;
+  blink_count?: number;
+  blinks_per_minute?: number;
+  average_ear?: number;
+  blink_timestamps?: number[];
+  evaluation?: string;
+  blink_rate?: number;
+  score?: number;
+  feedback?: string;
+  [key: string]: unknown;
+};
+
+export type EyeBlinkingAnalyzeResponse = {
+  message?: string;
+  reportId?: number;
+  result?: EyeBlinkingRawResult;
+  data?: EyeBlinkingRawResult;
+  [key: string]: unknown;
+};
+
+export type FollowUpCreateResponse = {
+  message?: string;
+  followUpId?: number;
+  followUpQuestionId?: number;
+  followUpQuestion?: string;
+  follow_up_question?: string;
+  [key: string]: unknown;
+};
+
+export async function getJobRoles(): Promise<JobRole[]> {
+  const response = await fetch(`${API_BASE_URL}/api/job-role/all`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`직무 목록 조회 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export async function uploadInterviewVideo(params: {
+  file: Blob;
+  userId?: number;
+  interviewId?: number;
+}): Promise<VideoUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", params.file, "interview.webm");
+
+  if (params.userId !== undefined) {
+    formData.append("userId", String(params.userId));
+  }
+
+  if (params.interviewId !== undefined) {
+    formData.append("interviewId", String(params.interviewId));
+  }
+
+  const response = await fetch(`${API_BASE_URL}/videos/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`영상 업로드 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export async function analyzeEyeBlinkingByVideoUrl(params: {
+  videoUrl: string;
+  userId?: number;
+  interviewId?: number;
+}): Promise<EyeBlinkingAnalyzeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/eye-blinking/analyze`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      videoUrl: params.videoUrl,
+      userId: params.userId,
+      interviewId: params.interviewId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`눈 깜빡임 분석 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export async function analyzeEyeBlinking(params: {
+  file: Blob;
+  userId?: number;
+  interviewId?: number;
+}): Promise<EyeBlinkingAnalyzeResponse> {
+  const uploadResult = await uploadInterviewVideo({
+    file: params.file,
+    userId: params.userId,
+    interviewId: params.interviewId,
+  });
+
+  const videoUrl = uploadResult.videoUrl ?? uploadResult.objectKey;
+
+  if (!videoUrl) {
+    throw new Error("영상 업로드 응답에 videoUrl/objectKey가 없습니다.");
+  }
+
+  return analyzeEyeBlinkingByVideoUrl({
+    videoUrl,
+    userId: params.userId,
+    interviewId: params.interviewId,
+  });
+}
+
+export async function analyzeEyeBlinkingUploadOnly(params: {
+  file: Blob;
+  userId?: number;
+  interviewId?: number;
+}): Promise<EyeBlinkingAnalyzeResponse> {
+  return analyzeEyeBlinking({
+    file: params.file,
+    userId: params.userId,
+    interviewId: params.interviewId,
+  });
+}
+
+export async function createFollowUpQuestion(params: {
+  jobRoleId?: number;
+  job?: string;
+  questionId?: number;
+  originalQuestion?: string;
+  answer: string;
+  interviewStyle?: string;
+  userId?: number;
+  interviewId?: number;
+}): Promise<FollowUpCreateResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/followup/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      jobRoleId: params.jobRoleId,
+      job: params.job,
+      questionId: params.questionId,
+      original_question: params.originalQuestion,
+      answer: params.answer,
+      interview_style: params.interviewStyle ?? "normal",
+      userId: params.userId,
+      interviewId: params.interviewId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`꼬리질문 생성 실패: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export async function createQuestions(
+  request: QuestionRequest
+): Promise<Question[]> {
+  console.log("질문 생성 요청", request);
+
+  const response = await fetch(`${API_BASE_URL}/api/question/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  console.log("질문 생성 응답 상태", response.status);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("질문 생성 실패", errorText);
+    throw new Error(`질문 생성 실패: ${errorText}`);
+  }
+
+  const data: Question[] = await response.json();
+
+  console.log("질문 생성 응답", data);
+
+  return data;
+}
+</file>
+
 <file path="components/practice/InterviewRecording.tsx">
 "use client";
 
@@ -3692,71 +3466,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Mic, Square, ChevronRight, HelpCircle, Briefcase, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import {
-  analyzeEyeBlinking,
-  uploadVideo,
+  analyzeEyeBlinkingByVideoUrl,
+  uploadInterviewVideo,
+  createQuestions,
   type EyeBlinkingAnalyzeResponse,
+  JobRole,
+  Question,
+  getJobRoles,
 } from "@/lib/api";
 
 type Step = "jobSelect" | "prepare" | "countdown" | "recording" | "confirmStop" | "analyzing";
 
-// ── 직무 데이터 ───────────────────────────────────────────────
-const JOB_CATEGORIES = [
-  {
-    label: "IT/개발",
-    emoji: "💻",
-    jobs: ["프론트엔드", "백엔드", "AI", "데이터분석"],
-  },
-  {
-    label: "비즈니스",
-    emoji: "📊",
-    jobs: ["마케팅", "인사", "재무·회계"],
-  },
-  {
-    label: "디자인",
-    emoji: "🎨",
-    jobs: ["UX/UI 디자이너", "영상 제작", "그래픽 디자이너"],
-  },
-];
-
-// 카테고리별 색상 테마
-const CATEGORY_COLORS: Record<string, { activeTab: string; activeJob: string; dot: string }> = {
-  "IT/개발": {
-    activeTab: "bg-blue-600 text-white shadow-md shadow-blue-300/40",
-    activeJob: "border-blue-500 bg-blue-50 text-blue-700",
-    dot: "bg-blue-500",
-  },
-  "비즈니스": {
-    activeTab: "bg-emerald-600 text-white shadow-md shadow-emerald-300/40",
-    activeJob: "border-emerald-500 bg-emerald-50 text-emerald-700",
-    dot: "bg-emerald-500",
-  },
-  "디자인": {
-    activeTab: "bg-purple-600 text-white shadow-md shadow-purple-300/40",
-    activeJob: "border-purple-500 bg-purple-50 text-purple-700",
-    dot: "bg-purple-500",
-  },
-};
-
-// ── 직무별 면접 질문 ──────────────────────────────────────────
-const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
-  "IT/개발": [
-    "Q1. 프로젝트 중 가장 해결하기 어려웠던 기술적 한계와 트러블슈팅 경험을 말씀해 주세요.",
-    "Q2. 코드 리뷰나 협업 도구를 활용한 팀 개발 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q3. 본인이 가장 자신 있는 기술 스택과 해당 기술을 선택한 이유를 말씀해 주세요.",
-  ],
-  "비즈니스": [
-    "Q1. 데이터를 기반으로 의사결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q2. 팀원 간 의견이 대립할 때 조율한 경험과 본인만의 소통 노하우는 무엇인가요?",
-    "Q3. 본인이 주도적으로 기획하거나 실행한 프로젝트를 STAR 구조로 말씀해 주세요.",
-  ],
-  "디자인": [
-    "Q1. 사용자 중심의 디자인 결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q2. 개발팀 혹은 기획팀과 협업 시 디자인 의도를 효과적으로 전달한 방법을 말씀해 주세요.",
-    "Q3. 본인 포트폴리오 중 가장 애착이 가는 작업물과 그 이유를 설명해 주세요.",
-  ],
-};
-
-// ── 분석 화면 팁 ──────────────────────────────────────────────
 const LOADING_TIPS = [
   { category: "💡 면접 꿀팁", text: "답변을 하다가 막힐 때는 1~2초간 천천히 숨을 고르고 '잠시 생각할 시간을 주시겠습니까?'라고 정중히 양해를 구해보세요." },
   { category: "👔 면접 복장 추천", text: "IT/개발 직군은 너무 딱딱한 정장보다 깔끔한 셔츠나 슬랙스, 단정한 니트 레이어드가 훨씬 세련되고 전문적인 인상을 줍니다." },
@@ -3770,8 +3490,8 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const router = useRouter();
 
   // 직무 선택 상태
-  const [selectedCategory, setSelectedCategory] = useState("IT/개발");
-  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [selectedJob, setSelectedJob] = useState<number | null>(null);
 
   // 면접 진행 상태
   const [step, setStep] = useState<Step>("jobSelect");
@@ -3789,16 +3509,27 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // 현재 카테고리 파생 데이터
-  const currentCategoryData =
-    JOB_CATEGORIES.find((c) => c.label === selectedCategory) ?? JOB_CATEGORIES[0];
-  const currentColors = CATEGORY_COLORS[selectedCategory];
-  const currentQuestions =
-    QUESTIONS_BY_CATEGORY[selectedCategory] ?? QUESTIONS_BY_CATEGORY["IT/개발"];
+  // 프로토타입: 질문을 직군별 1개로 제한
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const currentQuestions = questions.slice(0, 1);
 
   const eyeBlinkingData = analysisResult?.result ?? analysisResult?.data;
 
-  // ── 카메라 초기화 (컴포넌트 마운트 시 바로 시작 → 배경 미리보기) ─
+  useEffect(() => {
+    const fetchJobRoles = async () => {
+      try {
+        const data = await getJobRoles();
+        console.log("직무 목록 조회 성공", data);
+        setJobRoles(data);
+      } catch (error) {
+        console.error("직무 목록 조회 실패", error);
+      }
+    };
+
+    fetchJobRoles();
+  }, []);
+
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -3846,21 +3577,52 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
 
       mediaRecorderRef.current.onstop = async () => {
         try {
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          console.log(`✅ 녹화 완료: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
+          const blob = new Blob(chunksRef.current, {
+            type: mediaRecorderRef.current?.mimeType || "video/webm",
+          });
+          console.log("녹화 chunks 개수:", chunksRef.current.length);
+          console.log("녹화 blob size:", blob.size);
+          console.log("녹화 blob type:", blob.type);
 
           if (blob.size === 0) {
             throw new Error("녹화된 영상 파일이 비어 있습니다.");
           }
 
-          // FE는 Spring만 호출한다.
-          // Spring이 FastAPI 호출과 DB 저장을 담당한다.
-          // userId/interviewId는 실제 로그인/면접 세션 연동 후 전달하면 된다.
-          const result = await analyzeEyeBlinking({
+          const uploadResult = await uploadInterviewVideo({
             file: blob,
+          });
+          
+          console.log("영상 업로드 결과:", uploadResult);
+          
+          const videoUrl = uploadResult.videoUrl ?? uploadResult.objectKey;
+          
+          if (!videoUrl) {
+            throw new Error("영상 업로드 응답에 videoUrl/objectKey가 없습니다.");
+          }
+          
+          console.log("분석에 넘기는 videoUrl:", videoUrl);
+          
+          setAnalysisProgress(55);
+          
+          const result = await analyzeEyeBlinkingByVideoUrl({
+            videoUrl,
           });
 
           console.log("눈 깜빡임 분석 결과:", result);
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem(
+              "latestEyeBlinkingAnalysis",
+              JSON.stringify({
+                message: result.message,
+                reportId: result.reportId,
+                result: result.result ?? result.data,
+                videoUrl,
+                savedAt: new Date().toISOString(),
+              })
+            );
+          }
+
           setAnalysisResult(result);
           setAnalysisProgress(100);
         } catch (error) {
@@ -3876,7 +3638,14 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
         }
       };
 
+      // 녹화 중지
       mediaRecorderRef.current.stop();
+
+      // ✅ 웹캠(카메라/마이크) 트랙을 완전히 종료하여 불빛 끄기
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null; // 스트림 참조 초기화
+      }
     }
   }, [step]);
 
@@ -3920,6 +3689,30 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     return () => { clearInterval(tipInterval); clearInterval(progressInterval); };
   }, [step]);
 
+  const handleStartInterview = async () => {
+    if (!selectedJob) return;
+
+    try {
+      setIsLoadingQuestions(true);
+
+      const response = await createQuestions({
+        count: 3,
+        jobRoleId: selectedJob,
+      });
+
+      console.log("질문 조회 성공", response);
+
+      setQuestions(response);
+      setCurrentQuestionIdx(0);
+
+      setStep("prepare");
+    } catch (error) {
+      console.error("질문 조회 실패", error);
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
     const s = (seconds % 60).toString().padStart(2, "0");
@@ -3935,9 +3728,9 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   };
 
   const handleFinalExit = () => {
-  streamRef.current?.getTracks().forEach((track) => track.stop());
-  onExit(); // ← router.push 대신 prop 사용
-};
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    onExit(); 
+  };
 
   // ── 분석 화면 (별도 풀스크린) ─────────────────────────────────
   if (step === "analyzing") {
@@ -4089,59 +3882,38 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
             </div>
 
             {/* 카테고리 탭 */}
-            <div className="flex gap-2 mb-5">
-              {JOB_CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat.label;
-                const colors = CATEGORY_COLORS[cat.label];
-                return (
-                  <button
-                    key={cat.label}
-                    onClick={() => {
-                      setSelectedCategory(cat.label);
-                      setSelectedJob(null);
-                    }}
-                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl text-xs font-bold transition-all duration-200 ${
-                      isActive
-                        ? colors.activeTab
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span className="text-base">{cat.emoji}</span>
-                    <span className="leading-none">{cat.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 세부 직무 선택 — 카테고리 바뀔 때 페이드 전환 */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedCategory}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
                 className="grid grid-cols-2 gap-2 mb-6"
               >
-                {currentCategoryData.jobs.map((job) => {
-                  const isSelected = selectedJob === job;
+                {jobRoles.map((job) => {
+                  const isSelected = selectedJob === job.id;
+
                   return (
                     <button
-                      key={job}
-                      onClick={() => setSelectedJob(job)}
+                      key={job.id}
+                      onClick={() => setSelectedJob(job.id)}
                       className={`py-3 px-3 rounded-xl text-sm font-semibold border-2 transition-all duration-200 text-left ${
                         isSelected
-                          ? currentColors.activeJob
+                          ? "border-navy bg-blue-50 text-navy"
                           : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 bg-white"
                       }`}
                     >
-                      {/* 선택 표시 도트 */}
                       <span
-                        className={`block w-2 h-2 rounded-full mb-1.5 transition-colors ${
-                          isSelected ? currentColors.dot : "bg-gray-300"
+                        className={`block w-2 h-2 rounded-full mb-1.5 ${
+                          isSelected ? "bg-navy" : "bg-gray-300"
                         }`}
                       />
-                      {job}
+
+                      <div>{job.name}</div>
+
+                      <div className="text-xs text-gray-400 mt-1">
+                        {job.category}
+                      </div>
                     </button>
                   );
                 })}
@@ -4151,14 +3923,14 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
             {/* 시작 버튼 — 직무 선택 전까지 비활성화 */}
             <button
               disabled={!selectedJob}
-              onClick={() => setStep("prepare")}
+              onClick={() => handleStartInterview()}
               className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 ${
                 selectedJob
                   ? "bg-navy text-white hover:bg-navy-dark shadow-md shadow-navy/20 hover:-translate-y-0.5"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {selectedJob ? `${selectedJob} 면접 시작하기` : "직무를 선택해 주세요"}
+              {selectedJob ? `${jobRoles.find(job => job.id === selectedJob)?.name} 면접 시작하기` : "직무를 선택해 주세요"}
               {selectedJob && <ChevronRight className="h-4 w-4" />}
             </button>
           </motion.div>
@@ -4185,9 +3957,9 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   </div>
                   {/* 선택된 직무 배지 */}
                   <div className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white border border-white/20">
-                    <span className="opacity-70">{selectedCategory}</span>
+                    <span className="opacity-70">{jobRoles.at(selectedJob!)?.name}</span>
                     <span className="opacity-40">·</span>
-                    <span>{selectedJob}</span>
+                    <span>{jobRoles.at(selectedJob!)?.name}</span>
                   </div>
                 </motion.div>
               )}
@@ -4204,11 +3976,11 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                       AI Live Question
                     </span>
                     <span className="text-[10px] font-bold text-gray-400">
-                      {selectedCategory} · {selectedJob}
+                      {jobRoles.at(selectedJob!)?.category} · {jobRoles.at(selectedJob!)?.name}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-navy mt-1 leading-snug">
-                    {currentQuestions[currentQuestionIdx]}
+                    {currentQuestions[currentQuestionIdx].question}
                   </h2>
                 </motion.div>
               )}
@@ -4288,8 +4060,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                 자세 정렬 완료 (촬영 시작)
               </button>
             ) : (
-              step !== "confirmStop" &&
-              step !== "analyzing" && (
+              step !== "confirmStop" && (
                 <div className="flex items-center gap-4">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
