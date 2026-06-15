@@ -15,6 +15,23 @@ export type VideoUploadResponse = {
    * 예: videos/uuid_interview.webm
    */
   videoUrl: string;
+
+  /**
+   * 혹시 BE 응답 필드명이 objectKey로 올 경우 대비
+   */
+  objectKey?: string;
+};
+
+export type QuestionRequest = {
+  count: number;
+  jobRoleId: number;
+  coverLetter?: string;
+};
+
+export type QuestionDto = {
+  id: number;
+  question: string;
+  jobName: string;
 };
 
 export type EyeBlinkingRawResult = {
@@ -68,14 +85,6 @@ export async function uploadInterviewVideo(params: {
   userId?: number;
   interviewId?: number;
 }): Promise<VideoUploadResponse> {
-  /**
-   * 팀원 VideoService와 연결되는 영상 저장 API.
-   *
-   * 변경 이유:
-   * - 기존에는 eye-blink API가 영상을 직접 multipart로 받아 로컬에 저장했다.
-   * - 하지만 팀원 코드에 /videos/upload → MinIO 저장 → videoUrl 반환 흐름이 이미 있으므로
-   *   FE도 이 API를 먼저 호출해야 영상 저장 방식이 하나로 통일된다.
-   */
   const formData = new FormData();
   formData.append("file", params.file, "interview.webm");
 
@@ -105,13 +114,6 @@ export async function analyzeEyeBlinkingByVideoUrl(params: {
   userId?: number;
   interviewId?: number;
 }): Promise<EyeBlinkingAnalyzeResponse> {
-  /**
-   * 저장된 영상 objectKey를 기반으로 눈 깜빡임 분석을 요청한다.
-   *
-   * FE → Spring /api/eye-blinking/analyze
-   * Spring → FastAPI /api/v1/vision/blinks
-   * FastAPI → MinIO에서 videoUrl 다운로드 후 OpenCV 분석
-   */
   const response = await fetch(`${API_BASE_URL}/api/eye-blinking/analyze`, {
     method: "POST",
     headers: {
@@ -137,27 +139,20 @@ export async function analyzeEyeBlinking(params: {
   userId?: number;
   interviewId?: number;
 }): Promise<EyeBlinkingAnalyzeResponse> {
-  /**
-   * 기존 InterviewRecording.tsx 호환용 함수.
-   *
-   * 수정 전:
-   * - FE가 영상을 바로 /api/eye-blinking/analyze/upload 로 전송했다.
-   *
-   * 수정 후:
-   * - 먼저 팀원 VideoService의 /videos/upload 로 영상을 MinIO에 저장한다.
-   * - 반환받은 videoUrl(videos/xxx.webm)을 /api/eye-blinking/analyze 로 넘겨 분석한다.
-   *
-   * 이렇게 해두면 아직 어딘가에서 analyzeEyeBlinking()을 호출해도
-   * 내부적으로 새 흐름을 타게 된다.
-   */
   const uploadResult = await uploadInterviewVideo({
     file: params.file,
     userId: params.userId,
     interviewId: params.interviewId,
   });
 
+  const videoUrl = uploadResult.videoUrl ?? uploadResult.objectKey;
+
+  if (!videoUrl) {
+    throw new Error("영상 업로드 응답에 videoUrl/objectKey가 없습니다.");
+  }
+
   return analyzeEyeBlinkingByVideoUrl({
-    videoUrl: uploadResult.videoUrl,
+    videoUrl,
     userId: params.userId,
     interviewId: params.interviewId,
   });
@@ -168,14 +163,6 @@ export async function analyzeEyeBlinkingUploadOnly(params: {
   userId?: number;
   interviewId?: number;
 }): Promise<EyeBlinkingAnalyzeResponse> {
-  /**
-   * 과거 단독 테스트용 이름.
-   *
-   * 지금은 팀원 VideoService 흐름과 맞추기 위해
-   * 내부적으로 analyzeEyeBlinking()을 호출한다.
-   *
-   * 즉 이 함수도 더 이상 /api/eye-blinking/analyze/upload 를 직접 부르지 않는다.
-   */
   return analyzeEyeBlinking({
     file: params.file,
     userId: params.userId,
@@ -193,14 +180,6 @@ export async function createFollowUpQuestion(params: {
   userId?: number;
   interviewId?: number;
 }): Promise<FollowUpCreateResponse> {
-  /**
-   * 답변 텍스트 기반 꼬리질문 생성 API.
-   *
-   * 주의:
-   * - followup은 영상 파일이 아니라 답변 텍스트가 필요하다.
-   * - 따라서 STT 결과가 준비되면 answer에 STT 텍스트를 넣어 호출하면 된다.
-   * - questionId가 있으면 Spring이 QuestionEntity에서 원본 질문을 조회할 수 있다.
-   */
   const response = await fetch(`${API_BASE_URL}/api/followup/create`, {
     method: "POST",
     headers: {
@@ -224,4 +203,32 @@ export async function createFollowUpQuestion(params: {
   }
 
   return response.json();
+}
+
+export async function createQuestions(
+  request: QuestionRequest
+): Promise<QuestionDto[]> {
+  console.log("질문 생성 요청", request);
+
+  const response = await fetch(`${API_BASE_URL}/api/question/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  console.log("질문 생성 응답 상태", response.status);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("질문 생성 실패", errorText);
+    throw new Error(`질문 생성 실패: ${errorText}`);
+  }
+
+  const data: QuestionDto[] = await response.json();
+
+  console.log("질문 생성 응답", data);
+
+  return data;
 }

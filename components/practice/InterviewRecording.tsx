@@ -7,6 +7,8 @@ import { Mic, Square, ChevronRight, HelpCircle, Briefcase, Loader2, CheckCircle2
 import {
   analyzeEyeBlinkingByVideoUrl,
   uploadInterviewVideo,
+  createQuestions,
+  type QuestionDto,
   type EyeBlinkingAnalyzeResponse,
 } from "@/lib/api";
 
@@ -50,26 +52,6 @@ const CATEGORY_COLORS: Record<string, { activeTab: string; activeJob: string; do
   },
 };
 
-// ── 직무별 면접 질문 ──────────────────────────────────────────
-const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
-  "IT/개발": [
-    "Q1. 프로젝트 중 가장 해결하기 어려웠던 기술적 한계와 트러블슈팅 경험을 말씀해 주세요.",
-    "Q2. 코드 리뷰나 협업 도구를 활용한 팀 개발 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q3. 본인이 가장 자신 있는 기술 스택과 해당 기술을 선택한 이유를 말씀해 주세요.",
-  ],
-  "비즈니스": [
-    "Q1. 데이터를 기반으로 의사결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q2. 팀원 간 의견이 대립할 때 조율한 경험과 본인만의 소통 노하우는 무엇인가요?",
-    "Q3. 본인이 주도적으로 기획하거나 실행한 프로젝트를 STAR 구조로 말씀해 주세요.",
-  ],
-  "디자인": [
-    "Q1. 사용자 중심의 디자인 결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
-    "Q2. 개발팀 혹은 기획팀과 협업 시 디자인 의도를 효과적으로 전달한 방법을 말씀해 주세요.",
-    "Q3. 본인 포트폴리오 중 가장 애착이 가는 작업물과 그 이유를 설명해 주세요.",
-  ],
-};
-
-// ── 분석 화면 팁 ──────────────────────────────────────────────
 const LOADING_TIPS = [
   { category: "💡 면접 꿀팁", text: "답변을 하다가 막힐 때는 1~2초간 천천히 숨을 고르고 '잠시 생각할 시간을 주시겠습니까?'라고 정중히 양해를 구해보세요." },
   { category: "👔 면접 복장 추천", text: "IT/개발 직군은 너무 딱딱한 정장보다 깔끔한 셔츠나 슬랙스, 단정한 니트 레이어드가 훨씬 세련되고 전문적인 인상을 줍니다." },
@@ -106,12 +88,38 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const currentCategoryData =
     JOB_CATEGORIES.find((c) => c.label === selectedCategory) ?? JOB_CATEGORIES[0];
   const currentColors = CATEGORY_COLORS[selectedCategory];
-  const currentQuestions =
-    QUESTIONS_BY_CATEGORY[selectedCategory] ?? QUESTIONS_BY_CATEGORY["IT/개발"];
+  // 프로토타입: 질문을 직군별 1개로 제한
+  const [questions, setQuestions] = useState<QuestionDto[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const currentQuestions = questions.slice(0, 1);
 
   const eyeBlinkingData = analysisResult?.result ?? analysisResult?.data;
 
-  // ── 카메라 초기화 (컴포넌트 마운트 시 바로 시작 → 배경 미리보기) ─
+  useEffect(() => {
+    if (!selectedJob) return;
+
+    const fetchQuestions = async () => {
+      try {
+        setIsLoadingQuestions(true);
+
+        const response = await createQuestions({
+          count: 3,
+          jobRoleId: 1, // TODO: selectedJob에 맞는 jobRoleId로 교체 필요
+        });
+
+        console.log("질문 조회 성공", response);
+
+        setQuestions(response);
+        setCurrentQuestionIdx(0);
+      } catch (error) {
+        console.error("질문 조회 실패", error);
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [selectedJob]);
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -561,7 +569,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-navy mt-1 leading-snug">
-                    {currentQuestions[currentQuestionIdx]}
+                    {currentQuestions[currentQuestionIdx].question}
                   </h2>
                 </motion.div>
               )}
