@@ -8,20 +8,13 @@ export type JobRole = {
 };
 
 export type VideoUploadResponse = {
-  message?: string;
+  message: string;
 
   /**
    * Spring VideoService가 MinIO에 저장한 objectKey.
    * 예: videos/uuid_interview.webm
    */
-  videoUrl?: string;
-
-  /**
-   * 팀원 VideoService 응답에서 objectKey로 올 수도 있어서 같이 대응.
-   */
-  objectKey?: string;
-
-  [key: string]: unknown;
+  videoUrl: string;
 };
 
 export type EyeBlinkingRawResult = {
@@ -139,27 +132,6 @@ export async function analyzeEyeBlinkingByVideoUrl(params: {
   return response.json();
 }
 
-export async function uploadVideo(params: {
-  file: File | Blob;
-  fileName?: string;
-}): Promise<VideoUploadResponse> {
-  const formData = new FormData();
-
-  formData.append("file", params.file, params.fileName ?? "interview.webm");
-
-  const response = await fetch(`${API_BASE_URL}/videos/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`영상 업로드 실패: ${errorText}`);
-  }
-
-  return response.json();
-}
-
 export async function analyzeEyeBlinking(params: {
   file: Blob;
   userId?: number;
@@ -199,10 +171,10 @@ export async function analyzeEyeBlinkingUploadOnly(params: {
   /**
    * 과거 단독 테스트용 이름.
    *
-   * 현재는 팀원 VideoService 흐름에 맞춰
+   * 지금은 팀원 VideoService 흐름과 맞추기 위해
    * 내부적으로 analyzeEyeBlinking()을 호출한다.
    *
-   * 즉 이 함수도 더 이상 /api/eye-blinking/analyze/upload 를 직접 호출하지 않는다.
+   * 즉 이 함수도 더 이상 /api/eye-blinking/analyze/upload 를 직접 부르지 않는다.
    */
   return analyzeEyeBlinking({
     file: params.file,
@@ -253,4 +225,3 @@ export async function createFollowUpQuestion(params: {
 
   return response.json();
 }
-
