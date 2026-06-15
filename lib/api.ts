@@ -28,7 +28,7 @@ export type QuestionRequest = {
   coverLetter?: string;
 };
 
-export type QuestionDto = {
+export type Question = {
   id: number;
   question: string;
   jobName: string;
@@ -207,7 +207,7 @@ export async function createFollowUpQuestion(params: {
 
 export async function createQuestions(
   request: QuestionRequest
-): Promise<QuestionDto[]> {
+): Promise<Question[]> {
   console.log("질문 생성 요청", request);
 
   const response = await fetch(`${API_BASE_URL}/api/question/create`, {
@@ -226,7 +226,7 @@ export async function createQuestions(
     throw new Error(`질문 생성 실패: ${errorText}`);
   }
 
-  const data: QuestionDto[] = await response.json();
+  const data: Question[] = await response.json();
 
   console.log("질문 생성 응답", data);
 
