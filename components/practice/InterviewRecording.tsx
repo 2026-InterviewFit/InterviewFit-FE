@@ -8,49 +8,13 @@ import {
   analyzeEyeBlinkingByVideoUrl,
   uploadInterviewVideo,
   createQuestions,
-  type QuestionDto,
   type EyeBlinkingAnalyzeResponse,
+  JobRole,
+  Question,
+  getJobRoles,
 } from "@/lib/api";
 
 type Step = "jobSelect" | "prepare" | "countdown" | "recording" | "confirmStop" | "analyzing";
-
-// ── 직무 데이터 ───────────────────────────────────────────────
-const JOB_CATEGORIES = [
-  {
-    label: "IT/개발",
-    emoji: "💻",
-    jobs: ["프론트엔드", "백엔드", "AI", "데이터분석"],
-  },
-  {
-    label: "비즈니스",
-    emoji: "📊",
-    jobs: ["마케팅", "인사", "재무·회계"],
-  },
-  {
-    label: "디자인",
-    emoji: "🎨",
-    jobs: ["UX/UI 디자이너", "영상 제작", "그래픽 디자이너"],
-  },
-];
-
-// 카테고리별 색상 테마
-const CATEGORY_COLORS: Record<string, { activeTab: string; activeJob: string; dot: string }> = {
-  "IT/개발": {
-    activeTab: "bg-blue-600 text-white shadow-md shadow-blue-300/40",
-    activeJob: "border-blue-500 bg-blue-50 text-blue-700",
-    dot: "bg-blue-500",
-  },
-  "비즈니스": {
-    activeTab: "bg-emerald-600 text-white shadow-md shadow-emerald-300/40",
-    activeJob: "border-emerald-500 bg-emerald-50 text-emerald-700",
-    dot: "bg-emerald-500",
-  },
-  "디자인": {
-    activeTab: "bg-purple-600 text-white shadow-md shadow-purple-300/40",
-    activeJob: "border-purple-500 bg-purple-50 text-purple-700",
-    dot: "bg-purple-500",
-  },
-};
 
 const LOADING_TIPS = [
   { category: "💡 면접 꿀팁", text: "답변을 하다가 막힐 때는 1~2초간 천천히 숨을 고르고 '잠시 생각할 시간을 주시겠습니까?'라고 정중히 양해를 구해보세요." },
@@ -65,8 +29,8 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const router = useRouter();
 
   // 직무 선택 상태
-  const [selectedCategory, setSelectedCategory] = useState("IT/개발");
-  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [selectedJob, setSelectedJob] = useState<number | null>(null);
 
   // 면접 진행 상태
   const [step, setStep] = useState<Step>("jobSelect");
@@ -84,42 +48,29 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // 현재 카테고리 파생 데이터
-  const currentCategoryData =
-    JOB_CATEGORIES.find((c) => c.label === selectedCategory) ?? JOB_CATEGORIES[0];
-  const currentColors = CATEGORY_COLORS[selectedCategory];
   // 프로토타입: 질문을 직군별 1개로 제한
-  const [questions, setQuestions] = useState<QuestionDto[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const currentQuestions = questions.slice(0, 1);
 
   const eyeBlinkingData = analysisResult?.result ?? analysisResult?.data;
 
   useEffect(() => {
-    if (!selectedJob) return;
-
-    const fetchQuestions = async () => {
+    const fetchJobRoles = async () => {
       try {
-        setIsLoadingQuestions(true);
+        const data = await getJobRoles();
 
-        const response = await createQuestions({
-          count: 3,
-          jobRoleId: 1, // TODO: selectedJob에 맞는 jobRoleId로 교체 필요
-        });
+        console.log("직무 목록 조회 성공", data);
 
-        console.log("질문 조회 성공", response);
-
-        setQuestions(response);
-        setCurrentQuestionIdx(0);
+        setJobRoles(data);
       } catch (error) {
-        console.error("질문 조회 실패", error);
-      } finally {
-        setIsLoadingQuestions(false);
+        console.error("직무 목록 조회 실패", error);
       }
     };
 
-    fetchQuestions();
-  }, [selectedJob]);
+    fetchJobRoles();
+  }, []);
+
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -280,6 +231,30 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
 
     return () => { clearInterval(tipInterval); clearInterval(progressInterval); };
   }, [step]);
+
+  const handleStartInterview = async () => {
+    if (!selectedJob) return;
+
+    try {
+      setIsLoadingQuestions(true);
+
+      const response = await createQuestions({
+        count: 3,
+        jobRoleId: selectedJob,
+      });
+
+      console.log("질문 조회 성공", response);
+
+      setQuestions(response);
+      setCurrentQuestionIdx(0);
+
+      setStep("prepare");
+    } catch (error) {
+      console.error("질문 조회 실패", error);
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -450,59 +425,38 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
             </div>
 
             {/* 카테고리 탭 */}
-            <div className="flex gap-2 mb-5">
-              {JOB_CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat.label;
-                const colors = CATEGORY_COLORS[cat.label];
-                return (
-                  <button
-                    key={cat.label}
-                    onClick={() => {
-                      setSelectedCategory(cat.label);
-                      setSelectedJob(null);
-                    }}
-                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl text-xs font-bold transition-all duration-200 ${
-                      isActive
-                        ? colors.activeTab
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span className="text-base">{cat.emoji}</span>
-                    <span className="leading-none">{cat.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 세부 직무 선택 — 카테고리 바뀔 때 페이드 전환 */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedCategory}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
                 className="grid grid-cols-2 gap-2 mb-6"
               >
-                {currentCategoryData.jobs.map((job) => {
-                  const isSelected = selectedJob === job;
+                {jobRoles.map((job) => {
+                  const isSelected = selectedJob === job.id;
+
                   return (
                     <button
-                      key={job}
-                      onClick={() => setSelectedJob(job)}
+                      key={job.id}
+                      onClick={() => setSelectedJob(job.id)}
                       className={`py-3 px-3 rounded-xl text-sm font-semibold border-2 transition-all duration-200 text-left ${
                         isSelected
-                          ? currentColors.activeJob
+                          ? "border-navy bg-blue-50 text-navy"
                           : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 bg-white"
                       }`}
                     >
-                      {/* 선택 표시 도트 */}
                       <span
-                        className={`block w-2 h-2 rounded-full mb-1.5 transition-colors ${
-                          isSelected ? currentColors.dot : "bg-gray-300"
+                        className={`block w-2 h-2 rounded-full mb-1.5 ${
+                          isSelected ? "bg-navy" : "bg-gray-300"
                         }`}
                       />
-                      {job}
+
+                      <div>{job.name}</div>
+
+                      <div className="text-xs text-gray-400 mt-1">
+                        {job.category}
+                      </div>
                     </button>
                   );
                 })}
@@ -512,14 +466,14 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
             {/* 시작 버튼 — 직무 선택 전까지 비활성화 */}
             <button
               disabled={!selectedJob}
-              onClick={() => setStep("prepare")}
+              onClick={() => handleStartInterview()}
               className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 ${
                 selectedJob
                   ? "bg-navy text-white hover:bg-navy-dark shadow-md shadow-navy/20 hover:-translate-y-0.5"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {selectedJob ? `${selectedJob} 면접 시작하기` : "직무를 선택해 주세요"}
+              {selectedJob ? `${jobRoles.find(job => job.id === selectedJob)?.name} 면접 시작하기` : "직무를 선택해 주세요"}
               {selectedJob && <ChevronRight className="h-4 w-4" />}
             </button>
           </motion.div>
@@ -546,9 +500,9 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                   </div>
                   {/* 선택된 직무 배지 */}
                   <div className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white border border-white/20">
-                    <span className="opacity-70">{selectedCategory}</span>
+                    <span className="opacity-70">{jobRoles.at(selectedJob!)?.name}</span>
                     <span className="opacity-40">·</span>
-                    <span>{selectedJob}</span>
+                    <span>{jobRoles.at(selectedJob!)?.name}</span>
                   </div>
                 </motion.div>
               )}
@@ -565,7 +519,7 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
                       AI Live Question
                     </span>
                     <span className="text-[10px] font-bold text-gray-400">
-                      {selectedCategory} · {selectedJob}
+                      {jobRoles.at(selectedJob!)?.category} · {jobRoles.at(selectedJob!)?.name}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-navy mt-1 leading-snug">
