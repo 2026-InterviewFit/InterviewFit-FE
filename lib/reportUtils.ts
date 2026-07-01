@@ -32,11 +32,16 @@ export const getStatusClassName = (record?: DashboardRecord) => {
 export const getRecordDate = (record?: DashboardRecord) => record?.report?.createdAt ?? record?.savedAt;
 export const getRecordJobName = (record?: DashboardRecord) => record?.report?.jobName ?? record?.jobName ?? "모의면접";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
 export const getVideoPlaybackUrl = (objectKey?: string) => {
   if (!objectKey) return undefined;
   if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) return objectKey;
-  const minioBaseUrl = process.env.NEXT_PUBLIC_MINIO_PUBLIC_BASE_URL ?? "http://localhost:9000/videos";
-  return `${minioBaseUrl.replace(/\/$/, "")}/${objectKey.replace(/^\/+/, "")}`;
+
+  return `${API_BASE_URL.replace(/\/$/, "")}/api/videos/stream?objectKey=${encodeURIComponent(
+    objectKey.replace(/^\/+/, "")
+  )}`;
 };
 
 export const getSortedReports = (report?: InterviewReportResponse) => [...(report?.answers ?? [])].sort((a, b) => a.answerOrder - b.answerOrder);
