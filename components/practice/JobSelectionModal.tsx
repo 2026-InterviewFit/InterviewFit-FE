@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Briefcase, CheckCircle2, ChevronRight } from "lucide-react";
-import { type JobRole } from "@/lib/api";
+import type { JobRole } from "@/types";
 
 interface JobSelectionModalProps {
   jobRoles: JobRole[];
