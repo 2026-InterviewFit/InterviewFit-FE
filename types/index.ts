@@ -124,6 +124,8 @@ export type InterviewHistoryItem = {
   jobRoleId?: number;
   jobName?: string;
   answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
+  questionTexts?: string[];      // 🔑 질문 목록 (문항별 순서대로)
+  questionTimestamps?: number[]; // 🔑 각 질문이 영상에서 시작된 시각(초 단위)
   savedAt?: string;
 };
 

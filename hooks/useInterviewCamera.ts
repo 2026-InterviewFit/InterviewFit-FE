@@ -1,6 +1,8 @@
 // hooks/useInterviewCamera.ts
 import { useState, useEffect, useRef } from "react";
 import { uploadAnswerVideo } from "@/lib/api";
+// @ts-expect-error - fix-webm-duration에는 타입 정의가 없습니다
+import fixWebmDuration from "fix-webm-duration";
 
 interface UseInterviewCameraProps {
   step: string;
@@ -9,6 +11,7 @@ interface UseInterviewCameraProps {
   jobRoleId: number | null;
   jobName?: string;
   currentQuestions: string[];
+  questionTimestamps: number[]; // 🔑 추가: 질문별 시작 시각(초)
   onExit: () => void;
 }
 
@@ -19,12 +22,14 @@ export function useInterviewCamera({
   jobRoleId,
   jobName,
   currentQuestions,
+  questionTimestamps,
   onExit,
 }: UseInterviewCameraProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordStartTimeRef = useRef<number>(0);
 
   const [analysisProgress, setAnalysisProgress] = useState(1);
   const [analysisResult, setAnalysisResult] = useState<{ message?: string } | null>(null);
@@ -59,9 +64,12 @@ export function useInterviewCamera({
         : "video/webm";
       const recorder = new MediaRecorder(streamRef.current, { mimeType });
       mediaRecorderRef.current = recorder;
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+
+      recordStartTimeRef.current = Date.now();
       recorder.start(1000);
     }
 
@@ -72,9 +80,20 @@ export function useInterviewCamera({
 
       mediaRecorderRef.current.onstop = async () => {
         try {
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          if (blob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
+          const rawBlob = new Blob(chunksRef.current, { type: "video/webm" });
+          if (rawBlob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
           if (!interviewId) throw new Error("면접 세션 정보가 없습니다. 다시 시작해주세요.");
+
+          setAnalysisProgress(20);
+
+          // webm duration 헤더 수리
+          const recordedDurationMs = Date.now() - recordStartTimeRef.current;
+          const blob: Blob = await new Promise((resolve, reject) => {
+            fixWebmDuration(rawBlob, recordedDurationMs, (fixedBlob: Blob) => {
+              if (fixedBlob) resolve(fixedBlob);
+              else reject(new Error("영상 길이 정보 복구에 실패했습니다."));
+            });
+          });
 
           setAnalysisProgress(40);
           const result = await uploadAnswerVideo({
@@ -91,6 +110,8 @@ export function useInterviewCamera({
             jobRoleId,
             jobName: jobName ?? "모의면접",
             answers: [{ answerId: result.answerId, answerOrder: result.answerOrder, analysisStatus: result.analysisStatus }],
+            questionTexts: currentQuestions,       // 🔑 질문 원문 저장
+            questionTimestamps,                     // 🔑 타임스탬프 저장
             savedAt: new Date().toISOString(),
           };
 
@@ -117,7 +138,7 @@ export function useInterviewCamera({
         streamRef.current = null;
       }
     }
-  }, [step, currentQuestions, interviewId, jobRoleId, jobName, startedUserId]);
+  }, [step, currentQuestions, interviewId, jobRoleId, jobName, startedUserId, questionTimestamps]);
 
   return {
     videoRef,

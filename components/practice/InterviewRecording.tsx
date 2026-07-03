@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 // ── 분리한 Custom Hooks Import ──
 import { useInterviewFlow } from "@/hooks/useInterviewFlow";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
@@ -31,7 +33,11 @@ const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
 export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   // 1. 상태 및 흐름 관리 Hook 호출
   const flow = useInterviewFlow();
-  
+
+  // 🔑 질문이 전환될 때마다 "그 순간의 녹화 경과 시간(초)"을 쌓아두는 ref
+  // Q1은 항상 0초부터 시작하므로 초기값 [0]
+  const questionTimestampsRef = useRef<number[]>([0]);
+
   const selectedJobData = flow.jobRoles.find((job) => job.id === flow.selectedJobId);
   const uniqueCategories = Array.from(new Set(flow.jobRoles.map((job) => job.category)));
   const filteredJobs = flow.jobRoles.filter((job) => job.category === flow.selectedCategory);
@@ -45,12 +51,17 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     jobRoleId: flow.jobRoleId,
     jobName: selectedJobData?.name,
     currentQuestions,
+    questionTimestamps: questionTimestampsRef.current, // 🔑 전달
     onExit,
   });
 
   const handleNextQuestion = () => {
-    if (flow.currentQuestionIdx < currentQuestions.length - 1) flow.setCurrentQuestionIdx((prev) => prev + 1);
-    else flow.setStep("analyzing");
+    if (flow.currentQuestionIdx < currentQuestions.length - 1) {
+      questionTimestampsRef.current.push(flow.time); // 🔑 다음 질문 시작 시각 기록
+      flow.setCurrentQuestionIdx((prev) => prev + 1);
+    } else {
+      flow.setStep("analyzing");
+    }
   };
 
   const handleFinalExit = () => {

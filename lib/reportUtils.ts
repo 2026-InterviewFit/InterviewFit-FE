@@ -49,11 +49,55 @@ export const getAverageEyeScore = (report?: InterviewReportResponse) => average(
 export const getAveragePoseScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.pose?.score));
 export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
 
+// 🔑 신규: STAR 평가 점수를 0~100 척도로 환산해서 평균
+// 백엔드가 speech 전용 종합 점수를 아직 내려주지 않아서,
+// AI 평가(aiEvaluationJson) 안의 star_score(S/T/A/R)를 임시로 활용합니다.
+// ⚠️ star_score가 항목별 0~25점(4개 합 100점) 구조라고 가정한 근사치입니다.
+//    백엔드 척도가 다르다면 이 함수만 조정하면 됩니다.
+export const getAverageSpeechContentScore = (report?: InterviewReportResponse) => {
+  const scores = getSortedReports(report)
+    .map((answer) => {
+      if (!answer.speech?.aiEvaluationJson) return undefined;
+      try {
+        const parsed = JSON.parse(answer.speech.aiEvaluationJson);
+        const star = parsed?.star_score;
+        if (!star || typeof star !== "object") return undefined;
+
+        const values = Object.values(star).filter((v): v is number => typeof v === "number");
+        if (values.length === 0) return undefined;
+
+        const total = values.reduce((sum, v) => sum + v, 0);
+        return Math.max(0, Math.min(100, total));
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((v): v is number => typeof v === "number");
+
+  return average(scores);
+};
+
+// 🔑 신규: 발화 속도 점수 + STAR 내용 점수를 함께 반영한 종합 발화 점수.
+// 기존에는 속도(글자/초)만으로 점수를 매겨서, 말은 빨리 해도 내용이 부실하면
+// 오히려 점수가 높게 나오는 문제가 있었습니다. 이제 내용 점수 비중을 더 둡니다.
+export const getSpeechScore = (report?: InterviewReportResponse) => {
+  const pace = getAverageSpeechPace(report);
+  const paceScore =
+    typeof pace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(pace - 3.5) * 12)) : undefined;
+  const contentScore = getAverageSpeechContentScore(report);
+
+  if (typeof paceScore === "number" && typeof contentScore === "number") {
+    // 속도 40% + 내용 60% 가중 평균 (내용이 더 중요하다고 보고 가중치를 둠)
+    return paceScore * 0.4 + contentScore * 0.6;
+  }
+
+  return paceScore ?? contentScore;
+};
+
 export const getOverallScore = (report?: InterviewReportResponse) => {
   const eyeScore = getAverageEyeScore(report);
   const poseScore = getAveragePoseScore(report);
-  const speechPace = getAverageSpeechPace(report);
-  const speechScore = typeof speechPace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(speechPace - 3.5) * 12)) : undefined;
+  const speechScore = getSpeechScore(report); // 🔑 개선된 함수로 교체
   return average([eyeScore, poseScore, speechScore]);
 };
 

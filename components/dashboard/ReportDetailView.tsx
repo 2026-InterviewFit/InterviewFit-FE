@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Trash2, BarChart3, CheckCircle, Mic, Play } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
 import type { DashboardRecord } from "@/types";
 import {
-  getOverallScore, getAverageEyeScore, getAveragePoseScore,
-  getAverageSpeechPace, getReportStatusLabel, getMainFeedback,
-  getSortedReports, getVideoPlaybackUrl, getRecordDate, formatKoreanDate, getRecordJobName
+  getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
+  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl, 
+  getRecordDate, formatKoreanDate, getRecordJobName
 } from "@/lib/reportUtils";
+
+import FeedbackAccordion from "./report/FeedbackAccordion";
+import VisualAnalysisCard from "./report/VisualAnalysisCard";
+import OverviewVisualizer from "./report/OverviewVisualizer"; 
+import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
 
 interface ReportDetailViewProps {
   record: DashboardRecord;
@@ -19,145 +24,172 @@ interface ReportDetailViewProps {
 
 export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
+  const [activePlaybackTime, setActivePlaybackTime] = useState(0); // 🔑 현재 재생 위치
+  const playerRef = useRef<MirroredVideoPlayerHandle>(null);
 
   const report = record.report;
   const sortedAnswers = getSortedReports(report);
-  const selectedAnswerForVideo = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
-  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerForVideo?.videoObjectKey);
+  const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
+  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
   
   const overallScore = getOverallScore(report);
-  const visualScore = ((getAverageEyeScore(report) || 0) + (getAveragePoseScore(report) || 0)) / 2 || undefined;
-  const averagePace = getAverageSpeechPace(report);
-  
+  const eyeScore = getAverageEyeScore(report);
+  const poseScore = getAveragePoseScore(report);
+  const speechScore = getSpeechScore(report); // 🔑 개선된 함수 사용
+
   const selectedDate = formatKoreanDate(getRecordDate(record));
   const selectedJobName = getRecordJobName(record);
 
+  const rawQuestions = selectedAnswerData?.questionText || "";
+  const parsedQuestions = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
+  const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
+
+  const timestamps = record.questionTimestamps ?? [];
+
+  const formatTimestamp = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const handleJumpToQuestion = (idx: number) => {
+    const target = timestamps[idx];
+    if (typeof target === "number") {
+      playerRef.current?.seekTo(target);
+    }
+  };
+
+  // 🔑 현재 재생 시각 기준으로 "지금 몇 번째 질문 구간인지" 계산
+  // 마지막으로 시작 시각이 activePlaybackTime보다 작거나 같은 질문이 현재 재생 중인 질문
+  const activeQuestionIndex =
+    timestamps.length > 0
+      ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
+      : -1;
+
   return (
     <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
-      {/* 상단 버튼 영역 */}
       <div className="flex items-center justify-between w-full mb-6">
-        <button onClick={onBack} className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50">
+        <button
+          onClick={onBack}
+          aria-label="목록으로 돌아가기"
+          className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
         </button>
-        <button onClick={() => onDelete(record.interviewId)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100">
+        <button
+          onClick={() => onDelete(record.interviewId)}
+          aria-label="이 분석 기록 삭제"
+          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
+        >
           <Trash2 className="h-4 w-4" /> 기록 삭제
         </button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
-        {/* 좌측: 스파이더 차트 및 코멘트 */}
-        <div className="xl:col-span-8 flex flex-col gap-6 w-full">
-          <div className="flex flex-col md:flex-row items-center gap-10 rounded-[32px] bg-white dark:bg-[#1e293b] p-8 md:p-10 shadow-sm border border-black/[0.02]">
-            <div className="relative flex w-full md:w-[280px] shrink-0 flex-col items-center">
-              <span className="text-xs font-bold text-muted dark:text-gray-400 mb-4 flex items-center gap-1">
-                <BarChart3 className="h-3.5 w-3.5 text-blue-500" /> 역량 밸런스 지표
-              </span>
-              <svg viewBox="0 0 240 230" className="w-full max-w-[240px] h-auto overflow-visible drop-shadow-sm">
-                <polygon points="110,20 188,65 188,155 110,200 32,155 32,65" fill="none" stroke="#e5e7eb" strokeWidth="1" />
-                <polygon points="110,65 149,87 149,132 110,155 71,132 71,87" fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3" />
-                <line x1="110" y1="20" x2="110" y2="200" stroke="#f3f4f6" strokeWidth="1" />
-                <line x1="32" y1="65" x2="188" y2="155" stroke="#f3f4f6" strokeWidth="1" />
-                <line x1="32" y1="155" x2="188" y2="65" stroke="#f3f4f6" strokeWidth="1" />
-                <polygon points="110,45 170,75 165,140 110,175 55,135 45,75" fill="rgba(167, 139, 250, 0.4)" stroke="#8b5cf6" strokeWidth="2" />
-                <text x="110" y="14" textAnchor="middle" className="text-[9px] font-bold fill-navy dark:fill-white">논리성</text>
-                <text x="226" y="68" textAnchor="end" className="text-[9px] font-bold fill-navy dark:fill-white">발화 속도</text>
-                <text x="226" y="160" textAnchor="end" className="text-[9px] font-bold fill-navy dark:fill-white">음량 분석</text>
-                <text x="110" y="218" textAnchor="middle" className="text-[9px] font-bold fill-navy dark:fill-white">시선 처리</text>
-                <text x="8" y="160" textAnchor="start" className="text-[9px] font-bold fill-navy dark:fill-white">표정 분석</text>
-                <text x="8" y="68" textAnchor="start" className="text-[9px] font-bold fill-navy dark:fill-white">자세 안정</text>
-              </svg>
+        <div className="xl:col-span-7 flex flex-col gap-6 w-full">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
+            <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
+              {roundLabel} ({getReportStatusLabel(record)})
             </div>
-
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2 text-4xl font-bold text-navy dark:text-white">
-                {typeof overallScore === "number" ? `${Math.round(overallScore)}%` : "-%"}
-                <span className="text-sm font-medium text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">
-                  {roundLabel} ({getReportStatusLabel(record)})
-                </span>
-              </div>
-              <h3 className="mt-4 text-xl md:text-2xl font-bold text-navy dark:text-white leading-snug">
-                {selectedJobName} 모의면접<br className="hidden md:block" />AI 상세 진단 리포트입니다.
+            <div className="flex justify-between items-end mb-2">
+              <h3 className="text-2xl font-bold text-navy dark:text-white leading-snug">
+                {selectedJobName} 모의면접<br />AI 진단 리포트
               </h3>
-              <p className="mt-4 max-h-[180px] overflow-y-auto pr-2 text-sm text-muted leading-relaxed break-keep">
-                {getMainFeedback(report)}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-            <div className="rounded-[28px] bg-[#f0fdf4] dark:bg-emerald-900/10 p-6 border border-black/[0.02]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[10px] font-bold text-emerald-600 mb-1">VISUAL</p>
-                  <h4 className="text-lg font-bold text-navy dark:text-white">시선 및 자세 안정도</h4>
+              <div className="text-right">
+                <p className="text-xs text-muted mb-1">종합 점수</p>
+                <div className="text-4xl font-bold text-blue-600">
+                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
                 </div>
-                <div className="rounded-full bg-white p-2 text-emerald-500 shadow-sm"><CheckCircle className="w-4 h-4" /></div>
-              </div>
-              <div className="mt-8 flex justify-between items-end">
-                <p className="text-xs text-emerald-700/70">카메라 정면 응시율</p>
-                <p className="text-3xl font-bold text-emerald-600">
-                  {typeof visualScore === "number" ? Math.round(visualScore) : "-"}<span className="text-base font-medium">%</span>
-                </p>
               </div>
             </div>
-
-            <div className="rounded-[28px] bg-[#fefce8] dark:bg-yellow-900/10 p-6 border border-black/[0.02]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[10px] font-bold text-yellow-600 mb-1">VOICE</p>
-                  <h4 className="text-lg font-bold text-navy dark:text-white">발화 속도 (BPM)</h4>
-                </div>
-                <div className="rounded-full bg-white p-2 text-yellow-500 shadow-sm"><Mic className="w-4 h-4" /></div>
-              </div>
-              <div className="mt-8 flex justify-between items-end">
-                <p className="text-xs text-yellow-700/70">분당 평균 발화 단어 수</p>
-                <p className="text-3xl font-bold text-yellow-600">
-                  {typeof averagePace === "number" ? Math.round(averagePace * 60) : "-"}<span className="text-sm font-medium"> WPM</span>
-                </p>
-              </div>
-            </div>
+            <FeedbackAccordion feedback={getMainFeedback(report)} />
+            <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
           </div>
+          <VisualAnalysisCard answerData={selectedAnswerData} />
         </div>
 
-        {/* 우측: 영상 플레이어 및 버튼 */}
-        <div className="xl:col-span-4 flex flex-col gap-6 w-full">
-          <div onClick={onStartNew} className="group cursor-pointer rounded-[32px] bg-[#1f2937] p-8 text-white shadow-lg transition-transform hover:-translate-y-1 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-400/20 transition-all" />
-            <h4 className="text-lg font-bold">새로운 연습 세션 시작하기</h4>
-            <p className="mt-2 text-xs text-white/60">웹캠과 마이크를 통해 정밀 분석을 시작합니다.</p>
-            <div className="mt-8 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 group-hover:bg-blue-500 transition-colors">
-              <Play className="h-5 w-5 fill-white pl-0.5" />
+        <div className="xl:col-span-5 flex flex-col gap-6 w-full">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
+            <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
+            
+            <div className="mb-5 flex flex-wrap gap-2">
+              {sortedAnswers.map((answer, index) => (
+                <button 
+                  key={answer.answerId} 
+                  onClick={() => setSelectedAnswerIndex(index)}
+                  aria-label={`${answer.answerOrder}번 질문 답변 보기`}
+                  className={`rounded-lg px-4 py-2 text-xs font-bold transition-all border ${
+                    selectedAnswerIndex === index 
+                      ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800" 
+                      : "bg-transparent border-line text-muted hover:bg-gray-50"
+                  }`}
+                >
+                  Q{answer.answerOrder}
+                </button>
+              ))}
             </div>
-          </div>
 
-          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.02] flex-1 flex flex-col">
-            <h4 className="text-lg font-bold text-navy dark:text-white mb-4">선택된 영상 다시보기</h4>
-            {sortedAnswers.length > 1 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {sortedAnswers.map((answer, index) => (
-                  <button key={answer.answerId} type="button" onClick={() => setSelectedAnswerIndex(index)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selectedAnswerIndex === index ? "bg-navy text-white" : "bg-bg text-muted hover:bg-gray-200"}`}>
-                    답변 {answer.answerOrder}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden mb-6">
+            <div className="mb-6">
               {selectedVideoUrl ? (
-                <video key={selectedVideoUrl} src={selectedVideoUrl} controls preload="metadata" className="h-full w-full bg-[#0f172a] object-contain" />
+                <MirroredVideoPlayer
+                  ref={playerRef}
+                  src={selectedVideoUrl}
+                  onTimeUpdate={setActivePlaybackTime} // 🔑 재생 위치 실시간 수신
+                />
               ) : (
-                <><Play className="h-12 w-12 fill-white opacity-80" /><p className="absolute bottom-4 text-[10px] text-white/60">영상 주소가 없습니다</p></>
+                <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
+                  <Play className="h-10 w-10 fill-white opacity-40" />
+                  <p className="absolute bottom-4 text-[10px] text-white/40">영상 주소가 없습니다</p>
+                </div>
               )}
             </div>
-            <div className="mt-auto">
-              <h5 className="font-bold text-ink dark:text-white">{selectedJobName} 모의면접</h5>
-              <p className="text-xs text-muted mt-1">촬영 일시 : {selectedDate}</p>
-              {selectedAnswerForVideo?.questionText && (
-                <p className="mt-3 text-xs leading-relaxed text-muted">
-                  {selectedAnswerForVideo.answerOrder}번 질문: {selectedAnswerForVideo.questionText}
-                </p>
-              )}
+            
+            <div className="mt-auto bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-black/5">
+              <h5 className="font-bold text-sm text-navy dark:text-white flex items-center gap-2 mb-4">
+                <ListVideo className="h-4 w-4 text-blue-600" />
+                질문 목록
+              </h5>
+              <div className="flex flex-col gap-2">
+                {questionsList.map((question, idx) => {
+                  const hasTimestamp = typeof timestamps[idx] === "number";
+                  const isActive = hasTimestamp && idx === activeQuestionIndex; // 🔑 현재 재생 중인 질문 여부
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleJumpToQuestion(idx)}
+                      disabled={!hasTimestamp}
+                      aria-label={`${idx + 1}번 질문으로 이동`}
+                      aria-current={isActive ? "true" : undefined}
+                      className={`text-left p-3 rounded-xl border transition-colors ${
+                        isActive
+                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" // 🔑 하이라이트 스타일
+                          : hasTimestamp
+                          ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
+                          : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <span className={`text-[10px] font-bold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                          Q{idx + 1} {isActive && "· 재생 중"}
+                        </span>
+                        {hasTimestamp && (
+                          <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">
+                            ▶ {formatTimestamp(timestamps[idx])}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
+                        {question}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted mt-5 pt-4 border-t border-black/5">
+                촬영 일시 : {selectedDate}
+              </p>
             </div>
           </div>
         </div>
