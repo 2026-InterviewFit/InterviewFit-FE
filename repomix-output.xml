@@ -138,277 +138,6 @@ tsconfig.json
 <files>
 This section contains the contents of the repository's files.
 
-<file path="components/dashboard/report/FeedbackAccordion.tsx">
-"use client";
-
-import { useState } from "react";
-import { ChevronDown, ChevronUp, MessageSquareText } from "lucide-react";
-
-interface FeedbackAccordionProps {
-  feedback: string;
-}
-
-export default function FeedbackAccordion({ feedback }: FeedbackAccordionProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <div className="mt-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-gray-800/30 p-5 transition-all">
-      <div className="flex items-center gap-2 mb-2">
-        <MessageSquareText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <span className="text-sm font-bold text-navy dark:text-white">AI 종합 피드백</span>
-      </div>
-      
-      <div className="relative">
-        <p className={`text-sm text-muted dark:text-gray-400 leading-relaxed break-keep transition-all ${isExpanded ? "" : "line-clamp-2"}`}>
-          {feedback}
-        </p>
-        
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-3 flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          {isExpanded ? (
-            <><ChevronUp className="h-3.5 w-3.5" /> 닫기</>
-          ) : (
-            <><ChevronDown className="h-3.5 w-3.5" /> 자세히 보기</>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="components/dashboard/report/MirroredVideoPlayer.tsx">
-"use client";
-
-import { useState, useRef } from "react";
-import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react";
-
-interface MirroredVideoPlayerProps {
-  src: string;
-}
-
-export default function MirroredVideoPlayer({ src }: MirroredVideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-
-  // 재생바 클릭 시 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (video && video.duration) {
-      video.currentTime = (Number(e.target.value) / 100) * video.duration;
-    }
-  };
-
-  return (
-    <div ref={containerRef} className="relative aspect-video w-full rounded-2xl bg-black overflow-hidden group">
-      {/* 영상만 뒤집음 (컨트롤러와 분리됨) */}
-      <video
-        ref={videoRef}
-        src={src}
-        className="w-full h-full object-contain -scale-x-100"
-        onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
-      />
-
-      {/* 커스텀 컨트롤러 레이어 (뒤집히지 않음) */}
-      <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={duration ? (currentTime / duration) * 100 : 0}
-          onChange={handleSeek}
-          className="w-full h-1.5 mb-3 cursor-pointer accent-blue-500"
-        />
-        <div className="flex gap-4">
-          <button onClick={() => { 
-            videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause();
-            setIsPlaying(!isPlaying);
-          }} className="text-white">
-            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-          </button>
-          <button onClick={() => containerRef.current?.requestFullscreen()} className="text-white ml-auto">
-            <Maximize size={20} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="components/dashboard/report/OverviewVisualizer.tsx">
-"use client";
-
-import RadarChart from "./RadarChart";
-import { BarChart3 } from "lucide-react";
-
-interface OverviewVisualizerProps {
-  eyeScore?: number;
-  poseScore?: number;
-  speechScore?: number;
-}
-
-export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speechScore = 0 }: OverviewVisualizerProps) {
-  const scores = [
-    { label: "시선/표정", score: eyeScore, color: "bg-blue-500" },
-    { label: "자세 안정", score: poseScore, color: "bg-indigo-500" },
-    { label: "답변/발화", score: speechScore, color: "bg-sky-400" },
-  ];
-
-  return (
-    <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-8 border-t border-black/5 dark:border-white/5 pt-6">
-      
-      {/* 1. 좌측 스파이더맵 */}
-      <div className="flex-1 w-full flex flex-col items-center border-r-0 md:border-r border-black/5 dark:border-white/5 pr-0 md:pr-8">
-        <div className="flex items-center gap-1.5 w-full mb-4">
-          <BarChart3 className="h-4 w-4 text-blue-600" />
-          <span className="text-sm font-bold text-navy dark:text-white">역량 밸런스</span>
-        </div>
-        <RadarChart />
-      </div>
-
-      {/* 2. 우측 막대 그래프 */}
-      <div className="flex-1 w-full flex flex-col justify-center">
-        <h4 className="text-sm font-bold text-navy dark:text-white mb-4">상세 점수 분포</h4>
-        <div className="flex flex-col gap-4">
-          {scores.map((s, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="w-16 text-[11px] font-semibold text-slate-500">{s.label}</span>
-              <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full ${s.color} transition-all duration-1000 ease-out`} 
-                  style={{ width: `${s.score || 0}%` }} 
-                />
-              </div>
-              <span className="w-8 text-right text-xs font-bold text-navy dark:text-white">{Math.round(s.score || 0)}점</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-    </div>
-  );
-}
-</file>
-
-<file path="components/dashboard/report/RadarChart.tsx">
-"use client";
-
-export default function RadarChart() {
-  return (
-    <div className="relative flex w-full max-w-[220px] shrink-0 flex-col items-center mx-auto">
-      <svg viewBox="0 0 240 230" className="w-full h-auto overflow-visible drop-shadow-sm">
-        <polygon points="110,20 188,65 188,155 110,200 32,155 32,65" fill="none" stroke="#e2e8f0" strokeWidth="1" />
-        <polygon points="110,65 149,87 149,132 110,155 71,132 71,87" fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3" />
-        <line x1="110" y1="20" x2="110" y2="200" stroke="#f1f5f9" strokeWidth="1" />
-        <line x1="32" y1="65" x2="188" y2="155" stroke="#f1f5f9" strokeWidth="1" />
-        <line x1="32" y1="155" x2="188" y2="65" stroke="#f1f5f9" strokeWidth="1" />
-        
-        {/* 테마에 맞춘 블루 색상 다각형 */}
-        <polygon points="110,45 170,75 165,140 110,175 55,135 45,75" fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="2" />
-        
-        <text x="110" y="10" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">논리성</text>
-        <text x="226" y="68" textAnchor="end" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">발화 속도</text>
-        <text x="226" y="160" textAnchor="end" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">음량 분석</text>
-        <text x="110" y="220" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">시선 처리</text>
-        <text x="8" y="160" textAnchor="start" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">표정 분석</text>
-        <text x="8" y="68" textAnchor="start" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">자세 안정</text>
-      </svg>
-    </div>
-  );
-}
-</file>
-
-<file path="components/dashboard/report/VisualAnalysisCard.tsx">
-"use client";
-
-import { Eye, UserSquare2 } from "lucide-react";
-import type { AnswerReport } from "@/types";
-
-interface VisualAnalysisCardProps {
-  answerData?: AnswerReport;
-}
-
-export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
-  const eye = answerData?.eye;
-  const pose = answerData?.pose;
-
-  if (!eye && !pose) return null;
-
-  return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* 눈 깜빡임 & 시선 분석 */}
-      {eye && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
-                <Eye className="h-4 w-4" />
-              </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
-            </div>
-            <span className="text-2xl font-bold text-blue-600">{eye.score}<span className="text-sm text-muted">점</span></span>
-          </div>
-          
-          {/* 🔥 수정: 요소 전체를 중앙으로 모으고 유연하게 배치 */}
-          <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
-            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
-            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
-          </div>
-          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
-            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
-          </p>
-        </div>
-      )}
-
-      {/* 자세 분석 */}
-      {pose && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
-                <UserSquare2 className="h-4 w-4" />
-              </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-bold">{pose.grade} Grade</span>
-              <span className="text-2xl font-bold text-blue-600">{pose.score}<span className="text-sm text-muted">점</span></span>
-            </div>
-          </div>
-
-          {/* 🔥 수정: 요소 전체를 중앙으로 모으고 유연하게 배치 */}
-          <div className="flex flex-wrap justify-center gap-4">
-            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
-            <StatBox label="어깨 흔들림 (횟수/시간)" value={`${pose.shoulderBadCount}회 / ${pose.shoulderBadDuration.toFixed(1)}초`} />
-            <StatBox label="얼굴 이탈 (횟수/시간)" value={`${pose.faceBadCount}회 / ${pose.faceBadDuration.toFixed(1)}초`} />
-            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
-            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 🔥 수정: 너비를 유연하게 조절하는(flex-1) 클래스 추가 및 최대 너비(max-w-xs) 설정
-function StatBox({ label, value, isWarning = false }: { label: string; value: string; isWarning?: boolean }) {
-  return (
-    <div className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${isWarning ? "bg-red-50/50 border-red-100" : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"}`}>
-      <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
-      <span className={`text-base font-bold ${isWarning ? "text-red-600" : "text-navy dark:text-white"}`}>{value}</span>
-    </div>
-  );
-}
-</file>
-
 <file path="app/faq/page.tsx">
 export default function FaqPage() {
   return (
@@ -539,137 +268,437 @@ export default function PracticeLandingPage() {
 }
 </file>
 
-<file path="components/dashboard/ReportDetailView.tsx">
+<file path="components/dashboard/report/FeedbackAccordion.tsx">
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
-import type { DashboardRecord } from "@/types";
-import {
-  getOverallScore, getAverageEyeScore, getAveragePoseScore, getAverageSpeechPace,
-  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl, 
-  getRecordDate, formatKoreanDate, getRecordJobName
-} from "@/lib/reportUtils";
+import { ChevronDown, ChevronUp, MessageSquareText } from "lucide-react";
 
-import FeedbackAccordion from "./report/FeedbackAccordion";
-import VisualAnalysisCard from "./report/VisualAnalysisCard";
-import OverviewVisualizer from "./report/OverviewVisualizer"; 
-import MirroredVideoPlayer from "./report/MirroredVideoPlayer";
-
-interface ReportDetailViewProps {
-  record: DashboardRecord;
-  roundLabel: string;
-  onBack: () => void;
-  onDelete: (id: number) => void;
-  onStartNew: () => void;
+interface FeedbackAccordionProps {
+  feedback: string;
 }
 
-export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
-  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
-
-  const report = record.report;
-  const sortedAnswers = getSortedReports(report);
-  const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
-  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
-  
-  const overallScore = getOverallScore(report);
-  const eyeScore = getAverageEyeScore(report);
-  const poseScore = getAveragePoseScore(report);
-  const speechPace = getAverageSpeechPace(report);
-  const speechScore = typeof speechPace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(speechPace - 3.5) * 12)) : undefined;
-
-  const selectedDate = formatKoreanDate(getRecordDate(record));
-  const selectedJobName = getRecordJobName(record);
-
-  const rawQuestions = selectedAnswerData?.questionText || "";
-  const questionsList = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
+export default function FeedbackAccordion({ feedback }: FeedbackAccordionProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
-      <div className="flex items-center justify-between w-full mb-6">
-        <button onClick={onBack} className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50 transition-colors">
-          <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
-        </button>
-        <button onClick={() => onDelete(record.interviewId)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100">
-          <Trash2 className="h-4 w-4" /> 기록 삭제
+    <div className="mt-4 rounded-2xl border border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-gray-800/30 p-5 transition-all">
+      <div className="flex items-center gap-2 mb-2">
+        <MessageSquareText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <span className="text-sm font-bold text-navy dark:text-white">AI 종합 피드백</span>
+      </div>
+      
+      <div className="relative">
+        <p className={`text-sm text-muted dark:text-gray-400 leading-relaxed break-keep transition-all ${isExpanded ? "" : "line-clamp-2"}`}>
+          {feedback}
+        </p>
+        
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-3 flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          {isExpanded ? (
+            <><ChevronUp className="h-3.5 w-3.5" /> 닫기</>
+          ) : (
+            <><ChevronDown className="h-3.5 w-3.5" /> 자세히 보기</>
+          )}
         </button>
       </div>
+    </div>
+  );
+}
+</file>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
-        <div className="xl:col-span-7 flex flex-col gap-6 w-full">
-          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
-            <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
-              {roundLabel} ({getReportStatusLabel(record)})
-            </div>
-            <div className="flex justify-between items-end mb-2">
-              <h3 className="text-2xl font-bold text-navy dark:text-white leading-snug">
-                {selectedJobName} 모의면접<br />AI 진단 리포트
-              </h3>
-              <div className="text-right">
-                <p className="text-xs text-muted mb-1">종합 점수</p>
-                <div className="text-4xl font-bold text-blue-600">
-                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
-                </div>
-              </div>
-            </div>
-            <FeedbackAccordion feedback={getMainFeedback(report)} />
-            <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
-          </div>
-          <VisualAnalysisCard answerData={selectedAnswerData} />
-        </div>
+<file path="components/dashboard/report/MirroredVideoPlayer.tsx">
+"use client";
 
-        <div className="xl:col-span-5 flex flex-col gap-6 w-full">
-          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
-            <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
-            
-            <div className="mb-5 flex flex-wrap gap-2">
-              {sortedAnswers.map((answer, index) => (
-                <button 
-                  key={answer.answerId} 
-                  onClick={() => setSelectedAnswerIndex(index)}
-                  className={`rounded-lg px-4 py-2 text-xs font-bold transition-all border ${
-                    selectedAnswerIndex === index 
-                      ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800" 
-                      : "bg-transparent border-line text-muted hover:bg-gray-50"
-                  }`}
-                >
-                  Q{answer.answerOrder}
-                </button>
-              ))}
-            </div>
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react";
 
-            <div className="mb-6">
-              {selectedVideoUrl ? (
-                <MirroredVideoPlayer src={selectedVideoUrl} />
-              ) : (
-                <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
-                  <Play className="h-10 w-10 fill-white opacity-40" />
-                  <p className="absolute bottom-4 text-[10px] text-white/40">영상 주소가 없습니다</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-auto bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-black/5">
-              <h5 className="font-bold text-sm text-navy dark:text-white flex items-center gap-2 mb-4">
-                <ListVideo className="h-4 w-4 text-blue-600" />
-                질문 목록
-              </h5>
-              <div className="flex flex-col gap-2">
-                {questionsList.map((question, idx) => (
-                  <div key={idx} className="p-3 bg-white dark:bg-slate-700/50 rounded-xl border border-black/5 dark:border-white/5">
-                    <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
-                      {question}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-muted mt-5 pt-4 border-t border-black/5">
-                촬영 일시 : {selectedDate}
-              </p>
-            </div>
+interface MirroredVideoPlayerProps {
+  src: string;
+  onTimeUpdate?: (currentTime: number) => void; // 🔑 현재 재생 위치를 부모에 알림
+}
+
+export interface MirroredVideoPlayerHandle {
+  seekTo: (seconds: number) => void;
+}
+
+const MirroredVideoPlayer = forwardRef<MirroredVideoPlayerHandle, MirroredVideoPlayerProps>(
+  ({ src, onTimeUpdate }, ref) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+    // 🔑 터치 기기(hover 불가능한 환경) 감지 — 감지되면 컨트롤을 항상 보이게 함
+    useEffect(() => {
+      if (typeof window !== "undefined" && window.matchMedia) {
+        setIsTouchDevice(window.matchMedia("(hover: none)").matches);
+      }
+    }, []);
+
+    const formatTime = (t: number) => {
+      if (!t || !Number.isFinite(t)) return "00:00";
+      const m = Math.floor(t / 60).toString().padStart(2, "0");
+      const s = Math.floor(t % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
+    };
+
+    // webm duration=Infinity 버그 우회
+    const fixDuration = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (video.duration === Infinity || Number.isNaN(video.duration)) {
+        video.currentTime = 1e101;
+        const onLoadedTimeUpdate = () => {
+          video.removeEventListener("timeupdate", onLoadedTimeUpdate);
+          video.currentTime = 0;
+          setDuration(video.duration);
+        };
+        video.addEventListener("timeupdate", onLoadedTimeUpdate);
+      } else {
+        setDuration(video.duration);
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      const time = videoRef.current?.currentTime || 0;
+      setCurrentTime(time);
+      onTimeUpdate?.(time); // 🔑 부모에 현재 시각 전달
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const video = videoRef.current;
+      if (video && Number.isFinite(video.duration)) {
+        video.currentTime = (Number(e.target.value) / 100) * video.duration;
+      }
+    };
+
+    const togglePlay = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (video.paused) {
+        video.play();
+        setIsPlaying(true);
+      } else {
+        video.pause();
+        setIsPlaying(false);
+      }
+    };
+
+    const toggleMute = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.muted = !video.muted;
+      setIsMuted(video.muted);
+    };
+
+    useImperativeHandle(ref, () => ({
+      seekTo: (seconds: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.currentTime = seconds;
+        video.play();
+        setIsPlaying(true);
+      },
+    }));
+
+    return (
+      <div ref={containerRef} className="relative aspect-video w-full rounded-2xl bg-black overflow-hidden group">
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full h-full object-contain -scale-x-100"
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={fixDuration}
+          onClick={togglePlay}
+          onEnded={() => setIsPlaying(false)}
+        />
+
+        {/* 🔑 터치 기기에서는 항상 opacity-100, 데스크톱은 기존처럼 hover 시에만 표시 */}
+        <div
+          className={`absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity ${
+            isTouchDevice ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={duration ? (currentTime / duration) * 100 : 0}
+            onChange={handleSeek}
+            aria-label="재생 위치 조절"
+            className="w-full h-1.5 mb-3 cursor-pointer accent-blue-500"
+          />
+          <div className="flex items-center gap-4">
+            <button onClick={togglePlay} className="text-white" aria-label={isPlaying ? "일시정지" : "재생"}>
+              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+
+            <button onClick={toggleMute} className="text-white" aria-label={isMuted ? "음소거 해제" : "음소거"}>
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
+
+            <span className="text-xs font-mono text-white/80 tabular-nums">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+
+            <button
+              onClick={() => containerRef.current?.requestFullscreen()}
+              className="text-white ml-auto"
+              aria-label="전체화면"
+            >
+              <Maximize size={20} />
+            </button>
           </div>
         </div>
       </div>
+    );
+  }
+);
+
+MirroredVideoPlayer.displayName = "MirroredVideoPlayer";
+export default MirroredVideoPlayer;
+</file>
+
+<file path="components/dashboard/report/OverviewVisualizer.tsx">
+"use client";
+
+import RadarChart from "./RadarChart";
+import { BarChart3 } from "lucide-react";
+
+interface OverviewVisualizerProps {
+  eyeScore?: number;
+  poseScore?: number;
+  speechScore?: number;
+}
+
+export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speechScore = 0 }: OverviewVisualizerProps) {
+  const scores = [
+    { label: "시선/표정", score: eyeScore, color: "bg-blue-500" },
+    { label: "자세 안정", score: poseScore, color: "bg-indigo-500" },
+    { label: "답변/발화", score: speechScore, color: "bg-sky-400" },
+  ];
+
+  return (
+    <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-8 border-t border-black/5 dark:border-white/5 pt-6">
+      
+      <div className="flex-1 w-full flex flex-col items-center border-r-0 md:border-r border-black/5 dark:border-white/5 pr-0 md:pr-8">
+        <div className="flex items-center gap-1.5 w-full mb-4">
+          <BarChart3 className="h-4 w-4 text-blue-600" />
+          <span className="text-sm font-bold text-navy dark:text-white">역량 밸런스</span>
+        </div>
+        {/* 🔑 실제 점수 전달 */}
+        <RadarChart eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
+      </div>
+
+      <div className="flex-1 w-full flex flex-col justify-center">
+        <h4 className="text-sm font-bold text-navy dark:text-white mb-4">상세 점수 분포</h4>
+        <div className="flex flex-col gap-4">
+          {scores.map((s, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="w-16 text-[11px] font-semibold text-slate-500">{s.label}</span>
+              <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full ${s.color} transition-all duration-1000 ease-out`} 
+                  style={{ width: `${s.score || 0}%` }} 
+                />
+              </div>
+              <span className="w-8 text-right text-xs font-bold text-navy dark:text-white">{Math.round(s.score || 0)}점</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+</file>
+
+<file path="components/dashboard/report/RadarChart.tsx">
+"use client";
+
+interface RadarChartProps {
+  eyeScore?: number;
+  poseScore?: number;
+  speechScore?: number;
+}
+
+// 실제로 측정 가능한 3개 지표만 사용합니다.
+// (논리성/음량분석 등은 백엔드가 별도 점수를 내려주지 않아 제외했습니다.
+//  나중에 해당 데이터가 생기면 이 배열에 축을 추가하면 됩니다.)
+const AXES = [
+  { label: "시선/표정", angle: -90 },
+  { label: "발화 안정성", angle: 30 },
+  { label: "자세 안정", angle: 150 },
+];
+
+const CENTER = 110;
+const MAX_RADIUS = 80;
+const MIN_RADIUS = 14; // 점수 0이어도 점 하나로 뭉개지지 않도록 하는 최소 반지름
+
+function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function getPoint(angleDeg: number, score: number) {
+  const clamped = Math.max(0, Math.min(100, score));
+  const radius = MIN_RADIUS + (clamped / 100) * (MAX_RADIUS - MIN_RADIUS);
+  const rad = toRadians(angleDeg);
+  return {
+    x: CENTER + radius * Math.cos(rad),
+    y: CENTER + radius * Math.sin(rad),
+  };
+}
+
+function getOuterPoint(angleDeg: number, radius: number) {
+  const rad = toRadians(angleDeg);
+  return {
+    x: CENTER + radius * Math.cos(rad),
+    y: CENTER + radius * Math.sin(rad),
+  };
+}
+
+export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 0 }: RadarChartProps) {
+  // AXES 순서(시선/표정, 발화 안정성, 자세 안정)와 정확히 맞춰서 배열 구성
+  const scores = [eyeScore, speechScore, poseScore];
+
+  const dataPoints = AXES.map((axis, i) => getPoint(axis.angle, scores[i]));
+  const dataPolygon = dataPoints.map((p) => `${p.x},${p.y}`).join(" ");
+
+  const outerPoints = AXES.map((axis) => getOuterPoint(axis.angle, MAX_RADIUS));
+  const outerPolygon = outerPoints.map((p) => `${p.x},${p.y}`).join(" ");
+
+  const midPoints = AXES.map((axis) => getOuterPoint(axis.angle, MAX_RADIUS * 0.5));
+  const midPolygon = midPoints.map((p) => `${p.x},${p.y}`).join(" ");
+
+  return (
+    <div className="relative flex w-full max-w-[220px] shrink-0 flex-col items-center mx-auto">
+      <svg viewBox="0 0 220 220" className="w-full h-auto overflow-visible drop-shadow-sm">
+        {/* 배경 그리드 */}
+        <polygon points={outerPolygon} fill="none" stroke="#e2e8f0" strokeWidth="1" />
+        <polygon points={midPolygon} fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3" />
+
+        {/* 중심에서 각 꼭짓점으로 이어지는 축선 */}
+        {outerPoints.map((p, i) => (
+          <line key={i} x1={CENTER} y1={CENTER} x2={p.x} y2={p.y} stroke="#f1f5f9" strokeWidth="1" />
+        ))}
+
+        {/* 🔑 실제 점수 기반 다각형 (더 이상 고정값 아님) */}
+        <polygon points={dataPolygon} fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="2" />
+
+        {/* 각 축 끝점 강조 점 */}
+        {dataPoints.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2563eb" />
+        ))}
+
+        {/* 라벨 */}
+        {AXES.map((axis) => {
+          const labelPoint = getOuterPoint(axis.angle, MAX_RADIUS + 18);
+          return (
+            <text
+              key={axis.label}
+              x={labelPoint.x}
+              y={labelPoint.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400"
+            >
+              {axis.label}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+</file>
+
+<file path="components/dashboard/report/VisualAnalysisCard.tsx">
+"use client";
+
+import { Eye, UserSquare2 } from "lucide-react";
+import type { AnswerReport } from "@/types";
+
+interface VisualAnalysisCardProps {
+  answerData?: AnswerReport;
+}
+
+export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
+  const eye = answerData?.eye;
+  const pose = answerData?.pose;
+
+  if (!eye && !pose) return null;
+
+  return (
+    <div className="flex flex-col gap-6 w-full">
+      {eye && (
+        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
+                <Eye className="h-4 w-4" />
+              </div>
+              <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
+            </div>
+            <span className="text-2xl font-bold text-blue-600">{eye.score}<span className="text-sm text-muted">점</span></span>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
+            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
+            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+          </div>
+          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
+            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+          </p>
+        </div>
+      )}
+
+      {pose && (
+        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
+                <UserSquare2 className="h-4 w-4" />
+              </div>
+              <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">{pose.grade} Grade</span>
+              <span className="text-2xl font-bold text-blue-600">{pose.score}<span className="text-sm text-muted">점</span></span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
+            <StatBox label="어깨 흔들림 (횟수/시간)" value={`${pose.shoulderBadCount}회 / ${pose.shoulderBadDuration.toFixed(1)}초`} />
+            <StatBox label="얼굴 이탈 (횟수/시간)" value={`${pose.faceBadCount}회 / ${pose.faceBadDuration.toFixed(1)}초`} />
+            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
+            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatBox({ label, value, isWarning = false }: { label: string; value: string; isWarning?: boolean }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${
+        isWarning
+          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40" // 🔑 다크모드 대응 추가
+          : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"
+      }`}
+    >
+      <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
+      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>{value}</span>
     </div>
   );
 }
@@ -1198,138 +1227,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 </file>
 
-<file path="hooks/useInterviewCamera.ts">
-// hooks/useInterviewCamera.ts
-import { useState, useEffect, useRef } from "react";
-import { uploadAnswerVideo } from "@/lib/api";
-
-interface UseInterviewCameraProps {
-  step: string;
-  interviewId: number | null;
-  startedUserId: number | null;
-  jobRoleId: number | null;
-  jobName?: string;
-  currentQuestions: string[];
-  onExit: () => void;
-}
-
-export function useInterviewCamera({
-  step,
-  interviewId,
-  startedUserId,
-  jobRoleId,
-  jobName,
-  currentQuestions,
-  onExit,
-}: UseInterviewCameraProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-
-  const [analysisProgress, setAnalysisProgress] = useState(1);
-  const [analysisResult, setAnalysisResult] = useState<{ message?: string } | null>(null);
-  const [analysisError, setAnalysisError] = useState("");
-
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-  };
-
-  // 1. 카메라 시작
-  useEffect(() => {
-    const startCamera = async () => {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamRef.current = mediaStream;
-        if (videoRef.current) videoRef.current.srcObject = mediaStream;
-      } catch (error) {
-        alert("카메라와 마이크 권한을 허용해주세요!");
-        onExit();
-      }
-    };
-    startCamera();
-    return () => stopCamera();
-  }, [onExit]);
-
-  // 2. 녹화 제어 및 업로드
-  useEffect(() => {
-    if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
-      chunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-        ? "video/webm;codecs=vp8,opus"
-        : "video/webm";
-      const recorder = new MediaRecorder(streamRef.current, { mimeType });
-      mediaRecorderRef.current = recorder;
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.start(1000);
-    }
-
-    if (step === "analyzing" && mediaRecorderRef.current?.state === "recording") {
-      setAnalysisResult(null);
-      setAnalysisError("");
-      setAnalysisProgress(1);
-
-      mediaRecorderRef.current.onstop = async () => {
-        try {
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          if (blob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
-          if (!interviewId) throw new Error("면접 세션 정보가 없습니다. 다시 시작해주세요.");
-
-          setAnalysisProgress(40);
-          const result = await uploadAnswerVideo({
-            interviewId,
-            file: blob,
-            answerOrder: 1,
-            questionText: currentQuestions.join(" | "),
-          });
-
-          setAnalysisProgress(80);
-          const historyItem = {
-            interviewId,
-            userId: startedUserId,
-            jobRoleId,
-            jobName: jobName ?? "모의면접",
-            answers: [{ answerId: result.answerId, answerOrder: result.answerOrder, analysisStatus: result.analysisStatus }],
-            savedAt: new Date().toISOString(),
-          };
-
-          localStorage.setItem("latestInterviewAnalysisJob", JSON.stringify(historyItem));
-          const prev = JSON.parse(localStorage.getItem("interviewAnalysisHistory") || "[]");
-          localStorage.setItem(
-            "interviewAnalysisHistory",
-            JSON.stringify([historyItem, ...prev.filter((h: any) => h.interviewId !== interviewId)].slice(0, 20))
-          );
-
-          setAnalysisProgress(100);
-          setAnalysisResult({ message: "업로드 완료! 백엔드에서 분석이 시작됐습니다." });
-        } catch (error) {
-          setAnalysisProgress(100);
-          setAnalysisError(error instanceof Error ? error.message : "업로드 중 오류가 발생했습니다.");
-        } finally {
-          mediaRecorderRef.current = null;
-        }
-      };
-
-      mediaRecorderRef.current.stop();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-    }
-  }, [step, currentQuestions, interviewId, jobRoleId, jobName, startedUserId]);
-
-  return {
-    videoRef,
-    analysisProgress,
-    analysisResult,
-    analysisError,
-    stopCamera,
-  };
-}
-</file>
-
 <file path="hooks/useInterviewFlow.ts">
 // hooks/useInterviewFlow.ts
 import { useState, useEffect } from "react";
@@ -1491,142 +1388,6 @@ export function cn(...inputs: ClassValue[]) {
 <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
 </file>
 
-<file path="types/index.ts">
-// types/index.ts
-
-export type JobRole = {
-  id: number;
-  category: string;
-  name: string;
-};
-
-export type VideoUploadResponse = {
-  videoUrl?: string;
-  objectKey?: string;
-  [key: string]: unknown;
-};
-
-export type EyeBlinkingRawResult = {
-  total_frames?: number;
-  fps?: number;
-  duration_seconds?: number;
-  face_detected_frames?: number;
-  blink_count?: number;
-  blinks_per_minute?: number;
-  average_ear?: number;
-  blink_timestamps?: number[];
-  evaluation?: string;
-  blink_rate?: number;
-  score?: number;
-  feedback?: string;
-  [key: string]: unknown;
-};
-
-export type EyeBlinkingAnalyzeResponse = {
-  message?: string;
-  reportId?: number;
-  result?: EyeBlinkingRawResult;
-  data?: EyeBlinkingRawResult;
-  [key: string]: unknown;
-};
-
-export type FollowUpCreateResponse = {
-  message?: string;
-  followUpQuestionId?: number;
-  followUpQuestion?: string;
-  follow_up_question?: string;
-  [key: string]: unknown;
-};
-
-export type InterviewStartResponse = {
-  interviewId: number;
-  userId: number;
-  jobRoleId: number;
-  jobName: string;
-  status: string;
-};
-
-export type AnswerUploadResponse = {
-  answerId: number;
-  interviewId: number;
-  questionId: number | null;
-  questionText: string | null;
-  videoObjectKey: string;
-  answerOrder: number;
-  analysisStatus: string;
-};
-
-export type AnswerReport = {
-  answerId: number;
-  questionId: number | null;
-  questionText: string | null;
-  videoObjectKey: string;
-  answerOrder: number;
-  analysisStatus: string;
-  errorMessage: string | null;
-  eye: {
-    reportId: number;
-    blinkCount: number;
-    blinkRate: number;
-    score: number;
-    feedback: string;
-  } | null;
-  pose: {
-    reportId: number;
-    totalDuration: number;
-    badCount: number;
-    badDuration: number;
-    shoulderBadCount: number;
-    faceBadCount: number;
-    shoulderBadDuration: number;
-    faceBadDuration: number;
-    badRatio: number;
-    score: number;
-    grade: string;
-  } | null;
-  speech: {
-    reportId: number;
-    textScript: string;
-    totalFillerCount: number;
-    fillerDetailsJson: string;
-    paceEvaluation: string;
-    paceFeedback: string;
-    charactersPerSecond: number;
-    totalSilenceSeconds: number;
-    criticalSilenceCount: number;
-    aiEvaluationJson: string;
-    modelAnswer: string;
-  } | null;
-};
-
-export type InterviewReportResponse = {
-  interviewId: number;
-  userId: number;
-  jobRoleId: number;
-  jobCategory: string;
-  jobName: string;
-  createdAt: string;
-  analysisStatus: string;
-  completed: boolean;
-  answers: AnswerReport[];
-};
-
-// Dashboard 전용 타입
-export type InterviewHistoryItem = {
-  interviewId: number;
-  userId?: number;
-  jobRoleId?: number;
-  jobName?: string;
-  answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
-  savedAt?: string;
-};
-
-export type DashboardRecord = InterviewHistoryItem & {
-  report?: InterviewReportResponse;
-  reportError?: string;
-};
-</file>
-
 <file path="AGENTS.md">
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
@@ -1749,6 +1510,208 @@ export default function LoginPage() {
         <LoginCard />
       </div>
     </main>
+  );
+}
+</file>
+
+<file path="components/dashboard/ReportDetailView.tsx">
+"use client";
+
+import { useState, useRef } from "react";
+import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
+import type { DashboardRecord } from "@/types";
+import {
+  getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
+  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl, 
+  getRecordDate, formatKoreanDate, getRecordJobName
+} from "@/lib/reportUtils";
+
+import FeedbackAccordion from "./report/FeedbackAccordion";
+import VisualAnalysisCard from "./report/VisualAnalysisCard";
+import OverviewVisualizer from "./report/OverviewVisualizer"; 
+import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
+
+interface ReportDetailViewProps {
+  record: DashboardRecord;
+  roundLabel: string;
+  onBack: () => void;
+  onDelete: (id: number) => void;
+  onStartNew: () => void;
+}
+
+export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
+  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
+  const [activePlaybackTime, setActivePlaybackTime] = useState(0); // 🔑 현재 재생 위치
+  const playerRef = useRef<MirroredVideoPlayerHandle>(null);
+
+  const report = record.report;
+  const sortedAnswers = getSortedReports(report);
+  const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
+  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
+  
+  const overallScore = getOverallScore(report);
+  const eyeScore = getAverageEyeScore(report);
+  const poseScore = getAveragePoseScore(report);
+  const speechScore = getSpeechScore(report); // 🔑 개선된 함수 사용
+
+  const selectedDate = formatKoreanDate(getRecordDate(record));
+  const selectedJobName = getRecordJobName(record);
+
+  const rawQuestions = selectedAnswerData?.questionText || "";
+  const parsedQuestions = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
+  const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
+
+  const timestamps = record.questionTimestamps ?? [];
+
+  const formatTimestamp = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const handleJumpToQuestion = (idx: number) => {
+    const target = timestamps[idx];
+    if (typeof target === "number") {
+      playerRef.current?.seekTo(target);
+    }
+  };
+
+  // 🔑 현재 재생 시각 기준으로 "지금 몇 번째 질문 구간인지" 계산
+  // 마지막으로 시작 시각이 activePlaybackTime보다 작거나 같은 질문이 현재 재생 중인 질문
+  const activeQuestionIndex =
+    timestamps.length > 0
+      ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
+      : -1;
+
+  return (
+    <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center justify-between w-full mb-6">
+        <button
+          onClick={onBack}
+          aria-label="목록으로 돌아가기"
+          className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
+        </button>
+        <button
+          onClick={() => onDelete(record.interviewId)}
+          aria-label="이 분석 기록 삭제"
+          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
+        >
+          <Trash2 className="h-4 w-4" /> 기록 삭제
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
+        <div className="xl:col-span-7 flex flex-col gap-6 w-full">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
+            <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
+              {roundLabel} ({getReportStatusLabel(record)})
+            </div>
+            <div className="flex justify-between items-end mb-2">
+              <h3 className="text-2xl font-bold text-navy dark:text-white leading-snug">
+                {selectedJobName} 모의면접<br />AI 진단 리포트
+              </h3>
+              <div className="text-right">
+                <p className="text-xs text-muted mb-1">종합 점수</p>
+                <div className="text-4xl font-bold text-blue-600">
+                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
+                </div>
+              </div>
+            </div>
+            <FeedbackAccordion feedback={getMainFeedback(report)} />
+            <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
+          </div>
+          <VisualAnalysisCard answerData={selectedAnswerData} />
+        </div>
+
+        <div className="xl:col-span-5 flex flex-col gap-6 w-full">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
+            <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
+            
+            <div className="mb-5 flex flex-wrap gap-2">
+              {sortedAnswers.map((answer, index) => (
+                <button 
+                  key={answer.answerId} 
+                  onClick={() => setSelectedAnswerIndex(index)}
+                  aria-label={`${answer.answerOrder}번 질문 답변 보기`}
+                  className={`rounded-lg px-4 py-2 text-xs font-bold transition-all border ${
+                    selectedAnswerIndex === index 
+                      ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800" 
+                      : "bg-transparent border-line text-muted hover:bg-gray-50"
+                  }`}
+                >
+                  Q{answer.answerOrder}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              {selectedVideoUrl ? (
+                <MirroredVideoPlayer
+                  ref={playerRef}
+                  src={selectedVideoUrl}
+                  onTimeUpdate={setActivePlaybackTime} // 🔑 재생 위치 실시간 수신
+                />
+              ) : (
+                <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
+                  <Play className="h-10 w-10 fill-white opacity-40" />
+                  <p className="absolute bottom-4 text-[10px] text-white/40">영상 주소가 없습니다</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-auto bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-black/5">
+              <h5 className="font-bold text-sm text-navy dark:text-white flex items-center gap-2 mb-4">
+                <ListVideo className="h-4 w-4 text-blue-600" />
+                질문 목록
+              </h5>
+              <div className="flex flex-col gap-2">
+                {questionsList.map((question, idx) => {
+                  const hasTimestamp = typeof timestamps[idx] === "number";
+                  const isActive = hasTimestamp && idx === activeQuestionIndex; // 🔑 현재 재생 중인 질문 여부
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleJumpToQuestion(idx)}
+                      disabled={!hasTimestamp}
+                      aria-label={`${idx + 1}번 질문으로 이동`}
+                      aria-current={isActive ? "true" : undefined}
+                      className={`text-left p-3 rounded-xl border transition-colors ${
+                        isActive
+                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" // 🔑 하이라이트 스타일
+                          : hasTimestamp
+                          ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
+                          : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <span className={`text-[10px] font-bold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                          Q{idx + 1} {isActive && "· 재생 중"}
+                        </span>
+                        {hasTimestamp && (
+                          <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">
+                            ▶ {formatTimestamp(timestamps[idx])}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
+                        {question}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted mt-5 pt-4 border-t border-black/5">
+                촬영 일시 : {selectedDate}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 </file>
@@ -2422,94 +2385,294 @@ export default function JobSelectionModal({
 }
 </file>
 
-<file path="lib/reportUtils.ts">
-// lib/reportUtils.ts
-import type { DashboardRecord, InterviewHistoryItem, InterviewReportResponse } from "@/types";
+<file path="hooks/useInterviewCamera.ts">
+// hooks/useInterviewCamera.ts
+import { useState, useEffect, useRef } from "react";
+import { uploadAnswerVideo } from "@/lib/api";
+// @ts-expect-error - fix-webm-duration에는 타입 정의가 없습니다
+import fixWebmDuration from "fix-webm-duration";
 
-export const formatKoreanDate = (value?: string) => {
-  if (!value) return "날짜 정보 없음";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "날짜 정보 없음";
-  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
+interface UseInterviewCameraProps {
+  step: string;
+  interviewId: number | null;
+  startedUserId: number | null;
+  jobRoleId: number | null;
+  jobName?: string;
+  currentQuestions: string[];
+  questionTimestamps: number[]; // 🔑 추가: 질문별 시작 시각(초)
+  onExit: () => void;
+}
+
+export function useInterviewCamera({
+  step,
+  interviewId,
+  startedUserId,
+  jobRoleId,
+  jobName,
+  currentQuestions,
+  questionTimestamps,
+  onExit,
+}: UseInterviewCameraProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordStartTimeRef = useRef<number>(0);
+
+  const [analysisProgress, setAnalysisProgress] = useState(1);
+  const [analysisResult, setAnalysisResult] = useState<{ message?: string } | null>(null);
+  const [analysisError, setAnalysisError] = useState("");
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+  };
+
+  // 1. 카메라 시작
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = mediaStream;
+        if (videoRef.current) videoRef.current.srcObject = mediaStream;
+      } catch (error) {
+        alert("카메라와 마이크 권한을 허용해주세요!");
+        onExit();
+      }
+    };
+    startCamera();
+    return () => stopCamera();
+  }, [onExit]);
+
+  // 2. 녹화 제어 및 업로드
+  useEffect(() => {
+    if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
+      chunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : "video/webm";
+      const recorder = new MediaRecorder(streamRef.current, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recordStartTimeRef.current = Date.now();
+      recorder.start(1000);
+    }
+
+    if (step === "analyzing" && mediaRecorderRef.current?.state === "recording") {
+      setAnalysisResult(null);
+      setAnalysisError("");
+      setAnalysisProgress(1);
+
+      mediaRecorderRef.current.onstop = async () => {
+        try {
+          const rawBlob = new Blob(chunksRef.current, { type: "video/webm" });
+          if (rawBlob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
+          if (!interviewId) throw new Error("면접 세션 정보가 없습니다. 다시 시작해주세요.");
+
+          setAnalysisProgress(20);
+
+          // webm duration 헤더 수리
+          const recordedDurationMs = Date.now() - recordStartTimeRef.current;
+          const blob: Blob = await new Promise((resolve, reject) => {
+            fixWebmDuration(rawBlob, recordedDurationMs, (fixedBlob: Blob) => {
+              if (fixedBlob) resolve(fixedBlob);
+              else reject(new Error("영상 길이 정보 복구에 실패했습니다."));
+            });
+          });
+
+          setAnalysisProgress(40);
+          const result = await uploadAnswerVideo({
+            interviewId,
+            file: blob,
+            answerOrder: 1,
+            questionText: currentQuestions.join(" | "),
+          });
+
+          setAnalysisProgress(80);
+          const historyItem = {
+            interviewId,
+            userId: startedUserId,
+            jobRoleId,
+            jobName: jobName ?? "모의면접",
+            answers: [{ answerId: result.answerId, answerOrder: result.answerOrder, analysisStatus: result.analysisStatus }],
+            questionTexts: currentQuestions,       // 🔑 질문 원문 저장
+            questionTimestamps,                     // 🔑 타임스탬프 저장
+            savedAt: new Date().toISOString(),
+          };
+
+          localStorage.setItem("latestInterviewAnalysisJob", JSON.stringify(historyItem));
+          const prev = JSON.parse(localStorage.getItem("interviewAnalysisHistory") || "[]");
+          localStorage.setItem(
+            "interviewAnalysisHistory",
+            JSON.stringify([historyItem, ...prev.filter((h: any) => h.interviewId !== interviewId)].slice(0, 20))
+          );
+
+          setAnalysisProgress(100);
+          setAnalysisResult({ message: "업로드 완료! 백엔드에서 분석이 시작됐습니다." });
+        } catch (error) {
+          setAnalysisProgress(100);
+          setAnalysisError(error instanceof Error ? error.message : "업로드 중 오류가 발생했습니다.");
+        } finally {
+          mediaRecorderRef.current = null;
+        }
+      };
+
+      mediaRecorderRef.current.stop();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    }
+  }, [step, currentQuestions, interviewId, jobRoleId, jobName, startedUserId, questionTimestamps]);
+
+  return {
+    videoRef,
+    analysisProgress,
+    analysisResult,
+    analysisError,
+    stopCamera,
+  };
+}
+</file>
+
+<file path="types/index.ts">
+// types/index.ts
+
+export type JobRole = {
+  id: number;
+  category: string;
+  name: string;
 };
 
-export const average = (values: Array<number | undefined | null>) => {
-  const validValues = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-  if (validValues.length === 0) return undefined;
-  return validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+export type VideoUploadResponse = {
+  videoUrl?: string;
+  objectKey?: string;
+  [key: string]: unknown;
 };
 
-export const getReportStatusLabel = (record?: DashboardRecord) => {
-  const status = record?.report?.analysisStatus;
-  if (record?.reportError) return "조회 실패";
-  if (status === "DONE") return "분석완료";
-  if (status === "FAILED") return "분석실패";
-  return "분석중";
+export type EyeBlinkingRawResult = {
+  total_frames?: number;
+  fps?: number;
+  duration_seconds?: number;
+  face_detected_frames?: number;
+  blink_count?: number;
+  blinks_per_minute?: number;
+  average_ear?: number;
+  blink_timestamps?: number[];
+  evaluation?: string;
+  blink_rate?: number;
+  score?: number;
+  feedback?: string;
+  [key: string]: unknown;
 };
 
-export const getStatusClassName = (record?: DashboardRecord) => {
-  const status = record?.report?.analysisStatus;
-  if (record?.reportError || status === "FAILED") return "rounded bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 text-red-600 dark:text-red-400";
-  if (status === "DONE") return "rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-blue-600 dark:text-blue-400";
-  return "rounded bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400";
+export type EyeBlinkingAnalyzeResponse = {
+  message?: string;
+  reportId?: number;
+  result?: EyeBlinkingRawResult;
+  data?: EyeBlinkingRawResult;
+  [key: string]: unknown;
 };
 
-export const getRecordDate = (record?: DashboardRecord) => record?.report?.createdAt ?? record?.savedAt;
-export const getRecordJobName = (record?: DashboardRecord) => record?.report?.jobName ?? record?.jobName ?? "모의면접";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
-export const getVideoPlaybackUrl = (objectKey?: string) => {
-  if (!objectKey) return undefined;
-  if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) return objectKey;
-
-  return `${API_BASE_URL.replace(/\/$/, "")}/api/videos/stream?objectKey=${encodeURIComponent(
-    objectKey.replace(/^\/+/, "")
-  )}`;
+export type FollowUpCreateResponse = {
+  message?: string;
+  followUpQuestionId?: number;
+  followUpQuestion?: string;
+  follow_up_question?: string;
+  [key: string]: unknown;
 };
 
-export const getSortedReports = (report?: InterviewReportResponse) => [...(report?.answers ?? [])].sort((a, b) => a.answerOrder - b.answerOrder);
-export const getAverageEyeScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.eye?.score));
-export const getAveragePoseScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.pose?.score));
-export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
-
-export const getOverallScore = (report?: InterviewReportResponse) => {
-  const eyeScore = getAverageEyeScore(report);
-  const poseScore = getAveragePoseScore(report);
-  const speechPace = getAverageSpeechPace(report);
-  const speechScore = typeof speechPace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(speechPace - 3.5) * 12)) : undefined;
-  return average([eyeScore, poseScore, speechScore]);
+export type InterviewStartResponse = {
+  interviewId: number;
+  userId: number;
+  jobRoleId: number;
+  jobName: string;
+  status: string;
 };
 
-export const getMainFeedback = (report?: InterviewReportResponse) => {
-  const answers = getSortedReports(report);
-  const answerWithFeedback = answers.find((answer) => {
-    if (!answer.speech?.aiEvaluationJson) return false;
-    try { return typeof JSON.parse(answer.speech.aiEvaluationJson).feedback === "string"; } catch { return false; }
-  });
-
-  if (!answerWithFeedback?.speech?.aiEvaluationJson) {
-    if (report?.analysisStatus === "DONE") return "분석은 완료되었습니다. Gemini 한도 초과 등으로 일부 AI 상세 피드백은 비어 있을 수 있습니다.";
-    return "분석 결과 조회 API 응답을 기다리는 중입니다. 백엔드 분석이 완료되었는지 확인해주세요.";
-  }
-  try { return JSON.parse(answerWithFeedback.speech.aiEvaluationJson).feedback ?? "AI 상세 피드백을 확인할 수 없습니다."; } 
-  catch { return "AI 상세 피드백을 파싱할 수 없습니다."; }
+export type AnswerUploadResponse = {
+  answerId: number;
+  interviewId: number;
+  questionId: number | null;
+  questionText: string | null;
+  videoObjectKey: string;
+  answerOrder: number;
+  analysisStatus: string;
 };
 
-export const loadInterviewHistory = (): DashboardRecord[] => {
-  if (typeof window === "undefined") return [];
-  const latestRaw = localStorage.getItem("latestInterviewAnalysisJob");
-  const historyRaw = localStorage.getItem("interviewAnalysisHistory");
-  const records: InterviewHistoryItem[] = [];
+export type AnswerReport = {
+  answerId: number;
+  questionId: number | null;
+  questionText: string | null;
+  videoObjectKey: string;
+  answerOrder: number;
+  analysisStatus: string;
+  errorMessage: string | null;
+  eye: {
+    reportId: number;
+    blinkCount: number;
+    blinkRate: number;
+    score: number;
+    feedback: string;
+  } | null;
+  pose: {
+    reportId: number;
+    totalDuration: number;
+    badCount: number;
+    badDuration: number;
+    shoulderBadCount: number;
+    faceBadCount: number;
+    shoulderBadDuration: number;
+    faceBadDuration: number;
+    badRatio: number;
+    score: number;
+    grade: string;
+  } | null;
+  speech: {
+    reportId: number;
+    textScript: string;
+    totalFillerCount: number;
+    fillerDetailsJson: string;
+    paceEvaluation: string;
+    paceFeedback: string;
+    charactersPerSecond: number;
+    totalSilenceSeconds: number;
+    criticalSilenceCount: number;
+    aiEvaluationJson: string;
+    modelAnswer: string;
+  } | null;
+};
 
-  try { if (historyRaw) { const parsed = JSON.parse(historyRaw); if (Array.isArray(parsed)) records.push(...parsed); } } catch {}
-  try { if (latestRaw) { const latest = JSON.parse(latestRaw); if (latest?.interviewId) records.unshift(latest); } } catch {}
+export type InterviewReportResponse = {
+  interviewId: number;
+  userId: number;
+  jobRoleId: number;
+  jobCategory: string;
+  jobName: string;
+  createdAt: string;
+  analysisStatus: string;
+  completed: boolean;
+  answers: AnswerReport[];
+};
 
-  const unique = new Map<number, InterviewHistoryItem>();
-  records.forEach((record) => { if (record?.interviewId) unique.set(record.interviewId, record); });
+// Dashboard 전용 타입
+export type InterviewHistoryItem = {
+  interviewId: number;
+  userId?: number;
+  jobRoleId?: number;
+  jobName?: string;
+  answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
+  questionTexts?: string[];      // 🔑 질문 목록 (문항별 순서대로)
+  questionTimestamps?: number[]; // 🔑 각 질문이 영상에서 시작된 시각(초 단위)
+  savedAt?: string;
+};
 
-  return Array.from(unique.values()).sort((a, b) => new Date(b.savedAt ?? 0).getTime() - new Date(a.savedAt ?? 0).getTime());
+export type DashboardRecord = InterviewHistoryItem & {
+  report?: InterviewReportResponse;
+  reportError?: string;
 };
 </file>
 
@@ -3041,6 +3204,141 @@ export function useCounter({
     ? value.toFixed(decimals)
     : Math.floor(value).toLocaleString();
 }
+</file>
+
+<file path="lib/reportUtils.ts">
+// lib/reportUtils.ts
+import type { DashboardRecord, InterviewHistoryItem, InterviewReportResponse } from "@/types";
+
+export const formatKoreanDate = (value?: string) => {
+  if (!value) return "날짜 정보 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "날짜 정보 없음";
+  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
+};
+
+export const average = (values: Array<number | undefined | null>) => {
+  const validValues = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (validValues.length === 0) return undefined;
+  return validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+};
+
+export const getReportStatusLabel = (record?: DashboardRecord) => {
+  const status = record?.report?.analysisStatus;
+  if (record?.reportError) return "조회 실패";
+  if (status === "DONE") return "분석완료";
+  if (status === "FAILED") return "분석실패";
+  return "분석중";
+};
+
+export const getStatusClassName = (record?: DashboardRecord) => {
+  const status = record?.report?.analysisStatus;
+  if (record?.reportError || status === "FAILED") return "rounded bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 text-red-600 dark:text-red-400";
+  if (status === "DONE") return "rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-blue-600 dark:text-blue-400";
+  return "rounded bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400";
+};
+
+export const getRecordDate = (record?: DashboardRecord) => record?.report?.createdAt ?? record?.savedAt;
+export const getRecordJobName = (record?: DashboardRecord) => record?.report?.jobName ?? record?.jobName ?? "모의면접";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+export const getVideoPlaybackUrl = (objectKey?: string) => {
+  if (!objectKey) return undefined;
+  if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) return objectKey;
+
+  return `${API_BASE_URL.replace(/\/$/, "")}/api/videos/stream?objectKey=${encodeURIComponent(
+    objectKey.replace(/^\/+/, "")
+  )}`;
+};
+
+export const getSortedReports = (report?: InterviewReportResponse) => [...(report?.answers ?? [])].sort((a, b) => a.answerOrder - b.answerOrder);
+export const getAverageEyeScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.eye?.score));
+export const getAveragePoseScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.pose?.score));
+export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
+
+// 🔑 신규: STAR 평가 점수를 0~100 척도로 환산해서 평균
+// 백엔드가 speech 전용 종합 점수를 아직 내려주지 않아서,
+// AI 평가(aiEvaluationJson) 안의 star_score(S/T/A/R)를 임시로 활용합니다.
+// ⚠️ star_score가 항목별 0~25점(4개 합 100점) 구조라고 가정한 근사치입니다.
+//    백엔드 척도가 다르다면 이 함수만 조정하면 됩니다.
+export const getAverageSpeechContentScore = (report?: InterviewReportResponse) => {
+  const scores = getSortedReports(report)
+    .map((answer) => {
+      if (!answer.speech?.aiEvaluationJson) return undefined;
+      try {
+        const parsed = JSON.parse(answer.speech.aiEvaluationJson);
+        const star = parsed?.star_score;
+        if (!star || typeof star !== "object") return undefined;
+
+        const values = Object.values(star).filter((v): v is number => typeof v === "number");
+        if (values.length === 0) return undefined;
+
+        const total = values.reduce((sum, v) => sum + v, 0);
+        return Math.max(0, Math.min(100, total));
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((v): v is number => typeof v === "number");
+
+  return average(scores);
+};
+
+// 🔑 신규: 발화 속도 점수 + STAR 내용 점수를 함께 반영한 종합 발화 점수.
+// 기존에는 속도(글자/초)만으로 점수를 매겨서, 말은 빨리 해도 내용이 부실하면
+// 오히려 점수가 높게 나오는 문제가 있었습니다. 이제 내용 점수 비중을 더 둡니다.
+export const getSpeechScore = (report?: InterviewReportResponse) => {
+  const pace = getAverageSpeechPace(report);
+  const paceScore =
+    typeof pace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(pace - 3.5) * 12)) : undefined;
+  const contentScore = getAverageSpeechContentScore(report);
+
+  if (typeof paceScore === "number" && typeof contentScore === "number") {
+    // 속도 40% + 내용 60% 가중 평균 (내용이 더 중요하다고 보고 가중치를 둠)
+    return paceScore * 0.4 + contentScore * 0.6;
+  }
+
+  return paceScore ?? contentScore;
+};
+
+export const getOverallScore = (report?: InterviewReportResponse) => {
+  const eyeScore = getAverageEyeScore(report);
+  const poseScore = getAveragePoseScore(report);
+  const speechScore = getSpeechScore(report); // 🔑 개선된 함수로 교체
+  return average([eyeScore, poseScore, speechScore]);
+};
+
+export const getMainFeedback = (report?: InterviewReportResponse) => {
+  const answers = getSortedReports(report);
+  const answerWithFeedback = answers.find((answer) => {
+    if (!answer.speech?.aiEvaluationJson) return false;
+    try { return typeof JSON.parse(answer.speech.aiEvaluationJson).feedback === "string"; } catch { return false; }
+  });
+
+  if (!answerWithFeedback?.speech?.aiEvaluationJson) {
+    if (report?.analysisStatus === "DONE") return "분석은 완료되었습니다. Gemini 한도 초과 등으로 일부 AI 상세 피드백은 비어 있을 수 있습니다.";
+    return "분석 결과 조회 API 응답을 기다리는 중입니다. 백엔드 분석이 완료되었는지 확인해주세요.";
+  }
+  try { return JSON.parse(answerWithFeedback.speech.aiEvaluationJson).feedback ?? "AI 상세 피드백을 확인할 수 없습니다."; } 
+  catch { return "AI 상세 피드백을 파싱할 수 없습니다."; }
+};
+
+export const loadInterviewHistory = (): DashboardRecord[] => {
+  if (typeof window === "undefined") return [];
+  const latestRaw = localStorage.getItem("latestInterviewAnalysisJob");
+  const historyRaw = localStorage.getItem("interviewAnalysisHistory");
+  const records: InterviewHistoryItem[] = [];
+
+  try { if (historyRaw) { const parsed = JSON.parse(historyRaw); if (Array.isArray(parsed)) records.push(...parsed); } } catch {}
+  try { if (latestRaw) { const latest = JSON.parse(latestRaw); if (latest?.interviewId) records.unshift(latest); } } catch {}
+
+  const unique = new Map<number, InterviewHistoryItem>();
+  records.forEach((record) => { if (record?.interviewId) unique.set(record.interviewId, record); });
+
+  return Array.from(unique.values()).sort((a, b) => new Date(b.savedAt ?? 0).getTime() - new Date(a.savedAt ?? 0).getTime());
+};
 </file>
 
 <file path="app/about/page.tsx">
@@ -4017,40 +4315,6 @@ export default function Navbar() {
 }
 </file>
 
-<file path="package.json">
-{
-  "name": "interviewfit",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "framer-motion": "^12.40.0",
-    "lucide-react": "^1.16.0",
-    "next": "16.2.6",
-    "next-themes": "^0.4.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "tailwind-merge": "^3.6.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
-}
-</file>
-
 <file path="app/mypage/dashboard/page.tsx">
 "use client";
 
@@ -4280,6 +4544,41 @@ export default function DashboardPage() {
 }
 </file>
 
+<file path="package.json">
+{
+  "name": "interviewfit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "fix-webm-duration": "^1.0.6",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.16.0",
+    "next": "16.2.6",
+    "next-themes": "^0.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
 <file path="lib/api.ts">
 // lib/api.ts
 
@@ -4438,6 +4737,8 @@ export const BRAND = { name: "InterviewFit" } as const;
 <file path="components/practice/InterviewRecording.tsx">
 "use client";
 
+import { useRef } from "react";
+
 // ── 분리한 Custom Hooks Import ──
 import { useInterviewFlow } from "@/hooks/useInterviewFlow";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
@@ -4469,7 +4770,11 @@ const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
 export default function InterviewRecording({ onExit }: { onExit: () => void }) {
   // 1. 상태 및 흐름 관리 Hook 호출
   const flow = useInterviewFlow();
-  
+
+  // 🔑 질문이 전환될 때마다 "그 순간의 녹화 경과 시간(초)"을 쌓아두는 ref
+  // Q1은 항상 0초부터 시작하므로 초기값 [0]
+  const questionTimestampsRef = useRef<number[]>([0]);
+
   const selectedJobData = flow.jobRoles.find((job) => job.id === flow.selectedJobId);
   const uniqueCategories = Array.from(new Set(flow.jobRoles.map((job) => job.category)));
   const filteredJobs = flow.jobRoles.filter((job) => job.category === flow.selectedCategory);
@@ -4483,12 +4788,17 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     jobRoleId: flow.jobRoleId,
     jobName: selectedJobData?.name,
     currentQuestions,
+    questionTimestamps: questionTimestampsRef.current, // 🔑 전달
     onExit,
   });
 
   const handleNextQuestion = () => {
-    if (flow.currentQuestionIdx < currentQuestions.length - 1) flow.setCurrentQuestionIdx((prev) => prev + 1);
-    else flow.setStep("analyzing");
+    if (flow.currentQuestionIdx < currentQuestions.length - 1) {
+      questionTimestampsRef.current.push(flow.time); // 🔑 다음 질문 시작 시각 기록
+      flow.setCurrentQuestionIdx((prev) => prev + 1);
+    } else {
+      flow.setStep("analyzing");
+    }
   };
 
   const handleFinalExit = () => {

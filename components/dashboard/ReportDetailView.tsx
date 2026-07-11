@@ -5,13 +5,14 @@ import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
 import type { DashboardRecord } from "@/types";
 import {
   getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
-  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl, 
+  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl,
   getRecordDate, formatKoreanDate, getRecordJobName
 } from "@/lib/reportUtils";
 
 import FeedbackAccordion from "./report/FeedbackAccordion";
 import VisualAnalysisCard from "./report/VisualAnalysisCard";
-import OverviewVisualizer from "./report/OverviewVisualizer"; 
+import SpeechAnalysisCard from "./report/SpeechAnalysisCard"; // 새로 추가된 컴포넌트 임포트
+import OverviewVisualizer from "./report/OverviewVisualizer";
 import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
 
 interface ReportDetailViewProps {
@@ -24,9 +25,9 @@ interface ReportDetailViewProps {
 
 export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
-  const [activePlaybackTime, setActivePlaybackTime] = useState(0); // 🔑 현재 재생 위치
+  const [activePlaybackTime, setActivePlaybackTime] = useState(0); 
   const playerRef = useRef<MirroredVideoPlayerHandle>(null);
-
+  
   const report = record.report;
   const sortedAnswers = getSortedReports(report);
   const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
@@ -35,17 +36,16 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
   const overallScore = getOverallScore(report);
   const eyeScore = getAverageEyeScore(report);
   const poseScore = getAveragePoseScore(report);
-  const speechScore = getSpeechScore(report); // 🔑 개선된 함수 사용
-
+  const speechScore = getSpeechScore(report); 
+  
   const selectedDate = formatKoreanDate(getRecordDate(record));
   const selectedJobName = getRecordJobName(record);
-
+  
   const rawQuestions = selectedAnswerData?.questionText || "";
   const parsedQuestions = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
   const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
-
   const timestamps = record.questionTimestamps ?? [];
-
+  
   const formatTimestamp = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60).toString().padStart(2, "0");
@@ -59,12 +59,9 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
     }
   };
 
-  // 🔑 현재 재생 시각 기준으로 "지금 몇 번째 질문 구간인지" 계산
-  // 마지막으로 시작 시각이 activePlaybackTime보다 작거나 같은 질문이 현재 재생 중인 질문
-  const activeQuestionIndex =
-    timestamps.length > 0
-      ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
-      : -1;
+  const activeQuestionIndex = timestamps.length > 0
+    ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
+    : -1;
 
   return (
     <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
@@ -105,7 +102,11 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
             <FeedbackAccordion feedback={getMainFeedback(report)} />
             <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
           </div>
+          
           <VisualAnalysisCard answerData={selectedAnswerData} />
+          
+          {/* 새롭게 추가된 SpeechAnalysisCard 영역 */}
+          <SpeechAnalysisCard answerData={selectedAnswerData} />
         </div>
 
         <div className="xl:col-span-5 flex flex-col gap-6 w-full">
@@ -134,7 +135,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
                 <MirroredVideoPlayer
                   ref={playerRef}
                   src={selectedVideoUrl}
-                  onTimeUpdate={setActivePlaybackTime} // 🔑 재생 위치 실시간 수신
+                  onTimeUpdate={setActivePlaybackTime}
                 />
               ) : (
                 <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
@@ -152,7 +153,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
               <div className="flex flex-col gap-2">
                 {questionsList.map((question, idx) => {
                   const hasTimestamp = typeof timestamps[idx] === "number";
-                  const isActive = hasTimestamp && idx === activeQuestionIndex; // 🔑 현재 재생 중인 질문 여부
+                  const isActive = hasTimestamp && idx === activeQuestionIndex;
 
                   return (
                     <button
@@ -164,7 +165,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
                       aria-current={isActive ? "true" : undefined}
                       className={`text-left p-3 rounded-xl border transition-colors ${
                         isActive
-                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" // 🔑 하이라이트 스타일
+                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" 
                           : hasTimestamp
                           ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
                           : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"

@@ -10,7 +10,7 @@ interface VisualAnalysisCardProps {
 export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
   const eye = answerData?.eye;
   const pose = answerData?.pose;
-
+  
   if (!eye && !pose) return null;
 
   return (
@@ -24,9 +24,11 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
               </div>
               <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
             </div>
-            <span className="text-2xl font-bold text-blue-600">{eye.score}<span className="text-sm text-muted">점</span></span>
+            <span className="text-2xl font-bold text-blue-600">
+              {eye.score}<span className="text-sm text-muted">점</span>
+            </span>
           </div>
-          
+
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
             <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
@@ -48,8 +50,12 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
               <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">{pose.grade} Grade</span>
-              <span className="text-2xl font-bold text-blue-600">{pose.score}<span className="text-sm text-muted">점</span></span>
+              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">
+                {pose.grade} Grade
+              </span>
+              <span className="text-2xl font-bold text-blue-600">
+                {pose.score}<span className="text-sm text-muted">점</span>
+              </span>
             </div>
           </div>
 
@@ -71,12 +77,14 @@ function StatBox({ label, value, isWarning = false }: { label: string; value: st
     <div
       className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${
         isWarning
-          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40" // 🔑 다크모드 대응 추가
+          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40"
           : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"
       }`}
     >
       <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
-      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>{value}</span>
+      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>
+        {value}
+      </span>
     </div>
   );
 }
