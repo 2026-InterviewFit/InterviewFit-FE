@@ -95,11 +95,15 @@ export type AnswerReport = {
     textScript: string;
     totalFillerCount: number;
     fillerDetailsJson: string;
+    repeatedExpressionsJson: string;   // 추가
     paceEvaluation: string;
     paceFeedback: string;
     charactersPerSecond: number;
     totalSilenceSeconds: number;
+    pauseRatePercent: number;          // 추가
     criticalSilenceCount: number;
+    volumeDbMean: number;              // 추가
+    volumeDbStd: number;               // 추가
     aiEvaluationJson: string;
     modelAnswer: string;
   } | null;
