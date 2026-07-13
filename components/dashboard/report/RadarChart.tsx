@@ -1,14 +1,13 @@
 "use client";
 
+import { motion } from "framer-motion"; // 💡 애니메이션을 위해 추가
+
 interface RadarChartProps {
   eyeScore?: number;
   poseScore?: number;
   speechScore?: number;
 }
 
-// 실제로 측정 가능한 3개 지표만 사용합니다.
-// (논리성/음량분석 등은 백엔드가 별도 점수를 내려주지 않아 제외했습니다.
-//  나중에 해당 데이터가 생기면 이 배열에 축을 추가하면 됩니다.)
 const AXES = [
   { label: "시선/표정", angle: -90 },
   { label: "발화 안정성", angle: 30 },
@@ -17,7 +16,7 @@ const AXES = [
 
 const CENTER = 110;
 const MAX_RADIUS = 80;
-const MIN_RADIUS = 14; // 점수 0이어도 점 하나로 뭉개지지 않도록 하는 최소 반지름
+const MIN_RADIUS = 14; 
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -42,7 +41,6 @@ function getOuterPoint(angleDeg: number, radius: number) {
 }
 
 export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 0 }: RadarChartProps) {
-  // AXES 순서(시선/표정, 발화 안정성, 자세 안정)와 정확히 맞춰서 배열 구성
   const scores = [eyeScore, speechScore, poseScore];
 
   const dataPoints = AXES.map((axis, i) => getPoint(axis.angle, scores[i]));
@@ -66,12 +64,27 @@ export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 
           <line key={i} x1={CENTER} y1={CENTER} x2={p.x} y2={p.y} stroke="#f1f5f9" strokeWidth="1" />
         ))}
 
-        {/* 🔑 실제 점수 기반 다각형 (더 이상 고정값 아님) */}
-        <polygon points={dataPolygon} fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="2" />
+        {/* 💡 애니메이션이 적용된 실제 점수 다각형! (중앙에서 퍼져나감) */}
+        <motion.polygon 
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+          points={dataPolygon} 
+          fill="rgba(37, 99, 235, 0.15)" 
+          stroke="#2563eb" 
+          strokeWidth="2" 
+        />
 
-        {/* 각 축 끝점 강조 점 */}
+        {/* 💡 각 축 끝점 강조 점도 같이 나타나게! */}
         {dataPoints.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2563eb" />
+          <motion.circle 
+            key={i} 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 + (i * 0.1), type: "spring" }}
+            cx={p.x} cy={p.y} r="3" fill="#2563eb" 
+          />
         ))}
 
         {/* 라벨 */}

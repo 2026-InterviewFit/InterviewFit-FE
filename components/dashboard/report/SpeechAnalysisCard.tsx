@@ -27,7 +27,7 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
   const silenceRatio = speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10)) * 100 : 0; // 임시 계산식
 
   return (
-    <div className="flex flex-col gap-6 w-full mt-6">
+    <div className="flex flex-col gap-6 w-full">
       {/* 1. 발화 및 키워드 통계 */}
       <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
         <div className="flex items-center gap-2 mb-6">

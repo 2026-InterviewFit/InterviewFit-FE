@@ -26,7 +26,8 @@ export default function RecordingControls({
     return `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
   };
 
-  if (step === "confirmStop") return null;
+  // 💡 수정됨: confirmStop 뿐만 아니라 countdown 중일 때도 하단 바를 숨김 처리!
+  if (step === "confirmStop" || step === "countdown") return null;
 
   return (
     <div className="flex items-center gap-4">

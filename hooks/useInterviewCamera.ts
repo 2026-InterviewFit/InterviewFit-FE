@@ -1,6 +1,7 @@
 // hooks/useInterviewCamera.ts
 import { useState, useEffect, useRef } from "react";
-import { uploadAnswerVideo } from "@/lib/api";
+// 💡 getInterviewReport API를 가져와서 백엔드 분석 완료 여부를 체크할 거야!
+import { uploadAnswerVideo, getInterviewReport } from "@/lib/api";
 // @ts-expect-error - fix-webm-duration에는 타입 정의가 없습니다
 import fixWebmDuration from "fix-webm-duration";
 
@@ -11,7 +12,7 @@ interface UseInterviewCameraProps {
   jobRoleId: number | null;
   jobName?: string;
   currentQuestions: string[];
-  questionTimestamps: number[]; // 🔑 추가: 질문별 시작 시각(초)
+  questionTimestamps: number[];
   onExit: () => void;
 }
 
@@ -30,6 +31,9 @@ export function useInterviewCamera({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordStartTimeRef = useRef<number>(0);
+  
+  // 💡 폴링(주기적 확인) 인터벌을 저장할 ref 추가
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [analysisProgress, setAnalysisProgress] = useState(1);
   const [analysisResult, setAnalysisResult] = useState<{ message?: string } | null>(null);
@@ -39,7 +43,13 @@ export function useInterviewCamera({
     streamRef.current?.getTracks().forEach((track) => track.stop());
   };
 
-  // 1. 카메라 시작
+  // 컴포넌트 언마운트 시 인터벌 정리
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -55,7 +65,6 @@ export function useInterviewCamera({
     return () => stopCamera();
   }, [onExit]);
 
-  // 2. 녹화 제어 및 업로드
   useEffect(() => {
     if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
       chunksRef.current = [];
@@ -84,9 +93,8 @@ export function useInterviewCamera({
           if (rawBlob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
           if (!interviewId) throw new Error("면접 세션 정보가 없습니다. 다시 시작해주세요.");
 
-          setAnalysisProgress(20);
+          setAnalysisProgress(15);
 
-          // webm duration 헤더 수리
           const recordedDurationMs = Date.now() - recordStartTimeRef.current;
           const blob: Blob = await new Promise((resolve, reject) => {
             fixWebmDuration(rawBlob, recordedDurationMs, (fixedBlob: Blob) => {
@@ -95,7 +103,7 @@ export function useInterviewCamera({
             });
           });
 
-          setAnalysisProgress(40);
+          setAnalysisProgress(30);
           const result = await uploadAnswerVideo({
             interviewId,
             file: blob,
@@ -103,15 +111,15 @@ export function useInterviewCamera({
             questionText: currentQuestions.join(" | "),
           });
 
-          setAnalysisProgress(80);
+          // 로컬 스토리지에 기록 저장 (중간에 나가더라도 대시보드에 남도록)
           const historyItem = {
             interviewId,
             userId: startedUserId,
             jobRoleId,
             jobName: jobName ?? "모의면접",
             answers: [{ answerId: result.answerId, answerOrder: result.answerOrder, analysisStatus: result.analysisStatus }],
-            questionTexts: currentQuestions,       // 🔑 질문 원문 저장
-            questionTimestamps,                     // 🔑 타임스탬프 저장
+            questionTexts: currentQuestions,
+            questionTimestamps,
             savedAt: new Date().toISOString(),
           };
 
@@ -122,10 +130,29 @@ export function useInterviewCamera({
             JSON.stringify([historyItem, ...prev.filter((h: any) => h.interviewId !== interviewId)].slice(0, 20))
           );
 
-          setAnalysisProgress(100);
-          setAnalysisResult({ message: "업로드 완료! 백엔드에서 분석이 시작됐습니다." });
+          setAnalysisProgress(40); // 💡 업로드 완료 지점 (이제 백엔드 분석을 기다립니다)
+
+          // 💡 [핵심 변경 포인트] 백엔드 분석이 완료될 때까지 기다리는 폴링 로직 추가!
+          pollIntervalRef.current = setInterval(async () => {
+            try {
+              const report = await getInterviewReport(interviewId);
+              if (report.analysisStatus === "DONE") {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setAnalysisProgress(100);
+                setAnalysisResult({ message: "모든 AI 분석이 완료되었습니다. 결과를 확인해 보세요!" });
+              } else if (report.analysisStatus === "FAILED") {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setAnalysisError("AI 분석 중 오류가 발생했습니다.");
+              } else {
+                // RUNNING 상태일 때 진행률을 천천히 99%까지 올림 (심리적 안정감 제공)
+                setAnalysisProgress((prev) => (prev < 98 ? prev + Math.floor(Math.random() * 3) + 1 : 99));
+              }
+            } catch (err) {
+              // 폴링 중 일시적 네트워크 에러는 무시하고 계속 진행
+            }
+          }, 3000); // 3초마다 상태 확인
+
         } catch (error) {
-          setAnalysisProgress(100);
           setAnalysisError(error instanceof Error ? error.message : "업로드 중 오류가 발생했습니다.");
         } finally {
           mediaRecorderRef.current = null;

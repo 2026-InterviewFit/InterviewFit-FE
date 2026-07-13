@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
 import type { DashboardRecord } from "@/types";
 import {
@@ -11,7 +12,7 @@ import {
 
 import FeedbackAccordion from "./report/FeedbackAccordion";
 import VisualAnalysisCard from "./report/VisualAnalysisCard";
-import SpeechAnalysisCard from "./report/SpeechAnalysisCard"; // 새로 추가된 컴포넌트 임포트
+import SpeechAnalysisCard from "./report/SpeechAnalysisCard";
 import OverviewVisualizer from "./report/OverviewVisualizer";
 import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
 
@@ -82,7 +83,8 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
+      {/* grid에 items-start 추가 */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
         <div className="xl:col-span-7 flex flex-col gap-6 w-full">
           <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
@@ -104,31 +106,13 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
           </div>
           
           <VisualAnalysisCard answerData={selectedAnswerData} />
-          
-          {/* 새롭게 추가된 SpeechAnalysisCard 영역 */}
           <SpeechAnalysisCard answerData={selectedAnswerData} />
         </div>
 
-        <div className="xl:col-span-5 flex flex-col gap-6 w-full">
+        {/* sticky 및 top-6 추가 */}
+        <div className="xl:col-span-5 flex flex-col gap-6 w-full sticky top-6">
           <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
             <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
-            
-            <div className="mb-5 flex flex-wrap gap-2">
-              {sortedAnswers.map((answer, index) => (
-                <button 
-                  key={answer.answerId} 
-                  onClick={() => setSelectedAnswerIndex(index)}
-                  aria-label={`${answer.answerOrder}번 질문 답변 보기`}
-                  className={`rounded-lg px-4 py-2 text-xs font-bold transition-all border ${
-                    selectedAnswerIndex === index 
-                      ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800" 
-                      : "bg-transparent border-line text-muted hover:bg-gray-50"
-                  }`}
-                >
-                  Q{answer.answerOrder}
-                </button>
-              ))}
-            </div>
 
             <div className="mb-6">
               {selectedVideoUrl ? (
@@ -163,25 +147,41 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
                       disabled={!hasTimestamp}
                       aria-label={`${idx + 1}번 질문으로 이동`}
                       aria-current={isActive ? "true" : undefined}
-                      className={`text-left p-3 rounded-xl border transition-colors ${
+                      // 💡 relative 속성을 추가하고, isActive일 때 겉 테두리는 투명하게 처리
+                      className={`relative text-left p-3 rounded-xl border transition-colors ${
                         isActive
-                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" 
+                          ? "border-transparent" 
                           : hasTimestamp
                           ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
                           : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1 gap-2">
+                      {/* 💡 Magic Motion 하이라이트 박스 (활성화 시 부드럽게 위아래로 이동!) */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeQuestionBackground"
+                          className="absolute inset-0 z-0 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700"
+                          initial={false}
+                          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                        />
+                      )}
+                      
+                      {/* 💡 글자와 뱃지가 하이라이트 박스 위로 올라오도록 relative z-10 추가 */}
+                      <div className="relative z-10 flex items-center justify-between mb-1 gap-2">
                         <span className={`text-[10px] font-bold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
                           Q{idx + 1} {isActive && "· 재생 중"}
                         </span>
                         {hasTimestamp && (
-                          <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            isActive ? "text-blue-600 bg-blue-100/50 dark:text-blue-300 dark:bg-blue-800/50" : "text-blue-500 bg-blue-50 dark:bg-blue-900/30"
+                          }`}>
                             ▶ {formatTimestamp(timestamps[idx])}
                           </span>
                         )}
                       </div>
-                      <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
+                      <p className={`relative z-10 text-[13px] leading-relaxed font-medium ${
+                        isActive ? "text-blue-900 dark:text-blue-100" : "text-slate-600 dark:text-slate-300"
+                      }`}>
                         {question}
                       </p>
                     </button>

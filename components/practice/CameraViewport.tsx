@@ -25,6 +25,9 @@ export default function CameraViewport({
   onCancelStop,
   onConfirmStop,
 }: CameraViewportProps) {
+  // 💡 팝업이 뜨는 모든 모달 단계를 체크하기 위한 변수 생성
+  const isModalStep = ["resumePrompt", "resumeUpload", "jobSelect"].includes(step);
+
   return (
     <>
       {/* 1. 배경 카메라 비디오 (풀스크린 원상 복구: object-cover) */}
@@ -34,11 +37,12 @@ export default function CameraViewport({
         playsInline
         muted
         className={`absolute inset-0 h-full w-full object-cover transform -scale-x-100 transition-all duration-500 ${
-          step === "jobSelect" ? "opacity-25 blur-sm" : "opacity-80"
+          isModalStep ? "opacity-25 blur-sm" : "opacity-80"
         }`}
       />
 
-      {step !== "jobSelect" && (
+      {/* 💡 모달 단계가 아닐 때만 카메라 UI 가이드라인 및 면접용 오버레이 표시 */}
+      {!isModalStep && (
         <div className="absolute inset-0 z-10 flex flex-col p-8 justify-between pointer-events-none">
           
           <div className="flex w-full justify-center pt-4">
@@ -90,7 +94,6 @@ export default function CameraViewport({
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 0.5 }}
-                // 십자선 크기 대폭 축소 (max-w 150px)
                 className="w-[20vmin] h-[20vmin] max-w-[150px] max-h-[150px] text-white flex items-center justify-center drop-shadow-2xl"
               >
                 <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">

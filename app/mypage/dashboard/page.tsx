@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image"; // 💡 빈 화면 3D 이미지를 위해 추가
+import { motion } from "framer-motion"; // 💡 애니메이션을 위해 추가
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import InterviewRecording from "@/components/practice/InterviewRecording";
@@ -12,6 +14,13 @@ import {
   loadInterviewHistory, formatKoreanDate, getOverallScore,
   getStatusClassName, getReportStatusLabel, getRecordDate, getRecordJobName
 } from "@/lib/reportUtils";
+import { useCounter } from "@/hooks/useCounter"; // 💡 점수 카운팅 애니메이션 훅 추가
+
+// 💡 리스트 안에서 훅을 안전하게 사용하기 위한 미니 컴포넌트
+function AnimatedScore({ score }: { score: number }) {
+  const animatedValue = useCounter({ target: score, duration: 1200 });
+  return <>{animatedValue}</>;
+}
 
 export default function DashboardPage() {
   const [isInterviewing, setIsInterviewing] = useState(false);
@@ -128,8 +137,7 @@ export default function DashboardPage() {
           <div className="flex-1"><Topbar /></div>
         </div>
 
-        <main className="px-6 pb-12 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full">
-          {!selectedRecordData ? (
+<main className="px-6 pb-32 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full">          {!selectedRecordData ? (
             <div className="flex flex-col w-full animate-in fade-in duration-300">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
                 <div>
@@ -161,9 +169,20 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 flex flex-col gap-4 w-full">
+                {/* 💡 4번 제안 적용: 비어있는 화면 3D 아이콘 둥둥 애니메이션 */}
                 {sortedRecords.length === 0 && (
-                  <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 text-sm text-muted shadow-sm border border-black/[0.02]">
-                    저장된 면접 분석 기록이 없습니다.
+                  <div className="flex flex-col items-center justify-center rounded-[32px] bg-white/60 dark:bg-[#1e293b]/60 py-20 px-8 text-center shadow-sm border border-black/[0.02] dark:border-white/[0.02]">
+                    <motion.div
+                      animate={{ y: [0, -12, 0] }}
+                      transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                      className="relative w-32 h-32 mb-6"
+                    >
+                      <Image src="/3d-computer.png" alt="Empty records" fill className="object-contain drop-shadow-lg" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-navy dark:text-white mb-2 tracking-tight">아직 면접 기록이 없어요!</h3>
+                    <p className="text-sm text-muted dark:text-gray-400 font-medium">
+                      우측 상단의 '새 면접 촬영하기' 버튼을 눌러 첫 모의면접을 시작해보세요.
+                    </p>
                   </div>
                 )}
                 {sortedRecords.map((record, index) => {
@@ -176,7 +195,12 @@ export default function DashboardPage() {
                   return (
                     <div key={record.interviewId} className="flex items-center gap-4 w-full group">
                       <input type="checkbox" checked={checkedIds.includes(record.interviewId)} onChange={() => toggleCheck(record.interviewId)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ml-2" />
-                      <div className="flex flex-1 items-center justify-between rounded-[24px] bg-white dark:bg-[#1e293b] p-6 shadow-sm border border-black/[0.02] hover:-translate-y-0.5 cursor-pointer" onClick={() => setSelectedRecord(record.interviewId)}>
+                      
+                      {/* 💡 3번 제안 적용: Hover Glow Effect 및 부드러운 트랜지션 추가 */}
+                      <div 
+                        className="flex flex-1 items-center justify-between rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.02] dark:border-white/[0.02] cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] hover:border-blue-200 dark:hover:border-blue-800" 
+                        onClick={() => setSelectedRecord(record.interviewId)}
+                      >
                         <div className="flex items-center gap-5">
                           <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full bg-bg dark:bg-[#0f1729] border border-line">
                             <span className="text-[9px] font-medium text-muted">회차</span>
@@ -187,20 +211,23 @@ export default function DashboardPage() {
                               <Calendar className="h-3.5 w-3.5" />{recordDate}
                               <span className={getStatusClassName(record)}>{getReportStatusLabel(record)}</span>
                             </div>
-                            <h3 className="mt-1.5 text-base font-bold text-ink dark:text-white line-clamp-1 group-hover:text-blue-600">
+                            <h3 className="mt-1.5 text-base font-bold text-ink dark:text-white line-clamp-1 group-hover:text-blue-600 transition-colors">
                               {recordDate} {roundLabel} 면접영상 분석 결과
                             </h3>
-                            <p className="mt-1 text-xs text-muted">{getRecordJobName(record)} 직무 대비 모의면접</p>
+                            <p className="mt-1 text-xs text-muted font-medium">{getRecordJobName(record)} 직무 대비 모의면접</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-6 shrink-0">
                           <div className="text-right hidden sm:block">
                             <p className="text-[11px] font-medium text-muted">종합 점수</p>
+                            
+                            {/* 💡 1번 제안 적용: AnimatedScore 컴포넌트로 숫자 롤링 */}
                             <p className="text-2xl font-bold text-navy dark:text-white">
-                              {typeof recordScore === "number" ? Math.round(recordScore) : "-"}<span className="text-sm font-medium">점</span>
+                              {typeof recordScore === "number" ? <AnimatedScore score={Math.round(recordScore)} /> : "-"}<span className="text-sm font-medium">점</span>
                             </p>
+
                           </div>
-                          <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-navy hover:bg-blue-100">
+                          <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-navy hover:bg-blue-100 transition-colors">
                             <Play className="h-4 w-4 pl-0.5" strokeWidth={2.5} />
                           </button>
                         </div>

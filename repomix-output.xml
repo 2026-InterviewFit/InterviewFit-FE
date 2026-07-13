@@ -75,6 +75,7 @@ components/
       MirroredVideoPlayer.tsx
       OverviewVisualizer.tsx
       RadarChart.tsx
+      SpeechAnalysisCard.tsx
       VisualAnalysisCard.tsx
     ReportDetailView.tsx
     Sidebar.tsx
@@ -469,13 +470,21 @@ export default MirroredVideoPlayer;
 <file path="components/dashboard/report/OverviewVisualizer.tsx">
 "use client";
 
+import { motion } from "framer-motion";
 import RadarChart from "./RadarChart";
 import { BarChart3 } from "lucide-react";
+import { useCounter } from "@/hooks/useCounter"; // 💡 훅 추가
 
 interface OverviewVisualizerProps {
   eyeScore?: number;
   poseScore?: number;
   speechScore?: number;
+}
+
+// 💡 숫자를 개별적으로 굴리기 위한 미니 컴포넌트
+function AnimatedBarScore({ score }: { score: number }) {
+  const animatedValue = useCounter({ target: score, duration: 1500, delay: 200 });
+  return <>{animatedValue}</>;
 }
 
 export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speechScore = 0 }: OverviewVisualizerProps) {
@@ -493,7 +502,6 @@ export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speech
           <BarChart3 className="h-4 w-4 text-blue-600" />
           <span className="text-sm font-bold text-navy dark:text-white">역량 밸런스</span>
         </div>
-        {/* 🔑 실제 점수 전달 */}
         <RadarChart eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
       </div>
 
@@ -501,20 +509,29 @@ export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speech
         <h4 className="text-sm font-bold text-navy dark:text-white mb-4">상세 점수 분포</h4>
         <div className="flex flex-col gap-4">
           {scores.map((s, i) => (
-            <div key={i} className="flex items-center gap-3">
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.2, duration: 0.5 }}
+              className="flex items-center gap-3"
+            >
               <span className="w-16 text-[11px] font-semibold text-slate-500">{s.label}</span>
               <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full ${s.color} transition-all duration-1000 ease-out`} 
-                  style={{ width: `${s.score || 0}%` }} 
+                <motion.div 
+                  className={`h-full rounded-full ${s.color}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${s.score || 0}%` }}
+                  transition={{ delay: i * 0.2, duration: 1.5, ease: [0.22, 1, 0.36, 1] }} 
                 />
               </div>
-              <span className="w-8 text-right text-xs font-bold text-navy dark:text-white">{Math.round(s.score || 0)}점</span>
-            </div>
+              <span className="w-8 text-right text-xs font-bold text-navy dark:text-white">
+                <AnimatedBarScore score={Math.round(s.score || 0)} />점
+              </span>
+            </motion.div>
           ))}
         </div>
       </div>
-
     </div>
   );
 }
@@ -523,15 +540,14 @@ export default function OverviewVisualizer({ eyeScore = 0, poseScore = 0, speech
 <file path="components/dashboard/report/RadarChart.tsx">
 "use client";
 
+import { motion } from "framer-motion"; // 💡 애니메이션을 위해 추가
+
 interface RadarChartProps {
   eyeScore?: number;
   poseScore?: number;
   speechScore?: number;
 }
 
-// 실제로 측정 가능한 3개 지표만 사용합니다.
-// (논리성/음량분석 등은 백엔드가 별도 점수를 내려주지 않아 제외했습니다.
-//  나중에 해당 데이터가 생기면 이 배열에 축을 추가하면 됩니다.)
 const AXES = [
   { label: "시선/표정", angle: -90 },
   { label: "발화 안정성", angle: 30 },
@@ -540,7 +556,7 @@ const AXES = [
 
 const CENTER = 110;
 const MAX_RADIUS = 80;
-const MIN_RADIUS = 14; // 점수 0이어도 점 하나로 뭉개지지 않도록 하는 최소 반지름
+const MIN_RADIUS = 14; 
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -565,7 +581,6 @@ function getOuterPoint(angleDeg: number, radius: number) {
 }
 
 export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 0 }: RadarChartProps) {
-  // AXES 순서(시선/표정, 발화 안정성, 자세 안정)와 정확히 맞춰서 배열 구성
   const scores = [eyeScore, speechScore, poseScore];
 
   const dataPoints = AXES.map((axis, i) => getPoint(axis.angle, scores[i]));
@@ -589,12 +604,27 @@ export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 
           <line key={i} x1={CENTER} y1={CENTER} x2={p.x} y2={p.y} stroke="#f1f5f9" strokeWidth="1" />
         ))}
 
-        {/* 🔑 실제 점수 기반 다각형 (더 이상 고정값 아님) */}
-        <polygon points={dataPolygon} fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="2" />
+        {/* 💡 애니메이션이 적용된 실제 점수 다각형! (중앙에서 퍼져나감) */}
+        <motion.polygon 
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+          points={dataPolygon} 
+          fill="rgba(37, 99, 235, 0.15)" 
+          stroke="#2563eb" 
+          strokeWidth="2" 
+        />
 
-        {/* 각 축 끝점 강조 점 */}
+        {/* 💡 각 축 끝점 강조 점도 같이 나타나게! */}
         {dataPoints.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2563eb" />
+          <motion.circle 
+            key={i} 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 + (i * 0.1), type: "spring" }}
+            cx={p.x} cy={p.y} r="3" fill="#2563eb" 
+          />
         ))}
 
         {/* 라벨 */}
@@ -619,86 +649,135 @@ export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 
 }
 </file>
 
-<file path="components/dashboard/report/VisualAnalysisCard.tsx">
+<file path="components/dashboard/report/SpeechAnalysisCard.tsx">
 "use client";
 
-import { Eye, UserSquare2 } from "lucide-react";
+import { Mic, MessageSquare, Star, KeyRound } from "lucide-react";
 import type { AnswerReport } from "@/types";
 
-interface VisualAnalysisCardProps {
+interface SpeechAnalysisCardProps {
   answerData?: AnswerReport;
 }
 
-export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
-  const eye = answerData?.eye;
-  const pose = answerData?.pose;
+export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardProps) {
+  const speech = answerData?.speech;
+  if (!speech) return null;
 
-  if (!eye && !pose) return null;
+  // AI 평가 JSON 파싱 (에러 방지 처리)
+  let aiEvaluation = { star_score: {}, feedback: "", keywords: [] };
+  try {
+    if (speech.aiEvaluationJson) {
+      aiEvaluation = JSON.parse(speech.aiEvaluationJson);
+    }
+  } catch (e) {
+    console.error("AI Evaluation JSON 파싱 실패:", e);
+  }
+
+  // 백엔드 명세 확정 전 임시 변수 처리
+  const volumeStability = "우수"; // TODO: API에서 넘어올 음량 안정성 데이터 매핑
+  const keywordRate = 78; // TODO: API에서 넘어올 키워드 포함율 데이터 매핑
+  const silenceRatio = speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10)) * 100 : 0; // 임시 계산식
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {eye && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
-                <Eye className="h-4 w-4" />
-              </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
-            </div>
-            <span className="text-2xl font-bold text-blue-600">{eye.score}<span className="text-sm text-muted">점</span></span>
+      {/* 1. 발화 및 키워드 통계 */}
+      <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="rounded-lg bg-purple-50 dark:bg-purple-900/30 p-2 text-purple-600 dark:text-purple-300">
+            <Mic className="h-4 w-4" />
           </div>
-          
-          <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
-            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
-            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+          <h4 className="text-base font-bold text-navy dark:text-white">발화 및 습관어 분석</h4>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatBox label="발화 속도 (CPS)" value={`${speech.charactersPerSecond.toFixed(1)}자/초`} />
+          <StatBox label="침묵 시간 (비율)" value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${silenceRatio.toFixed(1)}%)`} isWarning={silenceRatio > 15} />
+          <StatBox label="음량 안정성" value={volumeStability} />
+          <StatBox label="핵심 키워드 포함률" value={`${keywordRate}%`} />
+        </div>
+
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-black/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-bold text-navy dark:text-white flex items-center gap-1.5">
+              <KeyRound className="h-4 w-4 text-amber-500" /> 습관어 및 반복 표현
+            </span>
+            <span className="text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-md">
+              총 {speech.totalFillerCount}회 감지
+            </span>
           </div>
-          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
-            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+          <p className="text-xs text-muted leading-relaxed break-keep">
+            {speech.paceFeedback || "분석된 발화 피드백이 없습니다."}
           </p>
         </div>
-      )}
+      </div>
 
-      {pose && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300">
-                <UserSquare2 className="h-4 w-4" />
-              </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">{pose.grade} Grade</span>
-              <span className="text-2xl font-bold text-blue-600">{pose.score}<span className="text-sm text-muted">점</span></span>
-            </div>
+      {/* 2. 답변 관련 (현재 답변 vs 최적의 답변) */}
+      <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/30 p-2 text-emerald-600 dark:text-emerald-300">
+            <MessageSquare className="h-4 w-4" />
           </div>
+          <h4 className="text-base font-bold text-navy dark:text-white">답변 내용 분석</h4>
+        </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
-            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
-            <StatBox label="어깨 흔들림 (횟수/시간)" value={`${pose.shoulderBadCount}회 / ${pose.shoulderBadDuration.toFixed(1)}초`} />
-            <StatBox label="얼굴 이탈 (횟수/시간)" value={`${pose.faceBadCount}회 / ${pose.faceBadDuration.toFixed(1)}초`} />
-            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
-            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2 p-4 rounded-xl border border-black/5 bg-gray-50/50 dark:bg-slate-800/30">
+            <span className="text-xs font-bold text-slate-500">현재 답변 (STT)</span>
+            <p className="text-sm text-navy dark:text-slate-300 leading-relaxed font-medium break-keep h-32 overflow-y-auto scrollbar-hide">
+              {speech.textScript || "답변 내용을 불러올 수 없습니다."}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">최적의 답변 (AI 제안)</span>
+            <p className="text-sm text-navy dark:text-slate-300 leading-relaxed font-medium break-keep h-32 overflow-y-auto scrollbar-hide">
+              {speech.modelAnswer || "AI 모델 답변을 생성 중입니다."}
+            </p>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* 3. STAR 평가 (제미나이) */}
+      <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm flex flex-col gap-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-900/30 p-2 text-amber-600 dark:text-amber-300">
+            <Star className="h-4 w-4" />
+          </div>
+          <h4 className="text-base font-bold text-navy dark:text-white">STAR 구조 평가</h4>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {["S (Situation)", "T (Task)", "A (Action)", "R (Result)"].map((label, idx) => {
+            const scoreValues = Object.values(aiEvaluation.star_score || {});
+            const score = typeof scoreValues[idx] === "number" ? scoreValues[idx] : "-";
+            
+            return (
+              <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 text-center flex flex-col gap-1 shadow-sm">
+                <span className="text-[11px] font-bold text-slate-500">{label}</span>
+                <span className="text-lg font-bold text-amber-500">{score}점</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted bg-amber-50/50 dark:bg-amber-900/10 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 leading-relaxed text-center font-medium mt-2">
+          {aiEvaluation.feedback || "STAR 기법에 맞춰 경험을 구체적으로 설명해 보세요."}
+        </p>
+      </div>
     </div>
   );
 }
 
-function StatBox({ label, value, isWarning = false }: { label: string; value: string; isWarning?: boolean }) {
+function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {
   return (
-    <div
-      className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${
-        isWarning
-          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40" // 🔑 다크모드 대응 추가
+    <div className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[120px] ${
+        isWarning 
+          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40" 
           : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"
       }`}
     >
       <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
-      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>{value}</span>
+      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -1514,203 +1593,98 @@ export default function LoginPage() {
 }
 </file>
 
-<file path="components/dashboard/ReportDetailView.tsx">
+<file path="components/dashboard/report/VisualAnalysisCard.tsx">
 "use client";
 
-import { useState, useRef } from "react";
-import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
-import type { DashboardRecord } from "@/types";
-import {
-  getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
-  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl, 
-  getRecordDate, formatKoreanDate, getRecordJobName
-} from "@/lib/reportUtils";
+import { Eye, UserSquare2 } from "lucide-react";
+import type { AnswerReport } from "@/types";
 
-import FeedbackAccordion from "./report/FeedbackAccordion";
-import VisualAnalysisCard from "./report/VisualAnalysisCard";
-import OverviewVisualizer from "./report/OverviewVisualizer"; 
-import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
-
-interface ReportDetailViewProps {
-  record: DashboardRecord;
-  roundLabel: string;
-  onBack: () => void;
-  onDelete: (id: number) => void;
-  onStartNew: () => void;
+interface VisualAnalysisCardProps {
+  answerData?: AnswerReport;
 }
 
-export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
-  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
-  const [activePlaybackTime, setActivePlaybackTime] = useState(0); // 🔑 현재 재생 위치
-  const playerRef = useRef<MirroredVideoPlayerHandle>(null);
-
-  const report = record.report;
-  const sortedAnswers = getSortedReports(report);
-  const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
-  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
+export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
+  const eye = answerData?.eye;
+  const pose = answerData?.pose;
   
-  const overallScore = getOverallScore(report);
-  const eyeScore = getAverageEyeScore(report);
-  const poseScore = getAveragePoseScore(report);
-  const speechScore = getSpeechScore(report); // 🔑 개선된 함수 사용
-
-  const selectedDate = formatKoreanDate(getRecordDate(record));
-  const selectedJobName = getRecordJobName(record);
-
-  const rawQuestions = selectedAnswerData?.questionText || "";
-  const parsedQuestions = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
-  const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
-
-  const timestamps = record.questionTimestamps ?? [];
-
-  const formatTimestamp = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
-  const handleJumpToQuestion = (idx: number) => {
-    const target = timestamps[idx];
-    if (typeof target === "number") {
-      playerRef.current?.seekTo(target);
-    }
-  };
-
-  // 🔑 현재 재생 시각 기준으로 "지금 몇 번째 질문 구간인지" 계산
-  // 마지막으로 시작 시각이 activePlaybackTime보다 작거나 같은 질문이 현재 재생 중인 질문
-  const activeQuestionIndex =
-    timestamps.length > 0
-      ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
-      : -1;
+  if (!eye && !pose) return null;
 
   return (
-    <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
-      <div className="flex items-center justify-between w-full mb-6">
-        <button
-          onClick={onBack}
-          aria-label="목록으로 돌아가기"
-          className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
-        </button>
-        <button
-          onClick={() => onDelete(record.interviewId)}
-          aria-label="이 분석 기록 삭제"
-          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
-        >
-          <Trash2 className="h-4 w-4" /> 기록 삭제
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
-        <div className="xl:col-span-7 flex flex-col gap-6 w-full">
-          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
-            <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
-              {roundLabel} ({getReportStatusLabel(record)})
-            </div>
-            <div className="flex justify-between items-end mb-2">
-              <h3 className="text-2xl font-bold text-navy dark:text-white leading-snug">
-                {selectedJobName} 모의면접<br />AI 진단 리포트
-              </h3>
-              <div className="text-right">
-                <p className="text-xs text-muted mb-1">종합 점수</p>
-                <div className="text-4xl font-bold text-blue-600">
-                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
-                </div>
+    <div className="flex flex-col gap-6 w-full">
+      {eye && (
+        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {/* 🎨 시선 분석 아이콘: Blue 테마 적용 */}
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-300">
+                <Eye className="h-4 w-4" />
               </div>
+              <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
             </div>
-            <FeedbackAccordion feedback={getMainFeedback(report)} />
-            <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
+            <span className="text-2xl font-bold text-blue-600">
+              {eye.score}<span className="text-sm text-muted">점</span>
+            </span>
           </div>
-          <VisualAnalysisCard answerData={selectedAnswerData} />
+
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
+            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
+            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+          </div>
+          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
+            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+          </p>
         </div>
+      )}
 
-        <div className="xl:col-span-5 flex flex-col gap-6 w-full">
-          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
-            <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
-            
-            <div className="mb-5 flex flex-wrap gap-2">
-              {sortedAnswers.map((answer, index) => (
-                <button 
-                  key={answer.answerId} 
-                  onClick={() => setSelectedAnswerIndex(index)}
-                  aria-label={`${answer.answerOrder}번 질문 답변 보기`}
-                  className={`rounded-lg px-4 py-2 text-xs font-bold transition-all border ${
-                    selectedAnswerIndex === index 
-                      ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800" 
-                      : "bg-transparent border-line text-muted hover:bg-gray-50"
-                  }`}
-                >
-                  Q{answer.answerOrder}
-                </button>
-              ))}
-            </div>
-
-            <div className="mb-6">
-              {selectedVideoUrl ? (
-                <MirroredVideoPlayer
-                  ref={playerRef}
-                  src={selectedVideoUrl}
-                  onTimeUpdate={setActivePlaybackTime} // 🔑 재생 위치 실시간 수신
-                />
-              ) : (
-                <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
-                  <Play className="h-10 w-10 fill-white opacity-40" />
-                  <p className="absolute bottom-4 text-[10px] text-white/40">영상 주소가 없습니다</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-auto bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-black/5">
-              <h5 className="font-bold text-sm text-navy dark:text-white flex items-center gap-2 mb-4">
-                <ListVideo className="h-4 w-4 text-blue-600" />
-                질문 목록
-              </h5>
-              <div className="flex flex-col gap-2">
-                {questionsList.map((question, idx) => {
-                  const hasTimestamp = typeof timestamps[idx] === "number";
-                  const isActive = hasTimestamp && idx === activeQuestionIndex; // 🔑 현재 재생 중인 질문 여부
-
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleJumpToQuestion(idx)}
-                      disabled={!hasTimestamp}
-                      aria-label={`${idx + 1}번 질문으로 이동`}
-                      aria-current={isActive ? "true" : undefined}
-                      className={`text-left p-3 rounded-xl border transition-colors ${
-                        isActive
-                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 ring-1 ring-blue-300" // 🔑 하이라이트 스타일
-                          : hasTimestamp
-                          ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
-                          : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1 gap-2">
-                        <span className={`text-[10px] font-bold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
-                          Q{idx + 1} {isActive && "· 재생 중"}
-                        </span>
-                        {hasTimestamp && (
-                          <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md">
-                            ▶ {formatTimestamp(timestamps[idx])}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
-                        {question}
-                      </p>
-                    </button>
-                  );
-                })}
+      {pose && (
+        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {/* 🎨 자세 분석 아이콘: Indigo 테마 적용 */}
+              <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 p-2 text-indigo-600 dark:text-indigo-300">
+                <UserSquare2 className="h-4 w-4" />
               </div>
-              <p className="text-[11px] text-muted mt-5 pt-4 border-t border-black/5">
-                촬영 일시 : {selectedDate}
-              </p>
+              <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* 🎨 Grade 뱃지: Indigo 테마 적용 */}
+              <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
+                {pose.grade} Grade
+              </span>
+              {/* 🎨 점수 색상: Indigo 테마 적용 */}
+              <span className="text-2xl font-bold text-indigo-600">
+                {pose.score}<span className="text-sm text-muted">점</span>
+              </span>
             </div>
           </div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
+            <StatBox label="어깨 흔들림 (횟수/시간)" value={`${pose.shoulderBadCount}회 / ${pose.shoulderBadDuration.toFixed(1)}초`} />
+            <StatBox label="얼굴 이탈 (횟수/시간)" value={`${pose.faceBadCount}회 / ${pose.faceBadDuration.toFixed(1)}초`} />
+            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
+            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
+          </div>
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function StatBox({ label, value, isWarning = false }: { label: string; value: string; isWarning?: boolean }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${
+        isWarning
+          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40"
+          : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"
+      }`}
+    >
+      <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
+      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -2107,11 +2081,12 @@ function KakaoIcon() {
 </file>
 
 <file path="components/practice/AnalysisProgress.tsx">
+// components/practice/AnalysisProgress.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Lightbulb } from "lucide-react";
 import type { JobRole } from "@/types";
 
 const LOADING_TIPS = [
@@ -2142,55 +2117,61 @@ export default function AnalysisProgress({
   useEffect(() => {
     const tipInterval = setInterval(() => {
       setTipIdx((prev) => (prev + 1) % LOADING_TIPS.length);
-    }, 4000);
+    }, 6500);
     return () => clearInterval(tipInterval);
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-bg text-ink p-8 relative font-sans select-none">
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-40">
-        <div className="absolute -top-40 -left-20 h-[650px] w-[650px] rounded-full bg-[#fef08a]/40 blur-[140px]" />
-        <div className="absolute top-10 -right-20 h-[750px] w-[750px] rounded-full bg-[#bfdbfe]/60 blur-[160px]" />
-        <div className="absolute bottom-[-150px] left-1/4 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[130px]" />
+    <div className="flex h-full w-full flex-col items-center justify-center bg-bg text-ink p-8 relative font-sans select-none overflow-hidden">
+      
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-60">
+        <div className="absolute -top-40 -left-20 h-[650px] w-[650px] rounded-full bg-[#fef08a]/50 blur-[130px]" />
+        <div className="absolute top-10 -right-20 h-[750px] w-[750px] rounded-full bg-[#bfdbfe]/60 blur-[150px]" />
+        <div className="absolute bottom-[-150px] left-1/4 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/40 blur-[130px]" />
       </div>
 
       <div className="relative z-10 flex flex-col items-center max-w-2xl text-center space-y-8 w-full">
         {/* 진행률 원형 */}
         <div className="relative flex items-center justify-center w-28 h-28">
-          <div className="absolute inset-0 rounded-full border-4 border-black/[0.04]" />
+          <div className="absolute inset-0 rounded-full border-4 border-black/[0.04] dark:border-white/[0.04]" />
           {!analysisResult && !analysisError && (
             <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-transparent animate-[spin_2s_linear_infinite]" />
           )}
           {analysisResult && <CheckCircle2 className="h-12 w-12 text-emerald-500" />}
           {analysisError && <AlertCircle className="h-12 w-12 text-red-500" />}
           {!analysisResult && !analysisError && (
-            <span className="font-serif text-xl font-bold tracking-tight text-navy">
+            <span className="font-serif text-xl font-bold tracking-tight text-navy dark:text-white">
               {analysisProgress}%
             </span>
           )}
         </div>
 
-        {/* 상태 텍스트 */}
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight text-navy">
+          <h2 className="text-2xl font-bold tracking-tight text-navy dark:text-white">
             {analysisResult
-              ? "업로드 완료!"
+              ? "분석 완료!"
               : analysisError
               ? "오류가 발생했습니다"
-              : "면접 영상 업로드 중..."}
+              : "AI 면접 영상 분석 중..."}
           </h2>
-          <p className="text-sm text-muted">
-            <span className="font-bold text-navy">{selectedJobData?.name}</span>{" "}
+          <p className="text-sm text-muted dark:text-gray-400">
+            <span className="font-bold text-navy dark:text-gray-200">{selectedJobData?.name}</span>{" "}
             {analysisResult
-              ? "직무 면접 영상이 저장됐습니다. 대시보드에서 분석 결과를 확인하세요."
-              : "직무 기준으로 녹화 영상을 서버로 전송하고 있습니다."}
+              ? "직무 면접 영상 분석이 완료되었습니다."
+              : "직무 기준으로 AI가 다각도로 분석을 진행하고 있습니다."}
           </p>
         </div>
 
         {/* 로딩 팁 */}
         {!analysisResult && !analysisError && (
-          <div className="w-full bg-white/70 border border-black/[0.04] backdrop-blur-md rounded-[32px] p-8 text-center min-h-[160px] flex flex-col items-center justify-center overflow-hidden shadow-sm">
-            <Loader2 className="mb-4 h-8 w-8 animate-spin text-blue-500" />
+          <div className="w-full bg-white/70 dark:bg-[#1e293b]/70 border border-black/[0.04] dark:border-white/[0.04] backdrop-blur-md rounded-[32px] p-8 text-center min-h-[160px] flex flex-col items-center justify-center overflow-hidden shadow-sm">
+            
+            {/* 💡 빙글빙글 도는 로딩 제거하고, 차분한 전구 아이콘과 텍스트로 대체! */}
+            <div className="mb-4 flex items-center justify-center gap-1.5 text-blue-500 dark:text-blue-400 opacity-80">
+              <Lightbulb className="h-5 w-5" />
+              <span className="text-xs font-bold tracking-widest uppercase">Take a break</span>
+            </div>
+
             <AnimatePresence mode="wait">
               <motion.div
                 key={tipIdx}
@@ -2200,10 +2181,10 @@ export default function AnalysisProgress({
                 transition={{ duration: 0.6 }}
                 className="flex flex-col items-center space-y-3"
               >
-                <span className="inline-block text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <span className="inline-block text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30 px-3 py-1 rounded-full">
                   {LOADING_TIPS[tipIdx].category}
                 </span>
-                <p className="text-sm font-semibold leading-relaxed text-navy max-w-md">
+                <p className="text-sm font-semibold leading-relaxed text-navy dark:text-gray-200 max-w-md break-keep">
                   {LOADING_TIPS[tipIdx].text}
                 </p>
               </motion.div>
@@ -2211,26 +2192,26 @@ export default function AnalysisProgress({
           </div>
         )}
 
-        {/* 업로드 완료 결과 카드 */}
+        {/* 💡 업로드 완료가 아닌 '분석 완료' 카드! */}
         {analysisResult && (
-          <div className="w-full rounded-[32px] bg-white/80 p-8 text-left shadow-sm border border-black/[0.04] backdrop-blur-md">
+          <div className="w-full rounded-[32px] bg-white/80 dark:bg-[#1e293b]/80 p-8 text-left shadow-sm border border-black/[0.04] dark:border-white/[0.04] backdrop-blur-md animate-in fade-in zoom-in-95 duration-500">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-blue-50 p-5">
-                <p className="text-xs font-bold text-blue-600">눈 깜빡임 분석</p>
-                <p className="mt-2 text-sm font-bold text-navy">백엔드 처리 중</p>
+              <div className="rounded-2xl bg-blue-50 dark:bg-blue-900/20 p-5 border border-blue-100/50 dark:border-blue-800/50">
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400">시선 및 표정 분석</p>
+                <p className="mt-2 text-sm font-bold text-navy dark:text-white">AI 분석 완료</p>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-5">
-                <p className="text-xs font-bold text-emerald-600">자세 분석</p>
-                <p className="mt-2 text-sm font-bold text-navy">백엔드 처리 중</p>
+              <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 p-5 border border-emerald-100/50 dark:border-emerald-800/50">
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">자세 안정성 분석</p>
+                <p className="mt-2 text-sm font-bold text-navy dark:text-white">AI 분석 완료</p>
               </div>
-              <div className="rounded-2xl bg-purple-50 p-5">
-                <p className="text-xs font-bold text-purple-600">발화 분석</p>
-                <p className="mt-2 text-sm font-bold text-navy">백엔드 처리 중</p>
+              <div className="rounded-2xl bg-purple-50 dark:bg-purple-900/20 p-5 border border-purple-100/50 dark:border-purple-800/50">
+                <p className="text-xs font-bold text-purple-600 dark:text-purple-400">발화 및 내용 분석</p>
+                <p className="mt-2 text-sm font-bold text-navy dark:text-white">AI 분석 완료</p>
               </div>
             </div>
-            <div className="mt-5 rounded-2xl bg-gray-50 p-5">
+            <div className="mt-5 rounded-2xl bg-gray-50 dark:bg-slate-800 p-5 border border-black/5 dark:border-white/5">
               <p className="text-xs font-bold text-gray-500">안내</p>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-navy">
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-navy dark:text-gray-200">
                 {analysisResult.message}
               </p>
             </div>
@@ -2244,9 +2225,14 @@ export default function AnalysisProgress({
           </div>
         )}
 
+        {/* 버튼이 '분석 완료' 시퀀스 이후에만 더 눈에 띄게! */}
         <button
           onClick={onExit}
-          className="rounded-full bg-navy px-10 py-4 text-sm font-bold text-white shadow-lg shadow-navy/10 hover:bg-navy-dark transition-colors"
+          className={`rounded-full px-10 py-4 text-sm font-bold shadow-lg transition-all duration-300 ${
+            analysisResult 
+              ? "bg-navy dark:bg-white text-white dark:text-navy hover:scale-105" 
+              : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+          }`}
         >
           대시보드에서 결과 확인하기
         </button>
@@ -2388,7 +2374,8 @@ export default function JobSelectionModal({
 <file path="hooks/useInterviewCamera.ts">
 // hooks/useInterviewCamera.ts
 import { useState, useEffect, useRef } from "react";
-import { uploadAnswerVideo } from "@/lib/api";
+// 💡 getInterviewReport API를 가져와서 백엔드 분석 완료 여부를 체크할 거야!
+import { uploadAnswerVideo, getInterviewReport } from "@/lib/api";
 // @ts-expect-error - fix-webm-duration에는 타입 정의가 없습니다
 import fixWebmDuration from "fix-webm-duration";
 
@@ -2399,7 +2386,7 @@ interface UseInterviewCameraProps {
   jobRoleId: number | null;
   jobName?: string;
   currentQuestions: string[];
-  questionTimestamps: number[]; // 🔑 추가: 질문별 시작 시각(초)
+  questionTimestamps: number[];
   onExit: () => void;
 }
 
@@ -2418,6 +2405,9 @@ export function useInterviewCamera({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordStartTimeRef = useRef<number>(0);
+  
+  // 💡 폴링(주기적 확인) 인터벌을 저장할 ref 추가
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [analysisProgress, setAnalysisProgress] = useState(1);
   const [analysisResult, setAnalysisResult] = useState<{ message?: string } | null>(null);
@@ -2427,7 +2417,13 @@ export function useInterviewCamera({
     streamRef.current?.getTracks().forEach((track) => track.stop());
   };
 
-  // 1. 카메라 시작
+  // 컴포넌트 언마운트 시 인터벌 정리
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -2443,7 +2439,6 @@ export function useInterviewCamera({
     return () => stopCamera();
   }, [onExit]);
 
-  // 2. 녹화 제어 및 업로드
   useEffect(() => {
     if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
       chunksRef.current = [];
@@ -2472,9 +2467,8 @@ export function useInterviewCamera({
           if (rawBlob.size === 0) throw new Error("녹화된 영상 파일이 비어 있습니다.");
           if (!interviewId) throw new Error("면접 세션 정보가 없습니다. 다시 시작해주세요.");
 
-          setAnalysisProgress(20);
+          setAnalysisProgress(15);
 
-          // webm duration 헤더 수리
           const recordedDurationMs = Date.now() - recordStartTimeRef.current;
           const blob: Blob = await new Promise((resolve, reject) => {
             fixWebmDuration(rawBlob, recordedDurationMs, (fixedBlob: Blob) => {
@@ -2483,7 +2477,7 @@ export function useInterviewCamera({
             });
           });
 
-          setAnalysisProgress(40);
+          setAnalysisProgress(30);
           const result = await uploadAnswerVideo({
             interviewId,
             file: blob,
@@ -2491,15 +2485,15 @@ export function useInterviewCamera({
             questionText: currentQuestions.join(" | "),
           });
 
-          setAnalysisProgress(80);
+          // 로컬 스토리지에 기록 저장 (중간에 나가더라도 대시보드에 남도록)
           const historyItem = {
             interviewId,
             userId: startedUserId,
             jobRoleId,
             jobName: jobName ?? "모의면접",
             answers: [{ answerId: result.answerId, answerOrder: result.answerOrder, analysisStatus: result.analysisStatus }],
-            questionTexts: currentQuestions,       // 🔑 질문 원문 저장
-            questionTimestamps,                     // 🔑 타임스탬프 저장
+            questionTexts: currentQuestions,
+            questionTimestamps,
             savedAt: new Date().toISOString(),
           };
 
@@ -2510,10 +2504,29 @@ export function useInterviewCamera({
             JSON.stringify([historyItem, ...prev.filter((h: any) => h.interviewId !== interviewId)].slice(0, 20))
           );
 
-          setAnalysisProgress(100);
-          setAnalysisResult({ message: "업로드 완료! 백엔드에서 분석이 시작됐습니다." });
+          setAnalysisProgress(40); // 💡 업로드 완료 지점 (이제 백엔드 분석을 기다립니다)
+
+          // 💡 [핵심 변경 포인트] 백엔드 분석이 완료될 때까지 기다리는 폴링 로직 추가!
+          pollIntervalRef.current = setInterval(async () => {
+            try {
+              const report = await getInterviewReport(interviewId);
+              if (report.analysisStatus === "DONE") {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setAnalysisProgress(100);
+                setAnalysisResult({ message: "모든 AI 분석이 완료되었습니다. 결과를 확인해 보세요!" });
+              } else if (report.analysisStatus === "FAILED") {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setAnalysisError("AI 분석 중 오류가 발생했습니다.");
+              } else {
+                // RUNNING 상태일 때 진행률을 천천히 99%까지 올림 (심리적 안정감 제공)
+                setAnalysisProgress((prev) => (prev < 98 ? prev + Math.floor(Math.random() * 3) + 1 : 99));
+              }
+            } catch (err) {
+              // 폴링 중 일시적 네트워크 에러는 무시하고 계속 진행
+            }
+          }, 3000); // 3초마다 상태 확인
+
         } catch (error) {
-          setAnalysisProgress(100);
           setAnalysisError(error instanceof Error ? error.message : "업로드 중 오류가 발생했습니다.");
         } finally {
           mediaRecorderRef.current = null;
@@ -3079,6 +3092,209 @@ export default function SettingsPage() {
             </div>
           </div>
         </main>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/dashboard/ReportDetailView.tsx">
+"use client";
+
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
+import type { DashboardRecord } from "@/types";
+import {
+  getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
+  getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl,
+  getRecordDate, formatKoreanDate, getRecordJobName
+} from "@/lib/reportUtils";
+
+import FeedbackAccordion from "./report/FeedbackAccordion";
+import VisualAnalysisCard from "./report/VisualAnalysisCard";
+import SpeechAnalysisCard from "./report/SpeechAnalysisCard";
+import OverviewVisualizer from "./report/OverviewVisualizer";
+import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
+
+interface ReportDetailViewProps {
+  record: DashboardRecord;
+  roundLabel: string;
+  onBack: () => void;
+  onDelete: (id: number) => void;
+  onStartNew: () => void;
+}
+
+export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
+  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
+  const [activePlaybackTime, setActivePlaybackTime] = useState(0); 
+  const playerRef = useRef<MirroredVideoPlayerHandle>(null);
+  
+  const report = record.report;
+  const sortedAnswers = getSortedReports(report);
+  const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
+  const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
+  
+  const overallScore = getOverallScore(report);
+  const eyeScore = getAverageEyeScore(report);
+  const poseScore = getAveragePoseScore(report);
+  const speechScore = getSpeechScore(report); 
+  
+  const selectedDate = formatKoreanDate(getRecordDate(record));
+  const selectedJobName = getRecordJobName(record);
+  
+  const rawQuestions = selectedAnswerData?.questionText || "";
+  const parsedQuestions = rawQuestions.split("|").map(q => q.trim()).filter(q => q.length > 0);
+  const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
+  const timestamps = record.questionTimestamps ?? [];
+  
+  const formatTimestamp = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const handleJumpToQuestion = (idx: number) => {
+    const target = timestamps[idx];
+    if (typeof target === "number") {
+      playerRef.current?.seekTo(target);
+    }
+  };
+
+  const activeQuestionIndex = timestamps.length > 0
+    ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
+    : -1;
+
+  return (
+    <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center justify-between w-full mb-6">
+        <button
+          onClick={onBack}
+          aria-label="목록으로 돌아가기"
+          className="flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
+        </button>
+        <button
+          onClick={() => onDelete(record.interviewId)}
+          aria-label="이 분석 기록 삭제"
+          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
+        >
+          <Trash2 className="h-4 w-4" /> 기록 삭제
+        </button>
+      </div>
+
+      {/* grid에 items-start 추가 */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
+        <div className="xl:col-span-7 flex flex-col gap-6 w-full">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
+            <div className="flex items-center gap-3 text-sm font-medium text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full mb-4">
+              {roundLabel} ({getReportStatusLabel(record)})
+            </div>
+            <div className="flex justify-between items-end mb-2">
+              <h3 className="text-2xl font-bold text-navy dark:text-white leading-snug">
+                {selectedJobName} 모의면접<br />AI 진단 리포트
+              </h3>
+              <div className="text-right">
+                <p className="text-xs text-muted mb-1">종합 점수</p>
+                <div className="text-4xl font-bold text-blue-600">
+                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
+                </div>
+              </div>
+            </div>
+            <FeedbackAccordion feedback={getMainFeedback(report)} />
+            <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
+          </div>
+          
+          <VisualAnalysisCard answerData={selectedAnswerData} />
+          <SpeechAnalysisCard answerData={selectedAnswerData} />
+        </div>
+
+        {/* sticky 및 top-6 추가 */}
+        <div className="xl:col-span-5 flex flex-col gap-6 w-full sticky top-6">
+          <div className="rounded-[32px] bg-white dark:bg-[#1e293b] p-8 shadow-sm border border-black/[0.04] dark:border-white/[0.04] flex-1 flex flex-col">
+            <h4 className="text-base font-bold text-navy dark:text-white mb-4">답변 영상 다시보기</h4>
+
+            <div className="mb-6">
+              {selectedVideoUrl ? (
+                <MirroredVideoPlayer
+                  ref={playerRef}
+                  src={selectedVideoUrl}
+                  onTimeUpdate={setActivePlaybackTime}
+                />
+              ) : (
+                <div className="aspect-video w-full rounded-2xl bg-[#0f172a] relative flex items-center justify-center overflow-hidden shadow-inner">
+                  <Play className="h-10 w-10 fill-white opacity-40" />
+                  <p className="absolute bottom-4 text-[10px] text-white/40">영상 주소가 없습니다</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-auto bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-black/5">
+              <h5 className="font-bold text-sm text-navy dark:text-white flex items-center gap-2 mb-4">
+                <ListVideo className="h-4 w-4 text-blue-600" />
+                질문 목록
+              </h5>
+              <div className="flex flex-col gap-2">
+                {questionsList.map((question, idx) => {
+                  const hasTimestamp = typeof timestamps[idx] === "number";
+                  const isActive = hasTimestamp && idx === activeQuestionIndex;
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleJumpToQuestion(idx)}
+                      disabled={!hasTimestamp}
+                      aria-label={`${idx + 1}번 질문으로 이동`}
+                      aria-current={isActive ? "true" : undefined}
+                      // 💡 relative 속성을 추가하고, isActive일 때 겉 테두리는 투명하게 처리
+                      className={`relative text-left p-3 rounded-xl border transition-colors ${
+                        isActive
+                          ? "border-transparent" 
+                          : hasTimestamp
+                          ? "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer"
+                          : "bg-white dark:bg-slate-700/50 border-black/5 dark:border-white/5 cursor-default"
+                      }`}
+                    >
+                      {/* 💡 Magic Motion 하이라이트 박스 (활성화 시 부드럽게 위아래로 이동!) */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeQuestionBackground"
+                          className="absolute inset-0 z-0 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700"
+                          initial={false}
+                          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                        />
+                      )}
+                      
+                      {/* 💡 글자와 뱃지가 하이라이트 박스 위로 올라오도록 relative z-10 추가 */}
+                      <div className="relative z-10 flex items-center justify-between mb-1 gap-2">
+                        <span className={`text-[10px] font-bold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                          Q{idx + 1} {isActive && "· 재생 중"}
+                        </span>
+                        {hasTimestamp && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            isActive ? "text-blue-600 bg-blue-100/50 dark:text-blue-300 dark:bg-blue-800/50" : "text-blue-500 bg-blue-50 dark:bg-blue-900/30"
+                          }`}>
+                            ▶ {formatTimestamp(timestamps[idx])}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`relative z-10 text-[13px] leading-relaxed font-medium ${
+                        isActive ? "text-blue-900 dark:text-blue-100" : "text-slate-600 dark:text-slate-300"
+                      }`}>
+                        {question}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted mt-5 pt-4 border-t border-black/5">
+                촬영 일시 : {selectedDate}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -4319,6 +4535,8 @@ export default function Navbar() {
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image"; // 💡 빈 화면 3D 이미지를 위해 추가
+import { motion } from "framer-motion"; // 💡 애니메이션을 위해 추가
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import InterviewRecording from "@/components/practice/InterviewRecording";
@@ -4330,6 +4548,13 @@ import {
   loadInterviewHistory, formatKoreanDate, getOverallScore,
   getStatusClassName, getReportStatusLabel, getRecordDate, getRecordJobName
 } from "@/lib/reportUtils";
+import { useCounter } from "@/hooks/useCounter"; // 💡 점수 카운팅 애니메이션 훅 추가
+
+// 💡 리스트 안에서 훅을 안전하게 사용하기 위한 미니 컴포넌트
+function AnimatedScore({ score }: { score: number }) {
+  const animatedValue = useCounter({ target: score, duration: 1200 });
+  return <>{animatedValue}</>;
+}
 
 export default function DashboardPage() {
   const [isInterviewing, setIsInterviewing] = useState(false);
@@ -4446,8 +4671,7 @@ export default function DashboardPage() {
           <div className="flex-1"><Topbar /></div>
         </div>
 
-        <main className="px-6 pb-12 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full">
-          {!selectedRecordData ? (
+<main className="px-6 pb-32 pt-6 lg:px-10 lg:pt-10 flex flex-col w-full h-full">          {!selectedRecordData ? (
             <div className="flex flex-col w-full animate-in fade-in duration-300">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
                 <div>
@@ -4479,9 +4703,20 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 flex flex-col gap-4 w-full">
+                {/* 💡 4번 제안 적용: 비어있는 화면 3D 아이콘 둥둥 애니메이션 */}
                 {sortedRecords.length === 0 && (
-                  <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-8 text-sm text-muted shadow-sm border border-black/[0.02]">
-                    저장된 면접 분석 기록이 없습니다.
+                  <div className="flex flex-col items-center justify-center rounded-[32px] bg-white/60 dark:bg-[#1e293b]/60 py-20 px-8 text-center shadow-sm border border-black/[0.02] dark:border-white/[0.02]">
+                    <motion.div
+                      animate={{ y: [0, -12, 0] }}
+                      transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                      className="relative w-32 h-32 mb-6"
+                    >
+                      <Image src="/3d-computer.png" alt="Empty records" fill className="object-contain drop-shadow-lg" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-navy dark:text-white mb-2 tracking-tight">아직 면접 기록이 없어요!</h3>
+                    <p className="text-sm text-muted dark:text-gray-400 font-medium">
+                      우측 상단의 '새 면접 촬영하기' 버튼을 눌러 첫 모의면접을 시작해보세요.
+                    </p>
                   </div>
                 )}
                 {sortedRecords.map((record, index) => {
@@ -4494,7 +4729,12 @@ export default function DashboardPage() {
                   return (
                     <div key={record.interviewId} className="flex items-center gap-4 w-full group">
                       <input type="checkbox" checked={checkedIds.includes(record.interviewId)} onChange={() => toggleCheck(record.interviewId)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ml-2" />
-                      <div className="flex flex-1 items-center justify-between rounded-[24px] bg-white dark:bg-[#1e293b] p-6 shadow-sm border border-black/[0.02] hover:-translate-y-0.5 cursor-pointer" onClick={() => setSelectedRecord(record.interviewId)}>
+                      
+                      {/* 💡 3번 제안 적용: Hover Glow Effect 및 부드러운 트랜지션 추가 */}
+                      <div 
+                        className="flex flex-1 items-center justify-between rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.02] dark:border-white/[0.02] cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] hover:border-blue-200 dark:hover:border-blue-800" 
+                        onClick={() => setSelectedRecord(record.interviewId)}
+                      >
                         <div className="flex items-center gap-5">
                           <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full bg-bg dark:bg-[#0f1729] border border-line">
                             <span className="text-[9px] font-medium text-muted">회차</span>
@@ -4505,20 +4745,23 @@ export default function DashboardPage() {
                               <Calendar className="h-3.5 w-3.5" />{recordDate}
                               <span className={getStatusClassName(record)}>{getReportStatusLabel(record)}</span>
                             </div>
-                            <h3 className="mt-1.5 text-base font-bold text-ink dark:text-white line-clamp-1 group-hover:text-blue-600">
+                            <h3 className="mt-1.5 text-base font-bold text-ink dark:text-white line-clamp-1 group-hover:text-blue-600 transition-colors">
                               {recordDate} {roundLabel} 면접영상 분석 결과
                             </h3>
-                            <p className="mt-1 text-xs text-muted">{getRecordJobName(record)} 직무 대비 모의면접</p>
+                            <p className="mt-1 text-xs text-muted font-medium">{getRecordJobName(record)} 직무 대비 모의면접</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-6 shrink-0">
                           <div className="text-right hidden sm:block">
                             <p className="text-[11px] font-medium text-muted">종합 점수</p>
+                            
+                            {/* 💡 1번 제안 적용: AnimatedScore 컴포넌트로 숫자 롤링 */}
                             <p className="text-2xl font-bold text-navy dark:text-white">
-                              {typeof recordScore === "number" ? Math.round(recordScore) : "-"}<span className="text-sm font-medium">점</span>
+                              {typeof recordScore === "number" ? <AnimatedScore score={Math.round(recordScore)} /> : "-"}<span className="text-sm font-medium">점</span>
                             </p>
+
                           </div>
-                          <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-navy hover:bg-blue-100">
+                          <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-navy hover:bg-blue-100 transition-colors">
                             <Play className="h-4 w-4 pl-0.5" strokeWidth={2.5} />
                           </button>
                         </div>

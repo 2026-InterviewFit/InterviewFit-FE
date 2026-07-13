@@ -12,6 +12,10 @@ import AnalysisProgress from "./AnalysisProgress";
 import RecordingControls from "./RecordingControls";
 import CameraViewport from "./CameraViewport";
 
+// 💡 새로 제작한 자소서 관련 모달 추가 Import
+import ResumePromptModal from "./ResumePromptModal";
+import ResumeUploadModal from "./ResumeUploadModal";
+
 const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
   "IT/개발": [
     "Q1. 프로젝트 중 가장 해결하기 어려웠던 기술적 한계와 트러블슈팅 경험을 말씀해 주세요.",
@@ -82,6 +86,9 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     );
   }
 
+  // 💡 자소서 업로드 단계나 직무 대분류 탐색 시 하단 컨트롤러를 숨기기 위한 조건 설정
+  const isInputPhase = ["resumePrompt", "resumeUpload", "jobSelect"].includes(flow.step);
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-black font-sans">
       <CameraViewport
@@ -95,6 +102,34 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
         onConfirmStop={() => flow.setStep("analyzing")}
       />
 
+      {/* 💡 분기 1: 자기소개서 기입 의사 확인 모달 */}
+      {flow.step === "resumePrompt" && (
+        <ResumePromptModal
+          onYes={() => flow.setStep("resumeUpload")}
+          onNo={() => flow.setStep("jobSelect")}
+        />
+      )}
+
+      {/* 💡 분기 2: 자기소개서 파일 업로드 드래그 앤 드롭 모달 */}
+      {flow.step === "resumeUpload" && (
+        <ResumeUploadModal
+          onNext={(file) => {
+            flow.setResumeFile(file);
+            flow.setStep("jobSelect");
+          }}
+          onSkip={() => flow.setStep("jobSelect")}
+        />
+      )}
+
+      {/* 💡 분기 3: 직무 선택 모달 */}
+      {flow.step === "resumeUpload" && (
+        <ResumeUploadModal
+          isUploading={flow.isUploadingResume} // 💡 스피너 상태 전달
+          onNext={(file) => flow.handleResumeUpload(file)} // 💡 여기서 바로 가상 분석 함수 호출!
+          onSkip={() => flow.setStep("jobSelect")}
+        />
+      )}
+
       {flow.step === "jobSelect" && (
         <JobSelectionModal
           jobRoles={flow.jobRoles}
@@ -104,11 +139,13 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
           setSelectedJobId={flow.setSelectedJobId}
           filteredJobs={filteredJobs}
           uniqueCategories={uniqueCategories}
+          recommendedJobId={flow.recommendedJobId} // 💡 추천 ID 전달
           onStartInterview={flow.handleStartInterview}
         />
       )}
-
-      {flow.step !== "jobSelect" && (
+      
+      {/* 💡 설정 단계가 완료되어 실제 연습/카운트다운에 임할 때만 하단 바 출력 */}
+      {!isInputPhase && (
         <div className="absolute inset-x-0 bottom-0 z-20 flex h-32 w-full items-end justify-center pb-12 pointer-events-none">
           <div className="pointer-events-auto">
             <RecordingControls
