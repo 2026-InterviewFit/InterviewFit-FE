@@ -1,18 +1,32 @@
 "use client";
 
-import { Mic, MessageSquare, Star, KeyRound } from "lucide-react";
+import { Mic, MessageSquare, Star, KeyRound, Repeat } from "lucide-react";
 import type { AnswerReport } from "@/types";
 
 interface SpeechAnalysisCardProps {
   answerData?: AnswerReport;
 }
 
+type AiEvaluation = {
+  star_score: Record<string, number>;
+  feedback: string;
+  keywords: string[];
+};
+
+type RepeatedExpression = {
+  expression: string;
+  count: number;
+};
+
+// STAR 점수 만점 기준 (Gemini 프롬프트 기준과 반드시 일치해야 함)
+const STAR_MAX_SCORE = 10;
+
 export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardProps) {
   const speech = answerData?.speech;
   if (!speech) return null;
 
   // AI 평가 JSON 파싱 (에러 방지 처리)
-  let aiEvaluation = { star_score: {}, feedback: "", keywords: [] };
+  let aiEvaluation: AiEvaluation = { star_score: {}, feedback: "", keywords: [] };
   try {
     if (speech.aiEvaluationJson) {
       aiEvaluation = JSON.parse(speech.aiEvaluationJson);
@@ -21,10 +35,23 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
     console.error("AI Evaluation JSON 파싱 실패:", e);
   }
 
-  // 백엔드 명세 확정 전 임시 변수 처리
-  const volumeStability = "우수"; // TODO: API에서 넘어올 음량 안정성 데이터 매핑
-  const keywordRate = 78; // TODO: API에서 넘어올 키워드 포함율 데이터 매핑
-  const silenceRatio = speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10)) * 100 : 0; // 임시 계산식
+  // 반복 표현 JSON 파싱 (에러 방지 처리)
+  let repeatedExpressions: RepeatedExpression[] = [];
+  try {
+    if (speech.repeatedExpressionsJson) {
+      repeatedExpressions = JSON.parse(speech.repeatedExpressionsJson);
+    }
+  } catch (e) {
+    console.error("반복 표현 JSON 파싱 실패:", e);
+  }
+
+  // 침묵 비율은 백엔드에서 계산된 값을 그대로 사용
+  const silenceRatio = speech.pauseRatePercent ?? 0;
+  const silenceLevel =
+    silenceRatio < 10 ? "적절" : silenceRatio < 20 ? "보통" : "많음";
+
+  // 발화 속도 평가는 이미 파이썬(speech_service.py)에서 계산해서 내려옴
+  const paceLabel = speech.paceEvaluation || null;
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -37,11 +64,19 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
           <h4 className="text-base font-bold text-navy dark:text-white">발화 및 습관어 분석</h4>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatBox label="발화 속도 (CPS)" value={`${speech.charactersPerSecond.toFixed(1)}자/초`} />
-          <StatBox label="침묵 시간 (비율)" value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${silenceRatio.toFixed(1)}%)`} isWarning={silenceRatio > 15} />
-          <StatBox label="음량 안정성" value={volumeStability} />
-          <StatBox label="핵심 키워드 포함률" value={`${keywordRate}%`} />
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <StatBox
+            label="발화 속도 (CPS)"
+            value={`${speech.charactersPerSecond.toFixed(1)}자/초`}
+            subLabel={paceLabel ?? undefined}
+            isWarning={paceLabel === "너무 느림" || paceLabel === "너무 빠름"}
+          />
+          <StatBox
+            label="침묵 시간 (비율)"
+            value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${silenceRatio.toFixed(1)}%)`}
+            subLabel={silenceLevel}
+            isWarning={silenceRatio > 15}
+          />
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-black/5">
@@ -56,7 +91,37 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
           <p className="text-xs text-muted leading-relaxed break-keep">
             {speech.paceFeedback || "분석된 발화 피드백이 없습니다."}
           </p>
+
+          {repeatedExpressions.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-black/5">
+              {repeatedExpressions.map((r, idx) => (
+                <span
+                  key={`${r.expression}-${idx}`}
+                  className="flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300 px-2 py-1 rounded-md"
+                >
+                  <Repeat className="h-3 w-3" />
+                  &ldquo;{r.expression}&rdquo; {r.count}회
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+
+        {aiEvaluation.keywords && aiEvaluation.keywords.length > 0 && (
+          <div className="mt-4">
+            <span className="text-xs font-bold text-slate-500 mb-2 block">답변에 포함된 핵심 키워드</span>
+            <div className="flex flex-wrap gap-2">
+              {aiEvaluation.keywords.map((kw, idx) => (
+                <span
+                  key={`${kw}-${idx}`}
+                  className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 rounded-md"
+                >
+                  #{kw}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 2. 답변 관련 (현재 답변 vs 최적의 답변) */}
@@ -91,17 +156,21 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
             <Star className="h-4 w-4" />
           </div>
           <h4 className="text-base font-bold text-navy dark:text-white">STAR 구조 평가</h4>
+          <span className="text-[11px] font-semibold text-slate-400 ml-auto">{STAR_MAX_SCORE}점 만점</span>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {["S (Situation)", "T (Task)", "A (Action)", "R (Result)"].map((label, idx) => {
             const scoreValues = Object.values(aiEvaluation.star_score || {});
             const score = typeof scoreValues[idx] === "number" ? scoreValues[idx] : "-";
-            
+
             return (
               <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 text-center flex flex-col gap-1 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-500">{label}</span>
-                <span className="text-lg font-bold text-amber-500">{score}점</span>
+                <span className="text-lg font-bold text-amber-500">
+                  {score}
+                  <span className="text-xs text-slate-400 font-semibold">/{STAR_MAX_SCORE}점</span>
+                </span>
               </div>
             );
           })}
@@ -114,7 +183,17 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
   );
 }
 
-function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {
+function StatBox({
+  label,
+  value,
+  subLabel,
+  isWarning = false,
+}: {
+  label: string;
+  value: string | number;
+  subLabel?: string;
+  isWarning?: boolean;
+}) {
   return (
     <div className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[120px] ${
         isWarning 
@@ -126,6 +205,15 @@ function StatBox({ label, value, isWarning = false }: { label: string; value: st
       <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>
         {value}
       </span>
+      {subLabel && (
+        <span className={`text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded-md ${
+          isWarning
+            ? "text-red-500 bg-red-100/60 dark:bg-red-900/30"
+            : "text-blue-500 bg-blue-50 dark:bg-blue-900/20"
+        }`}>
+          {subLabel}
+        </span>
+      )}
     </div>
   );
 }
