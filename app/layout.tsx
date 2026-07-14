@@ -32,10 +32,10 @@ export default function RootLayout({
     <html
       lang="ko"
       className={`${satoshi.variable} ${playfair.variable}`}
-      suppressHydrationWarning // 💡 다크모드 사용 시 화면 깜빡임(에러)을 막아주는 필수 속성입니다!
+      suppressHydrationWarning 
     >
-      <body>
-        {/* 💡 앱 전체를 ThemeProvider로 감싸줍니다 */}
+      {/* 바디 태그에도 추가해 주세요! */}
+      <body suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>
