@@ -113,12 +113,10 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
       {/* 💡 분기 2: 자기소개서 파일 업로드 드래그 앤 드롭 모달 */}
       {flow.step === "resumeUpload" && (
         <ResumeUploadModal
-          onNext={(file) => {
-            flow.setResumeFile(file);
-            flow.setStep("jobSelect");
-          }}
-          onSkip={() => flow.setStep("jobSelect")}
-        />
+        isUploading={flow.isUploadingResume}
+        onNext={(file) => flow.handleResumeUpload(file)}
+        onSkip={() => flow.setStep("jobSelect")}
+      />
       )}
 
       {/* 💡 분기 3: 직무 선택 모달 */}

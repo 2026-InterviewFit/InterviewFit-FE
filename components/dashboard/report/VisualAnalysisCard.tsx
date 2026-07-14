@@ -19,24 +19,32 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
         <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              {/* 🎨 시선 분석 아이콘: Blue 테마 적용 */}
               <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-300">
                 <Eye className="h-4 w-4" />
               </div>
               <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
             </div>
             <span className="text-2xl font-bold text-blue-600">
-              {eye.score}<span className="text-sm text-muted">점</span>
+              {Math.round(eye.score ?? 0)}<span className="text-sm text-muted">점</span>
             </span>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
-            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
-            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+            <StatBox label="분당 깜빡임(BPM)" value={`${Number(eye.blinkRate ?? 0).toFixed(1)}회`} />
+            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount ?? 0}회`} />
+            <StatBox
+              label="영상 길이"
+              value={
+                eye.durationSeconds
+                  ? `${Math.round(eye.durationSeconds)}초`
+                  : pose?.totalDuration
+                    ? `${Math.round(pose.totalDuration)}초`
+                    : "-"
+              }
+            />
           </div>
           <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
-            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+            {eye.feedback || "눈 깜빡임 분석 결과를 확인할 수 없습니다."}
           </p>
         </div>
       )}
@@ -45,18 +53,15 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
         <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              {/* 🎨 자세 분석 아이콘: Indigo 테마 적용 */}
               <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 p-2 text-indigo-600 dark:text-indigo-300">
                 <UserSquare2 className="h-4 w-4" />
               </div>
               <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
             </div>
             <div className="flex items-center gap-2">
-              {/* 🎨 Grade 뱃지: Indigo 테마 적용 */}
               <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
                 {pose.grade} Grade
               </span>
-              {/* 🎨 점수 색상: Indigo 테마 적용 */}
               <span className="text-2xl font-bold text-indigo-600">
                 {pose.score}<span className="text-sm text-muted">점</span>
               </span>

@@ -20,6 +20,11 @@ export type EyeBlinkingRawResult = {
   blink_count?: number;
   blinks_per_minute?: number;
   average_ear?: number;
+  min_ear?: number;
+  max_ear?: number;
+  ear_threshold?: number;
+  ear_consec_frames?: number;
+  closed_frame_count?: number;
   blink_timestamps?: number[];
   evaluation?: string;
   blink_rate?: number;
@@ -74,6 +79,7 @@ export type AnswerReport = {
     reportId: number;
     blinkCount: number;
     blinkRate: number;
+    durationSeconds?: number;
     score: number;
     feedback: string;
   } | null;

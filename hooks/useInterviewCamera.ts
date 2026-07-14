@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 // 💡 getInterviewReport API를 가져와서 백엔드 분석 완료 여부를 체크할 거야!
 import { uploadAnswerVideo, getInterviewReport } from "@/lib/api";
-// @ts-expect-error - fix-webm-duration에는 타입 정의가 없습니다
 import fixWebmDuration from "fix-webm-duration";
 
 interface UseInterviewCameraProps {
