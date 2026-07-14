@@ -32,6 +32,10 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
   const report = record.report;
   const sortedAnswers = getSortedReports(report);
   const selectedAnswerData = sortedAnswers[selectedAnswerIndex] ?? sortedAnswers[0];
+
+  console.log("선택된 답변 전체:", selectedAnswerData);
+  console.log("시선 분석 데이터:", selectedAnswerData?.gaze);
+
   const selectedVideoUrl = getVideoPlaybackUrl(selectedAnswerData?.videoObjectKey);
   
   const overallScore = getOverallScore(report);
