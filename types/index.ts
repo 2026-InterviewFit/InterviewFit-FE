@@ -111,6 +111,11 @@ export type AnswerReport = {
     durationSeconds?: number;
     score: number;
     feedback: string;
+    blinkLogs?: {
+      logId?: number;
+      timestamp: number;
+      eventType?: string;
+    }[];
   } | null;
 
   gaze?: GazeReport | null;
@@ -145,6 +150,15 @@ export type AnswerReport = {
     volumeDbStd: number;
     aiEvaluationJson: string;
     modelAnswer: string;
+  } | null;
+  gaze: {
+    reportId: number;
+    centerRatio: number;
+    gazeAwayRatio: number;
+    gazeAwayCount: number;
+    score: number;
+    feedback?: string;
+    evaluation?: string;
   } | null;
 };
 
