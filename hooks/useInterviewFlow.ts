@@ -98,6 +98,8 @@ export function useInterviewFlow() {
     if (!selectedJobId) return;
     try {
       const savedUserId = localStorage.getItem("interviewfit_user_id");
+      console.log("선택된 jobRoleId:", selectedJobId);
+
       const result = await startInterview({
         jobRoleId: selectedJobId,
         userId: savedUserId ? Number(savedUserId) : null,
@@ -108,9 +110,15 @@ export function useInterviewFlow() {
       localStorage.setItem("interviewfit_user_id", String(result.userId));
       setStep("prepare");
     } catch (e) {
-      console.error("면접 시작 API 실패, 가상 세션으로 prepare 단계를 진행합니다.");
-      setInterviewId(Math.floor(Math.random() * 1000));
-      setStep("prepare");
+      console.error("면접 시작 API 실패:", e);
+    
+      alert(
+        e instanceof Error
+          ? e.message
+          : "면접 시작 API 호출에 실패했습니다."
+      );
+    
+      return;
     }
   };
 

@@ -7,68 +7,181 @@ interface VisualAnalysisCardProps {
   answerData?: AnswerReport;
 }
 
-export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
-  const eye = answerData?.eye;
-  const pose = answerData?.pose;
-  
-  if (!eye && !pose) return null;
+export default function VisualAnalysisCard({
+  answerData,
+}: VisualAnalysisCardProps) {
+  const eye = answerData?.eye ?? null;
+  const gaze = answerData?.gaze ?? null;
+  const pose = answerData?.pose ?? null;
+
+  if (!eye && !gaze && !pose) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {eye && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+    <div className="flex w-full flex-col gap-6">
+      {gaze && (
+        <div className="rounded-[24px] border border-black/[0.04] bg-white p-6 shadow-sm dark:border-white/[0.04] dark:bg-[#1e293b]">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* 🎨 시선 분석 아이콘: Blue 테마 적용 */}
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-300">
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
                 <Eye className="h-4 w-4" />
               </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
+
+              <h4 className="text-base font-bold text-navy dark:text-white">
+                시선 분석
+              </h4>
             </div>
+
             <span className="text-2xl font-bold text-blue-600">
-              {eye.score}<span className="text-sm text-muted">점</span>
+              {Math.round(Number(gaze.score ?? 0))}
+              <span className="text-sm text-muted">점</span>
             </span>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
-            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
-            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+          <div className="mb-4 flex flex-wrap justify-center gap-4">
+            <StatBox
+              label="정면 응시율"
+              value={`${Number(gaze.centerRatio ?? 0).toFixed(1)}%`}
+            />
+
+            <StatBox
+              label="시선 이탈 비율"
+              value={`${Number(gaze.gazeAwayRatio ?? 0).toFixed(1)}%`}
+              isWarning={Number(gaze.gazeAwayRatio ?? 0) > 20}
+            />
+
+            <StatBox
+              label="시선 이탈 횟수"
+              value={`${gaze.gazeAwayCount ?? 0}회`}
+              isWarning={Number(gaze.gazeAwayCount ?? 0) >= 5}
+            />
           </div>
-          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
-            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+
+          <p className="rounded-xl border border-black/5 bg-slate-50 p-3 text-center text-xs font-medium leading-relaxed text-muted dark:bg-slate-800/50">
+            {gaze.feedback ||
+              gaze.evaluation ||
+              "시선 분석 결과가 없습니다."}
+          </p>
+        </div>
+      )}
+
+      {eye && (
+        <div className="rounded-[24px] border border-black/[0.04] bg-white p-6 shadow-sm dark:border-white/[0.04] dark:bg-[#1e293b]">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-cyan-50 p-2 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-300">
+                <Eye className="h-4 w-4" />
+              </div>
+
+              <h4 className="text-base font-bold text-navy dark:text-white">
+                눈 깜빡임 분석
+              </h4>
+            </div>
+
+            <span className="text-2xl font-bold text-cyan-600">
+              {Math.round(Number(eye.score ?? 0))}
+              <span className="text-sm text-muted">점</span>
+            </span>
+          </div>
+
+          <div className="mb-4 flex flex-wrap justify-center gap-4">
+            <StatBox
+              label="분당 깜빡임(BPM)"
+              value={`${Number(eye.blinkRate ?? 0).toFixed(1)}회`}
+              isWarning={
+                Number(eye.blinkRate ?? 0) < 8 ||
+                Number(eye.blinkRate ?? 0) > 35
+              }
+            />
+
+            <StatBox
+              label="총 깜빡임 횟수"
+              value={`${eye.blinkCount ?? 0}회`}
+            />
+
+            <StatBox
+              label="영상 길이"
+              value={
+                eye.durationSeconds != null
+                  ? `${Math.round(eye.durationSeconds)}초`
+                  : pose?.totalDuration != null
+                    ? `${Math.round(pose.totalDuration)}초`
+                    : "-"
+              }
+            />
+          </div>
+
+          {eye.blinkLogs && eye.blinkLogs.length > 0 && (
+            <BlinkTimeline
+              durationSeconds={
+                eye.durationSeconds ?? pose?.totalDuration ?? 0
+              }
+              blinkLogs={eye.blinkLogs}
+            />
+          )}
+
+          <p className="rounded-xl border border-black/5 bg-slate-50 p-3 text-center text-xs font-medium leading-relaxed text-muted dark:bg-slate-800/50">
+            {eye.feedback || "눈 깜빡임 분석 결과가 없습니다."}
           </p>
         </div>
       )}
 
       {pose && (
-        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-[24px] border border-black/[0.04] bg-white p-6 shadow-sm dark:border-white/[0.04] dark:bg-[#1e293b]">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* 🎨 자세 분석 아이콘: Indigo 테마 적용 */}
-              <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 p-2 text-indigo-600 dark:text-indigo-300">
+              <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
                 <UserSquare2 className="h-4 w-4" />
               </div>
-              <h4 className="text-base font-bold text-navy dark:text-white">자세 안정성 분석</h4>
+
+              <h4 className="text-base font-bold text-navy dark:text-white">
+                자세 안정성 분석
+              </h4>
             </div>
+
             <div className="flex items-center gap-2">
-              {/* 🎨 Grade 뱃지: Indigo 테마 적용 */}
-              <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
-                {pose.grade} Grade
+              <span className="rounded-md bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+                {pose.grade || "-"} Grade
               </span>
-              {/* 🎨 점수 색상: Indigo 테마 적용 */}
+
               <span className="text-2xl font-bold text-indigo-600">
-                {pose.score}<span className="text-sm text-muted">점</span>
+                {pose.score ?? 0}
+                <span className="text-sm text-muted">점</span>
               </span>
             </div>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4">
-            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
-            <StatBox label="어깨 흔들림 (횟수/시간)" value={`${pose.shoulderBadCount}회 / ${pose.shoulderBadDuration.toFixed(1)}초`} />
-            <StatBox label="얼굴 이탈 (횟수/시간)" value={`${pose.faceBadCount}회 / ${pose.faceBadDuration.toFixed(1)}초`} />
-            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
-            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
+            <StatBox
+              label="전체 불안정 비율"
+              value={`${Number((pose.badRatio ?? 0) * 100).toFixed(1)}%`}
+              isWarning={Number(pose.badRatio ?? 0) > 0.3}
+            />
+
+            <StatBox
+              label="어깨 흔들림 (횟수/시간)"
+              value={`${pose.shoulderBadCount ?? 0}회 / ${Number(
+                pose.shoulderBadDuration ?? 0
+              ).toFixed(1)}초`}
+            />
+
+            <StatBox
+              label="얼굴 이탈 (횟수/시간)"
+              value={`${pose.faceBadCount ?? 0}회 / ${Number(
+                pose.faceBadDuration ?? 0
+              ).toFixed(1)}초`}
+            />
+
+            <StatBox
+              label="총 불안정 감지 횟수"
+              value={`${pose.badCount ?? 0}회`}
+            />
+
+            <StatBox
+              label="총 불안정 지속 시간"
+              value={`${Number(pose.badDuration ?? 0).toFixed(1)}초`}
+            />
           </div>
         </div>
       )}
@@ -76,17 +189,92 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
   );
 }
 
-function StatBox({ label, value, isWarning = false }: { label: string; value: string; isWarning?: boolean }) {
+interface BlinkTimelineProps {
+  durationSeconds: number;
+  blinkLogs: {
+    logId?: number;
+    timestamp: number;
+    eventType?: string;
+  }[];
+}
+
+function BlinkTimeline({
+  durationSeconds,
+  blinkLogs,
+}: BlinkTimelineProps) {
+  const safeDuration = durationSeconds > 0 ? durationSeconds : 1;
+
+  return (
+    <div className="mb-4 rounded-xl border border-black/5 bg-slate-50 p-4 dark:bg-slate-800/50">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-500">
+          깜빡임 발생 타임라인
+        </span>
+
+        <span className="text-xs font-medium text-muted">
+          총 {blinkLogs.length}회
+        </span>
+      </div>
+
+      <div className="relative h-8 rounded-full bg-white dark:bg-slate-900">
+        <div className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+
+        {blinkLogs.map((log, index) => {
+          const timestamp = Number(log.timestamp ?? 0);
+          const leftPercent = Math.min(
+            100,
+            Math.max(0, (timestamp / safeDuration) * 100)
+          );
+
+          return (
+            <div
+              key={log.logId ?? `${timestamp}-${index}`}
+              className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500"
+              style={{ left: `${leftPercent}%` }}
+              title={`${timestamp.toFixed(2)}초`}
+            />
+          );
+        })}
+      </div>
+
+      <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-400">
+        <span>0초</span>
+        <span>{Math.round(durationSeconds)}초</span>
+      </div>
+    </div>
+  );
+}
+
+interface StatBoxProps {
+  label: string;
+  value: string;
+  isWarning?: boolean;
+}
+
+function StatBox({
+  label,
+  value,
+  isWarning = false,
+}: StatBoxProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center p-4 rounded-xl border flex-1 min-w-[140px] max-w-[240px] ${
+      className={`flex min-w-[140px] max-w-[240px] flex-1 flex-col items-center justify-center rounded-xl border p-4 text-center ${
         isWarning
-          ? "bg-red-50/50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40"
-          : "bg-white dark:bg-slate-800/50 border-black/5 dark:border-white/5"
+          ? "border-red-100 bg-red-50/50 dark:border-red-900/40 dark:bg-red-900/20"
+          : "border-black/5 bg-white dark:border-white/5 dark:bg-slate-800/50"
       }`}
     >
-      <span className="text-[11px] font-bold text-slate-500 mb-1.5">{label}</span>
-      <span className={`text-base font-bold ${isWarning ? "text-red-600 dark:text-red-400" : "text-navy dark:text-white"}`}>
+      <span className="mb-1.5 text-[11px] font-bold text-slate-500">
+        {label}
+      </span>
+
+      <span
+        className={`text-base font-bold ${
+          isWarning
+            ? "text-red-600 dark:text-red-400"
+            : "text-navy dark:text-white"
+        }`}
+      >
         {value}
       </span>
     </div>
