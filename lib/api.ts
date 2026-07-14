@@ -21,16 +21,29 @@ export async function getJobRoles(): Promise<JobRole[]> {
   return response.json();
 }
 
+
 export async function startInterview(params: {
   jobRoleId: number;
-  userId?: number | null;
-}): Promise<InterviewStartResponse> {
+  userId: number | null;
+}) {
+  console.log("startInterview 요청 body:", params);
+
   const response = await fetch(`${API_BASE_URL}/api/interview/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jobRoleId: params.jobRoleId, userId: params.userId ?? null }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
   });
-  if (!response.ok) throw new Error("면접 시작 실패");
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+
+    throw new Error(
+      `면접 시작 실패 (${response.status}): ${errorBody || response.statusText}`
+    );
+  }
+
   return response.json();
 }
 

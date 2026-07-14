@@ -34,7 +34,7 @@ export default function VisualAnalysisCard({
             </div>
 
             <span className="text-2xl font-bold text-blue-600">
-              {gaze.score ?? 0}
+              {Math.round(Number(gaze.score ?? 0))}
               <span className="text-sm text-muted">점</span>
             </span>
           </div>
@@ -80,7 +80,7 @@ export default function VisualAnalysisCard({
             </div>
 
             <span className="text-2xl font-bold text-cyan-600">
-              {eye.score ?? 0}
+              {Math.round(Number(eye.score ?? 0))}
               <span className="text-sm text-muted">점</span>
             </span>
           </div>
@@ -89,7 +89,10 @@ export default function VisualAnalysisCard({
             <StatBox
               label="분당 깜빡임(BPM)"
               value={`${Number(eye.blinkRate ?? 0).toFixed(1)}회`}
-              isWarning={Number(eye.blinkRate ?? 0) > 35}
+              isWarning={
+                Number(eye.blinkRate ?? 0) < 8 ||
+                Number(eye.blinkRate ?? 0) > 35
+              }
             />
 
             <StatBox
@@ -100,12 +103,23 @@ export default function VisualAnalysisCard({
             <StatBox
               label="영상 길이"
               value={
-                pose?.totalDuration != null
-                  ? `${Math.round(pose.totalDuration)}초`
-                  : "-"
+                eye.durationSeconds != null
+                  ? `${Math.round(eye.durationSeconds)}초`
+                  : pose?.totalDuration != null
+                    ? `${Math.round(pose.totalDuration)}초`
+                    : "-"
               }
             />
           </div>
+
+          {eye.blinkLogs && eye.blinkLogs.length > 0 && (
+            <BlinkTimeline
+              durationSeconds={
+                eye.durationSeconds ?? pose?.totalDuration ?? 0
+              }
+              blinkLogs={eye.blinkLogs}
+            />
+          )}
 
           <p className="rounded-xl border border-black/5 bg-slate-50 p-3 text-center text-xs font-medium leading-relaxed text-muted dark:bg-slate-800/50">
             {eye.feedback || "눈 깜빡임 분석 결과가 없습니다."}
@@ -171,6 +185,62 @@ export default function VisualAnalysisCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface BlinkTimelineProps {
+  durationSeconds: number;
+  blinkLogs: {
+    logId?: number;
+    timestamp: number;
+    eventType?: string;
+  }[];
+}
+
+function BlinkTimeline({
+  durationSeconds,
+  blinkLogs,
+}: BlinkTimelineProps) {
+  const safeDuration = durationSeconds > 0 ? durationSeconds : 1;
+
+  return (
+    <div className="mb-4 rounded-xl border border-black/5 bg-slate-50 p-4 dark:bg-slate-800/50">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-500">
+          깜빡임 발생 타임라인
+        </span>
+
+        <span className="text-xs font-medium text-muted">
+          총 {blinkLogs.length}회
+        </span>
+      </div>
+
+      <div className="relative h-8 rounded-full bg-white dark:bg-slate-900">
+        <div className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+
+        {blinkLogs.map((log, index) => {
+          const timestamp = Number(log.timestamp ?? 0);
+          const leftPercent = Math.min(
+            100,
+            Math.max(0, (timestamp / safeDuration) * 100)
+          );
+
+          return (
+            <div
+              key={log.logId ?? `${timestamp}-${index}`}
+              className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500"
+              style={{ left: `${leftPercent}%` }}
+              title={`${timestamp.toFixed(2)}초`}
+            />
+          );
+        })}
+      </div>
+
+      <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-400">
+        <span>0초</span>
+        <span>{Math.round(durationSeconds)}초</span>
+      </div>
     </div>
   );
 }
