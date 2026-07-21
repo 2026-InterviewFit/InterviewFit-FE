@@ -3,17 +3,62 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { BRAND } from "@/lib/constants";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
+declare global {
+  interface Window {
+    Kakao: any;
+  }
+}
+
 export default function LoginCard() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [kakaoReady, setKakaoReady] = useState(false);
 
-  // 가짜 로그인 처리 함수: 세션에 도장 찍고 메인으로 이동
+  useEffect(() => {
+    // 💡 window.Kakao와 Kakao.Auth가 완전히 로드될 때까지 0.1초마다 안전하게 체크
+    const checkKakao = setInterval(() => {
+      if (typeof window !== "undefined" && window.Kakao) {
+        if (!window.Kakao.isInitialized()) {
+          try {
+            window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+          } catch (e) {
+            console.error("카카오 초기화 실패:", e);
+          }
+        }
+        // Auth 객체까지 완벽히 로드되었는지 확인
+        if (window.Kakao.Auth) {
+          setKakaoReady(true);
+          clearInterval(checkKakao);
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(checkKakao);
+  }, []);
+
   const handleLogin = () => {
-    sessionStorage.setItem("mockSession", "true");
-    router.push("/");
+    if (typeof window === "undefined" || !window.Kakao || !window.Kakao.Auth) {
+      alert("카카오 로그인 모듈이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 💡 안전하게 옵셔널 체이닝(?.)을 사용하여 Auth.authorize 호출
+      window.Kakao.Auth?.authorize({
+        redirectUri: `${window.location.origin}/oauth/kakao/callback`,
+      });
+    } catch (err) {
+      console.error("카카오 인증 요청 실패:", err);
+      alert("로그인 요청에 실패했어요. 다시 시도해주세요.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,15 +69,11 @@ export default function LoginCard() {
         transition={{ duration: 0.9, ease: easeOut }}
         className="relative w-full max-w-[440px]"
       >
-        {/* 카드 바깥 부드러운 글로우 */}
         <div className="pointer-events-none absolute -inset-6 rounded-[36px] bg-gradient-to-br from-white/30 to-navy/5 blur-2xl" />
 
-        {/* 글라스 카드 */}
         <div className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white/40 px-10 py-14 shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
-          {/* 상단 하이라이트 라인 */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
-          {/* 브랜드 */}
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -42,7 +83,6 @@ export default function LoginCard() {
             {BRAND.name}
           </motion.p>
 
-          {/* LOGIN */}
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -61,20 +101,19 @@ export default function LoginCard() {
             카카오 계정으로 바로 시작하세요.
           </motion.p>
 
-          {/* 카카오 로그인 버튼 (handleLogin 함수 연결 완료) */}
           <motion.button
             onClick={handleLogin}
+            disabled={loading || !kakaoReady}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.55, ease: easeOut }}
             type="button"
-            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
+            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
           >
             <KakaoIcon />
-            카카오로 시작하기
+            {!kakaoReady ? "카카오 로딩 중..." : loading ? "카카오 로그인 이동 중..." : "카카오로 시작하기"}
           </motion.button>
 
-          {/* 신규 사용자 안내 */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -84,7 +123,6 @@ export default function LoginCard() {
             처음이신가요? 카카오 로그인 한 번으로 자동 가입됩니다.
           </motion.p>
 
-          {/* 디바이더 */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -92,7 +130,6 @@ export default function LoginCard() {
             className="mt-8 h-px w-full bg-navy/10"
           />
 
-          {/* 약관 */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -100,17 +137,11 @@ export default function LoginCard() {
             className="mt-5 text-center text-[11px] leading-relaxed text-muted/90"
           >
             로그인 시{" "}
-            <Link
-              href="/terms"
-              className="underline underline-offset-2 hover:text-navy"
-            >
+            <Link href="/terms" className="underline underline-offset-2 hover:text-navy">
               이용약관
             </Link>{" "}
             및{" "}
-            <Link
-              href="/privacy"
-              className="underline underline-offset-2 hover:text-navy"
-            >
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-navy">
               개인정보처리방침
             </Link>
             에 동의합니다.
@@ -123,13 +154,7 @@ export default function LoginCard() {
 
 function KakaoIcon() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
