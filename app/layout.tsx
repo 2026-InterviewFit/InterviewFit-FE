@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import { ThemeProvider } from "@/components/shared/ThemeProvider"; // 💡 ThemeProvider 불러오기!
 import "./globals.css";
 
@@ -32,10 +33,14 @@ export default function RootLayout({
     <html
       lang="ko"
       className={`${satoshi.variable} ${playfair.variable}`}
-      suppressHydrationWarning 
+      suppressHydrationWarning
     >
       {/* 바디 태그에도 추가해 주세요! */}
       <body suppressHydrationWarning>
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+          strategy="afterInteractive"
+        />
         <ThemeProvider>
           {children}
         </ThemeProvider>

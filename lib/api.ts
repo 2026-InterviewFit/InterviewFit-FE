@@ -21,7 +21,6 @@ export async function getJobRoles(): Promise<JobRole[]> {
   return response.json();
 }
 
-
 export async function startInterview(params: {
   jobRoleId: number;
   userId: number | null;
@@ -134,6 +133,17 @@ export async function analyzeEyeBlinking(params: {
   );
   if (!response.ok) throw new Error("눈 깜빡임 분석 실패");
   return response.json();
+}
+
+// 카카오 access token을 백엔드로 보내서 로그인 처리 + 자체 JWT 발급받기
+export async function kakaoLoginToServer(kakaoAccessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/api/users/kakao-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken: kakaoAccessToken }),
+  });
+  if (!response.ok) throw new Error("카카오 로그인 실패");
+  return response.json(); // { token: string, user: {...} }
 }
 
 // ── 상수 ──────────────────────────────────────────────────────
