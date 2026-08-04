@@ -21,7 +21,6 @@ export async function getJobRoles(): Promise<JobRole[]> {
   return response.json();
 }
 
-
 export async function startInterview(params: {
   jobRoleId: number;
   userId: number | null;
@@ -142,7 +141,6 @@ export const MARKETING_NAV_ITEMS = [
   { label: "기능 소개", href: "/features" },
   { label: "커뮤니티", href: "/community" },
   { label: "사용법", href: "/how-to" },
-  { label: "소개", href: "/about" },
 ] as const;
 
 export const APP_NAV_ITEMS = [

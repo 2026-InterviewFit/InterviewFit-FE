@@ -1,18 +1,14 @@
+// components/practice/InterviewRecording.tsx
 "use client";
 
-import { useRef } from "react";
-
-// ── 분리한 Custom Hooks Import ──
-import { useInterviewFlow } from "@/hooks/useInterviewFlow";
+import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useInterviewStore } from "@/store/useInterviewStore";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
 
-// ── 분리한 UI Components Import ──
 import JobSelectionModal from "./JobSelectionModal";
 import AnalysisProgress from "./AnalysisProgress";
 import RecordingControls from "./RecordingControls";
 import CameraViewport from "./CameraViewport";
-
-// 💡 새로 제작한 자소서 관련 모달 추가 Import
 import ResumePromptModal from "./ResumePromptModal";
 import ResumeUploadModal from "./ResumeUploadModal";
 
@@ -35,46 +31,84 @@ const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
 };
 
 export default function InterviewRecording({ onExit }: { onExit: () => void }) {
-  // 1. 상태 및 흐름 관리 Hook 호출
-  const flow = useInterviewFlow();
+  const {
+    step, setStep, countdown, setCountdown, time, setTime,
+    currentQuestionIdx, setCurrentQuestionIdx,
+    jobRoles, selectedCategory, setSelectedCategory,
+    selectedJobId, setSelectedJobId, recommendedJobId,
+    isUploadingResume, uploadResume,
+    interviewId, startedUserId, jobRoleId,
+    fetchJobRoles, startInterviewSession, reset
+  } = useInterviewStore();
 
-  // 🔑 질문이 전환될 때마다 "그 순간의 녹화 경과 시간(초)"을 쌓아두는 ref
-  // Q1은 항상 0초부터 시작하므로 초기값 [0]
   const questionTimestampsRef = useRef<number[]>([0]);
 
-  const selectedJobData = flow.jobRoles.find((job) => job.id === flow.selectedJobId);
-  const uniqueCategories = Array.from(new Set(flow.jobRoles.map((job) => job.category)));
-  const filteredJobs = flow.jobRoles.filter((job) => job.category === flow.selectedCategory);
-  const currentQuestions = QUESTIONS_BY_CATEGORY[flow.selectedCategory ?? "IT/개발"] ?? QUESTIONS_BY_CATEGORY["IT/개발"];
+  // 💡 핵심 픽스: 대시보드가 5초마다 새로고침되더라도 웹캠이 꺼지지 않게 함수를 캐싱합니다.
+  const onExitRef = useRef(onExit);
+  useEffect(() => {
+    onExitRef.current = onExit;
+  }, [onExit]);
 
-  // 2. 카메라 및 녹화 제어 Hook 호출
+  const stableOnExit = useCallback(() => {
+    onExitRef.current();
+  }, []);
+
+  const selectedJobData = useMemo(() => jobRoles.find((job) => job.id === selectedJobId), [jobRoles, selectedJobId]);
+  const uniqueCategories = useMemo(() => Array.from(new Set(jobRoles.map((job) => job.category))), [jobRoles]);
+  const filteredJobs = useMemo(() => jobRoles.filter((job) => job.category === selectedCategory), [jobRoles, selectedCategory]);
+  const currentQuestions = useMemo(() => QUESTIONS_BY_CATEGORY[selectedCategory ?? "IT/개발"] ?? QUESTIONS_BY_CATEGORY["IT/개발"], [selectedCategory]);
+
+  useEffect(() => {
+    fetchJobRoles();
+    return () => reset();
+  }, [fetchJobRoles, reset]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (step === "countdown") {
+      interval = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+    } else if (step === "recording") {
+      interval = setInterval(() => setTime((prev) => prev + 1), 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, setCountdown, setTime]);
+
+  useEffect(() => {
+    if (step === "countdown" && countdown === 0) {
+      setStep("recording");
+      setCountdown(3); 
+    }
+  }, [countdown, step, setStep, setCountdown]);
+
+  // 💡 안정화된 stableOnExit를 넘겨주어 카메라 훅이 렌더링에 영향받지 않게 합니다.
   const camera = useInterviewCamera({
-    step: flow.step,
-    interviewId: flow.interviewId,
-    startedUserId: flow.startedUserId,
-    jobRoleId: flow.jobRoleId,
+    step,
+    interviewId,
+    startedUserId,
+    jobRoleId,
     jobName: selectedJobData?.name,
     currentQuestions,
-    questionTimestamps: questionTimestampsRef.current, // 🔑 전달
-    onExit,
+    questionTimestamps: questionTimestampsRef.current,
+    onExit: stableOnExit, 
   });
 
   const handleNextQuestion = () => {
-    if (flow.currentQuestionIdx < currentQuestions.length - 1) {
-      questionTimestampsRef.current.push(flow.time); // 🔑 다음 질문 시작 시각 기록
-      flow.setCurrentQuestionIdx((prev) => prev + 1);
+    if (currentQuestionIdx < currentQuestions.length - 1) {
+      questionTimestampsRef.current.push(time);
+      setCurrentQuestionIdx((prev) => prev + 1);
     } else {
-      flow.setStep("analyzing");
+      setStep("analyzing");
     }
   };
 
   const handleFinalExit = () => {
     camera.stopCamera();
-    onExit();
+    stableOnExit();
   };
 
-  // ── 렌더링 ──
-  if (flow.step === "analyzing") {
+  if (step === "analyzing") {
     return (
       <AnalysisProgress
         analysisProgress={camera.analysisProgress}
@@ -86,73 +120,60 @@ export default function InterviewRecording({ onExit }: { onExit: () => void }) {
     );
   }
 
-  // 💡 자소서 업로드 단계나 직무 대분류 탐색 시 하단 컨트롤러를 숨기기 위한 조건 설정
-  const isInputPhase = ["resumePrompt", "resumeUpload", "jobSelect"].includes(flow.step);
+  const isInputPhase = ["resumePrompt", "resumeUpload", "jobSelect"].includes(step);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-black font-sans">
       <CameraViewport
         videoRef={camera.videoRef}
-        step={flow.step}
-        countdown={flow.countdown}
-        selectedCategory={flow.selectedCategory}
+        step={step}
+        countdown={countdown}
+        selectedCategory={selectedCategory}
         selectedJobName={selectedJobData?.name}
-        currentQuestionText={currentQuestions[flow.currentQuestionIdx]}
-        onCancelStop={() => flow.setStep("recording")}
-        onConfirmStop={() => flow.setStep("analyzing")}
+        currentQuestionText={currentQuestions[currentQuestionIdx]}
+        onCancelStop={() => setStep("recording")}
+        onConfirmStop={() => setStep("analyzing")}
       />
 
-      {/* 💡 분기 1: 자기소개서 기입 의사 확인 모달 */}
-      {flow.step === "resumePrompt" && (
+      {step === "resumePrompt" && (
         <ResumePromptModal
-          onYes={() => flow.setStep("resumeUpload")}
-          onNo={() => flow.setStep("jobSelect")}
+          onYes={() => setStep("resumeUpload")}
+          onNo={() => setStep("jobSelect")}
         />
       )}
 
-      {/* 💡 분기 2: 자기소개서 파일 업로드 드래그 앤 드롭 모달 */}
-      {flow.step === "resumeUpload" && (
+      {step === "resumeUpload" && (
         <ResumeUploadModal
-        isUploading={flow.isUploadingResume}
-        onNext={(file) => flow.handleResumeUpload(file)}
-        onSkip={() => flow.setStep("jobSelect")}
-      />
-      )}
-
-      {/* 💡 분기 3: 직무 선택 모달 */}
-      {flow.step === "resumeUpload" && (
-        <ResumeUploadModal
-          isUploading={flow.isUploadingResume} // 💡 스피너 상태 전달
-          onNext={(file) => flow.handleResumeUpload(file)} // 💡 여기서 바로 가상 분석 함수 호출!
-          onSkip={() => flow.setStep("jobSelect")}
+          isUploading={isUploadingResume}
+          onNext={(file) => uploadResume(file)}
+          onSkip={() => setStep("jobSelect")}
         />
       )}
 
-      {flow.step === "jobSelect" && (
+      {step === "jobSelect" && (
         <JobSelectionModal
-          jobRoles={flow.jobRoles}
-          selectedCategory={flow.selectedCategory}
-          setSelectedCategory={flow.setSelectedCategory}
-          selectedJobId={flow.selectedJobId}
-          setSelectedJobId={flow.setSelectedJobId}
+          jobRoles={jobRoles}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedJobId={selectedJobId}
+          setSelectedJobId={setSelectedJobId}
           filteredJobs={filteredJobs}
           uniqueCategories={uniqueCategories}
-          recommendedJobId={flow.recommendedJobId} // 💡 추천 ID 전달
-          onStartInterview={flow.handleStartInterview}
+          recommendedJobId={recommendedJobId}
+          onStartInterview={startInterviewSession}
         />
       )}
       
-      {/* 💡 설정 단계가 완료되어 실제 연습/카운트다운에 임할 때만 하단 바 출력 */}
       {!isInputPhase && (
         <div className="absolute inset-x-0 bottom-0 z-20 flex h-32 w-full items-end justify-center pb-12 pointer-events-none">
           <div className="pointer-events-auto">
             <RecordingControls
-              step={flow.step}
-              time={flow.time}
-              currentQuestionIdx={flow.currentQuestionIdx}
+              step={step}
+              time={time}
+              currentQuestionIdx={currentQuestionIdx}
               totalQuestions={currentQuestions.length}
-              onStartCountdown={() => flow.setStep("countdown")}
-              onStopRecording={() => flow.setStep("confirmStop")}
+              onStartCountdown={() => setStep("countdown")}
+              onStopRecording={() => setStep("confirmStop")}
               onNextQuestion={handleNextQuestion}
             />
           </div>
