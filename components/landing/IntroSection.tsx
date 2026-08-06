@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { isAuthenticated, subscribeToAuthChanges } from "@/lib/auth";
 
 const FEATURES = [
   {
@@ -45,10 +46,9 @@ export default function IntroSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const session = sessionStorage.getItem("mockSession");
-    if (session === "true") {
-      setIsLoggedIn(true);
-    }
+    const syncAuthState = () => setIsLoggedIn(isAuthenticated());
+    syncAuthState();
+    return subscribeToAuthChanges(syncAuthState);
   }, []);
 
   return (

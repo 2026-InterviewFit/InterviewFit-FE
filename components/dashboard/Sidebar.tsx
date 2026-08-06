@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { clearAuth } from "@/lib/auth";
 
 interface SidebarProps {
   onMenuClick?: () => void;
@@ -12,7 +13,7 @@ export default function Sidebar({ onMenuClick }: SidebarProps) {
   const pathname = usePathname();
 
   const handleLogout = () => {
-    sessionStorage.removeItem("mockSession");
+    clearAuth();
     window.location.href = "/";
   };
 
