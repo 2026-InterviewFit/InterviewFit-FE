@@ -71,7 +71,7 @@ export default function DashboardPage() {
             <PtReportDetail
               title={selectedPtGroup.title} jobName={selectedPtGroup.jobName} roundLabel={selectedPtGroup.roundLabel} savedAt={selectedPtGroup.savedAt} report={selectedPtGroup.detail as PtReport}
               onBack={() => setSelectedPtGroupId(null)}
-              onDelete={() => { if(window.confirm("기록을 삭제하시겠습니까?")) { deletePtGroup(selectedPtGroup.kind, selectedPtGroup.id); setSelectedPtGroupId(null); } }}
+              onDelete={() => {if (window.confirm("기록을 삭제하시겠습니까?")) {deletePtGroup("pt", selectedPtGroup.id);setSelectedPtGroupId(null);}}}
             />
           </main>
         </DashboardLayout>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
             <GroupReportDetail
               title={selectedPtGroup.title} jobName={selectedPtGroup.jobName} roundLabel={selectedPtGroup.roundLabel} savedAt={selectedPtGroup.savedAt} report={selectedPtGroup.detail as GroupReport}
               onBack={() => setSelectedPtGroupId(null)}
-              onDelete={() => { if(window.confirm("기록을 삭제하시겠습니까?")) { deletePtGroup(selectedPtGroup.kind, selectedPtGroup.id); setSelectedPtGroupId(null); } }}
+              onDelete={() => {if (window.confirm("기록을 삭제하시겠습니까?")) {deletePtGroup("group", selectedPtGroup.id);setSelectedPtGroupId(null);}}}
             />
           </main>
         </DashboardLayout>

@@ -72,6 +72,8 @@ export const MOCK_WIKI_QUESTIONS: WikiQuestion[] = [
   { id: "w5", companyName: "당근", tier: "스타트업", role: "프론트엔드", text: "웹 퍼포먼스 최적화를 위해 LCP와 CLS를 개선해본 경험이 있나요?", date: "2026.06.01", verifiedCount: 5 },
 ];
 
+export const MOCK_WIKI = MOCK_WIKI_QUESTIONS;
+
 // 🎨 커뮤니티 팔레트 (Color Palette 04 기준). 색을 바꾸려면 여기 한 곳만 수정.
 export const PALETTE = {
   cream: "#FFFDF5", // 기본 배경 (가짜 흰색)

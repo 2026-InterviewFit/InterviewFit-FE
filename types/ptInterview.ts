@@ -24,12 +24,12 @@ export interface DocumentSummary {
 }
 
 export interface PtInterviewMeta {
-  ptInterviewId: string;
+  ptInterviewId: number;
   job: string;
   topic: string;
   instruction: string;
-  prepSeconds: number;  // 준비 시간(초)
-  limitSeconds: number; // 발표 제한 시간(초)
+  prepSeconds: number;
+  limitSeconds: number;
   fileName: string;
   fileSize: number;
   fileType: string;
@@ -97,4 +97,68 @@ export interface PtReport {
     nextAction: string[];
   };
   timeline: TimelineEvent[];
+}
+export interface PtInterviewResponse {
+  id: number;
+  interviewId: number;
+  topic: string;
+  instruction: string;
+  preparationSeconds: number;
+  presentationSeconds: number;
+  status: string;
+}
+
+export interface PtDocumentUploadResponse {
+  documentId: number;
+  ptInterviewId: number;
+  originalFileName: string;
+  objectKey: string;
+  analysisStatus: string;
+}
+
+export interface PtSlideResponse {
+  slideId: number;
+  slideNumber: number;
+  title: string | null;
+  extractedText: string | null;
+  summary: string | null;
+  imageObjectKey: string | null;
+  analysisJson: string | null;
+}
+
+export interface PtDocumentDetailResponse {
+  documentId: number;
+  ptInterviewId: number;
+  originalFileName: string;
+  objectKey: string;
+  contentType: string;
+  fileSize: number;
+  analysisStatus: DocumentAnalysisStatus;
+  totalSlides: number;
+  summary: string | null;
+  errorMessage: string | null;
+  slides: PtSlideResponse[];
+}
+
+export interface PtQuestionResponse {
+  id: number;
+  questionNumber: number;
+  question: string;
+  reason: string | null;
+}
+
+export interface PtReportResponse {
+  reportId: number;
+  ptInterviewId: number;
+  contentScore: number;
+  structureScore: number;
+  deliveryScore: number;
+  qaScore: number;
+  overallScore: number;
+  presentationSummary: string;
+  strengths: string;
+  weaknesses: string;
+  improvement: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+
 import type {
   DocumentAnalysisStatus,
   Slide,
@@ -6,11 +7,12 @@ import type {
   PtQuestion,
   PtInterviewMeta,
 } from "@/types/ptInterview";
+
 import {
-  MOCK_SLIDES,
-  MOCK_DOC_SUMMARY,
-  MOCK_PT_QUESTIONS,
-} from "@/lib/ptInterviewData";
+  createPtInterview,
+  uploadPtDocument,
+  getPtDocument,
+} from "@/lib/api";
 
 interface CreateForm {
   job: string;
@@ -26,7 +28,8 @@ interface PtState {
   meta: PtInterviewMeta | null;
 
   analysisStatus: DocumentAnalysisStatus;
-  analysisProgress: number; // 0~100
+  analysisProgress: number;
+
   slides: Slide[];
   docSummary: DocumentSummary | null;
 
@@ -34,19 +37,32 @@ interface PtState {
 
   questions: PtQuestion[];
   currentQuestionIdx: number;
+
+  isCreating: boolean;
+  isUploading: boolean;
+  isLoadingDocument: boolean;
+
+  error: string | null;
 }
 
 interface PtActions {
   setForm: (patch: Partial<CreateForm>) => void;
   resetForm: () => void;
-  createInterview: () => string;
-  runDocumentAnalysis: () => void;
-  loadFallbackDocument: () => void;
-  setCurrentSlideIdx: (i: number) => void;
+
+  createInterview: (interviewId: number) => Promise<number>;
+  uploadDocument: (ptInterviewId: number) => Promise<void>;
+  fetchDocument: (ptInterviewId: number) => Promise<void>;
+
+  setCurrentSlideIdx: (index: number) => void;
   nextSlide: () => void;
   prevSlide: () => void;
-  loadQuestions: () => void;
-  setCurrentQuestionIdx: (v: number | ((p: number) => number)) => void;
+
+  setQuestions: (questions: PtQuestion[]) => void;
+  setCurrentQuestionIdx: (
+    value: number | ((previous: number) => number)
+  ) => void;
+
+  clearError: () => void;
   reset: () => void;
 }
 
@@ -62,114 +78,328 @@ const initialForm: CreateForm = {
 const initialState: PtState = {
   form: initialForm,
   meta: null,
+
   analysisStatus: "UPLOADED",
   analysisProgress: 0,
+
   slides: [],
   docSummary: null,
+
   currentSlideIdx: 0,
+
   questions: [],
   currentQuestionIdx: 0,
+
+  isCreating: false,
+  isUploading: false,
+  isLoadingDocument: false,
+
+  error: null,
 };
 
-// 분석 시뮬레이션 타이머 (모듈 스코프에 두어 중복 실행 방지)
-let analysisTimer: ReturnType<typeof setInterval> | null = null;
+function normalizeAnalysisStatus(
+  status?: string | null
+): DocumentAnalysisStatus {
+  switch (status?.toUpperCase()) {
+    case "UPLOADED":
+      return "UPLOADED";
 
-export const usePtInterviewStore = create<PtState & PtActions>((set, get) => ({
-  ...initialState,
+    case "EXTRACTING":
+    case "PROCESSING":
+      return "EXTRACTING";
 
-  setForm: (patch) => set((s) => ({ form: { ...s.form, ...patch } })),
-  resetForm: () => set({ form: initialForm }),
+    case "ANALYZING":
+      return "ANALYZING";
 
-  createInterview: () => {
-    const { form } = get();
-    const id = `pt_${Date.now()}`;
-    const file = form.file;
+    case "DONE":
+    case "COMPLETED":
+    case "SUCCESS":
+      return "DONE";
 
-    const meta: PtInterviewMeta = {
-      ptInterviewId: id,
-      job: form.job,
-      topic: form.topic,
-      instruction: form.instruction,
-      prepSeconds: form.prepMinutes * 60,
-      limitSeconds: form.limitMinutes * 60,
-      fileName: file?.name ?? "발표자료.pdf",
-      fileSize: file?.size ?? 0,
-      fileType: file?.type ?? "application/pdf",
-      status: "UPLOADED",
-    };
+    case "FAILED":
+    case "ERROR":
+      return "FAILED";
 
-    set({
-      meta,
-      analysisStatus: "UPLOADED",
-      analysisProgress: 0,
-      slides: [],
-      docSummary: null,
-      currentSlideIdx: 0,
-    });
-    return id;
-  },
+    default:
+      return "UPLOADED";
+  }
+}
 
-  // 문서 분석 진행 시뮬레이션: UPLOADED → EXTRACTING → ANALYZING → DONE
-  runDocumentAnalysis: () => {
-    if (analysisTimer) clearInterval(analysisTimer);
-    set({ analysisStatus: "EXTRACTING", analysisProgress: 8 });
+function getAnalysisProgress(status: DocumentAnalysisStatus): number {
+  switch (status) {
+    case "UPLOADED":
+      return 10;
 
-    analysisTimer = setInterval(() => {
-      const { analysisProgress } = get();
-      const next = Math.min(analysisProgress + Math.floor(Math.random() * 9) + 4, 100);
+    case "EXTRACTING":
+      return 40;
 
-      let status: DocumentAnalysisStatus = "EXTRACTING";
-      if (next >= 40 && next < 92) status = "ANALYZING";
+    case "ANALYZING":
+      return 75;
 
-      if (next >= 100) {
-        if (analysisTimer) clearInterval(analysisTimer);
-        analysisTimer = null;
-        set((s) => ({
-          analysisProgress: 100,
-          analysisStatus: "DONE",
-          slides: MOCK_SLIDES,
-          docSummary: MOCK_DOC_SUMMARY,
-          meta: s.meta ? { ...s.meta, status: "DONE" } : s.meta,
-        }));
-        return;
-      }
-      set({ analysisProgress: next, analysisStatus: status });
-    }, 700);
-  },
+    case "DONE":
+      return 100;
 
-  // 직접 URL 진입/새로고침으로 store가 빈 경우 데모용 데이터 주입
-  loadFallbackDocument: () => {
-    if (get().slides.length === 0) {
+    case "FAILED":
+      return 0;
+  }
+}
+
+function getErrorMessage(error: unknown, defaultMessage: string): string {
+  return error instanceof Error ? error.message : defaultMessage;
+}
+
+export const usePtInterviewStore = create<PtState & PtActions>(
+  (set, get) => ({
+    ...initialState,
+
+    setForm: (patch) =>
+      set((state) => ({
+        form: {
+          ...state.form,
+          ...patch,
+        },
+      })),
+
+    resetForm: () =>
       set({
-        slides: MOCK_SLIDES,
-        docSummary: MOCK_DOC_SUMMARY,
-        analysisStatus: "DONE",
-        analysisProgress: 100,
+        form: {
+          ...initialForm,
+        },
+      }),
+
+    createInterview: async (interviewId) => {
+      const { form } = get();
+
+      if (!interviewId || interviewId <= 0) {
+        throw new Error("유효한 면접 ID가 필요합니다.");
+      }
+
+      if (!form.topic.trim()) {
+        throw new Error("발표 주제를 입력해 주세요.");
+      }
+
+      if (!form.file) {
+        throw new Error("발표 자료를 선택해 주세요.");
+      }
+
+      set({
+        isCreating: true,
+        error: null,
       });
-    }
-  },
 
-  setCurrentSlideIdx: (i) => set({ currentSlideIdx: i }),
-  nextSlide: () =>
-    set((s) => ({
-      currentSlideIdx: Math.min(s.currentSlideIdx + 1, Math.max(s.slides.length - 1, 0)),
-    })),
-  prevSlide: () =>
-    set((s) => ({ currentSlideIdx: Math.max(s.currentSlideIdx - 1, 0) })),
+      try {
+        const response = await createPtInterview({
+          interviewId,
+          topic: form.topic.trim(),
+          instruction: form.instruction.trim(),
+          preparationSeconds: form.prepMinutes * 60,
+          presentationSeconds: form.limitMinutes * 60,
+        });
 
-  loadQuestions: () => {
-    if (get().questions.length === 0) {
-      set({ questions: MOCK_PT_QUESTIONS, currentQuestionIdx: 0 });
-    }
-  },
-  setCurrentQuestionIdx: (v) =>
-    set((s) => ({
-      currentQuestionIdx: typeof v === "function" ? v(s.currentQuestionIdx) : v,
-    })),
+        const status = normalizeAnalysisStatus(response.status);
 
-  reset: () => {
-    if (analysisTimer) clearInterval(analysisTimer);
-    analysisTimer = null;
-    set(initialState);
-  },
-}));
+        const meta: PtInterviewMeta = {
+          ptInterviewId: response.id,
+          job: form.job,
+          topic: response.topic,
+          instruction: response.instruction,
+          prepSeconds: response.preparationSeconds,
+          limitSeconds: response.presentationSeconds,
+          fileName: form.file.name,
+          fileSize: form.file.size,
+          fileType: form.file.type,
+          status,
+        };
+
+        set({
+          meta,
+          analysisStatus: status,
+          analysisProgress: 0,
+          slides: [],
+          docSummary: null,
+          currentSlideIdx: 0,
+          questions: [],
+          currentQuestionIdx: 0,
+        });
+
+        return response.id;
+      } catch (error) {
+        const message = getErrorMessage(
+          error,
+          "PT 면접 생성에 실패했습니다."
+        );
+
+        set({ error: message });
+        throw error;
+      } finally {
+        set({ isCreating: false });
+      }
+    },
+
+    uploadDocument: async (ptInterviewId) => {
+      const { form } = get();
+
+      if (!ptInterviewId || ptInterviewId <= 0) {
+        throw new Error("유효한 PT 면접 ID가 필요합니다.");
+      }
+
+      if (!form.file) {
+        throw new Error("업로드할 발표 자료가 없습니다.");
+      }
+
+      set({
+        isUploading: true,
+        error: null,
+        analysisStatus: "UPLOADED",
+        analysisProgress: 10,
+      });
+
+      try {
+        const response = await uploadPtDocument(
+          ptInterviewId,
+          form.file
+        );
+
+        const status = normalizeAnalysisStatus(
+          response.analysisStatus
+        );
+
+        set((state) => ({
+          analysisStatus: status,
+          analysisProgress: getAnalysisProgress(status),
+
+          meta: state.meta
+            ? {
+                ...state.meta,
+                ptInterviewId: response.ptInterviewId,
+                fileName: response.originalFileName,
+                fileSize: form.file?.size ?? state.meta.fileSize,
+                fileType: form.file?.type ?? state.meta.fileType,
+                status,
+              }
+            : null,
+        }));
+      } catch (error) {
+        const message = getErrorMessage(
+          error,
+          "PT 발표 자료 업로드에 실패했습니다."
+        );
+
+        set({
+          error: message,
+          analysisStatus: "FAILED",
+          analysisProgress: 0,
+        });
+
+        throw error;
+      } finally {
+        set({ isUploading: false });
+      }
+    },
+
+    fetchDocument: async (ptInterviewId) => {
+      if (!ptInterviewId || ptInterviewId <= 0) {
+        throw new Error("유효한 PT 면접 ID가 필요합니다.");
+      }
+
+      set({
+        isLoadingDocument: true,
+        error: null,
+      });
+
+      try {
+        const response = await getPtDocument(ptInterviewId);
+
+        const status = normalizeAnalysisStatus(
+          response.analysisStatus
+        );
+
+        const slides: Slide[] = response.slides.map((slide) => ({
+          slideNumber: slide.slideNumber,
+          title: slide.title ?? "",
+          body: slide.extractedText ?? "",
+          aiSummary: slide.summary ?? "",
+        }));
+
+        set((state) => ({
+          analysisStatus: status,
+          analysisProgress: getAnalysisProgress(status),
+          slides,
+          docSummary: null,
+          currentSlideIdx: 0,
+
+          meta: state.meta
+            ? {
+                ...state.meta,
+                ptInterviewId: response.ptInterviewId,
+                fileName: response.originalFileName,
+                fileSize: response.fileSize,
+                fileType: response.contentType,
+                status,
+              }
+            : null,
+        }));
+      } catch (error) {
+        const message = getErrorMessage(
+          error,
+          "PT 발표 자료 조회에 실패했습니다."
+        );
+
+        set({
+          error: message,
+          analysisStatus: "FAILED",
+          analysisProgress: 0,
+        });
+
+        throw error;
+      } finally {
+        set({ isLoadingDocument: false });
+      }
+    },
+
+    setCurrentSlideIdx: (index) =>
+      set((state) => ({
+        currentSlideIdx: Math.max(
+          0,
+          Math.min(index, Math.max(state.slides.length - 1, 0))
+        ),
+      })),
+
+    nextSlide: () =>
+      set((state) => ({
+        currentSlideIdx: Math.min(
+          state.currentSlideIdx + 1,
+          Math.max(state.slides.length - 1, 0)
+        ),
+      })),
+
+    prevSlide: () =>
+      set((state) => ({
+        currentSlideIdx: Math.max(state.currentSlideIdx - 1, 0),
+      })),
+
+    setQuestions: (questions) =>
+      set({
+        questions,
+        currentQuestionIdx: 0,
+      }),
+
+    setCurrentQuestionIdx: (value) =>
+      set((state) => ({
+        currentQuestionIdx:
+          typeof value === "function"
+            ? value(state.currentQuestionIdx)
+            : value,
+      })),
+
+    clearError: () => set({ error: null }),
+
+    reset: () =>
+      set({
+        ...initialState,
+        form: {
+          ...initialForm,
+        },
+      }),
+  })
+);
