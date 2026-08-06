@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Video } from "lucide-react";
+import { isAuthenticated, subscribeToAuthChanges } from "@/lib/auth";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -12,8 +13,9 @@ export default function Hero() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const session = sessionStorage.getItem("mockSession");
-    if (session === "true") setIsLoggedIn(true);
+    const syncAuthState = () => setIsLoggedIn(isAuthenticated());
+    syncAuthState();
+    return subscribeToAuthChanges(syncAuthState);
   }, []);
 
   const handleStart = () => {

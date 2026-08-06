@@ -97,12 +97,10 @@ export function useInterviewFlow() {
   const handleStartInterview = async () => {
     if (!selectedJobId) return;
     try {
-      const savedUserId = localStorage.getItem("interviewfit_user_id");
       console.log("선택된 jobRoleId:", selectedJobId);
 
       const result = await startInterview({
         jobRoleId: selectedJobId,
-        userId: savedUserId ? Number(savedUserId) : null,
       });
       setInterviewId(result.interviewId);
       setStartedUserId(result.userId);
