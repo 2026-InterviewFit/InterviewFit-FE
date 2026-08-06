@@ -1,7 +1,7 @@
 // app/features/page.tsx
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import GradientBackground from "@/components/shared/GradientBackground";
@@ -10,9 +10,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { UserCheck, Users, Monitor, BookOpen, ArrowRight, Camera, Mic, FileText, ShieldCheck, Trophy, BrainCircuit, Network } from "lucide-react";
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] } })
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      delay: i * 0.1,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  }),
 };
 
 export default function FeaturesPage() {

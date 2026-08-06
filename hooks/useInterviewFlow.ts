@@ -131,7 +131,6 @@ export function useInterviewFlow() {
 
       const result = await startInterview({
         jobRoleId: selectedJobId,
-        userId: loginUserId,
       });
 
       setInterviewId(result.interviewId);
