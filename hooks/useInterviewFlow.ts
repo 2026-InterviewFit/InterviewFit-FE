@@ -1,11 +1,20 @@
 // hooks/useInterviewFlow.ts
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { getJobRoles, startInterview } from "@/lib/api";
+import { getAccessToken, getLoginUserId } from "@/lib/auth";
 import type { JobRole } from "@/types";
 
-export type Step = "resumePrompt" | "resumeUpload" | "jobSelect" | "prepare" | "countdown" | "recording" | "confirmStop" | "analyzing";
+export type Step =
+  | "resumePrompt"
+  | "resumeUpload"
+  | "jobSelect"
+  | "prepare"
+  | "countdown"
+  | "recording"
+  | "confirmStop"
+  | "analyzing";
 
-// 테스트용 임시 데이터
 const FALLBACK_JOBS: JobRole[] = [
   { id: 1, category: "IT/개발", name: "프론트엔드" },
   { id: 2, category: "IT/개발", name: "백엔드" },
@@ -19,7 +28,7 @@ export function useInterviewFlow() {
 
   const [step, setStep] = useState<Step>("resumePrompt");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  
+
   const [recommendedJobId, setRecommendedJobId] = useState<number | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
 
@@ -36,57 +45,64 @@ export function useInterviewFlow() {
       .then((data) => {
         if (data && data.length > 0) {
           setJobRoles(data);
-          setSelectedCategory(Array.from(new Set(data.map((job) => job.category)))[0]);
+
+          const firstCategory = Array.from(
+            new Set(data.map((job) => job.category))
+          )[0];
+
+          setSelectedCategory(firstCategory);
         }
       })
-      .catch((e) => {
-        console.error("백엔드 연결 실패, 초기 임시 데이터를 계속 유지합니다.", e);
+      .catch((error) => {
+        console.error("백엔드 연결 실패, 초기 임시 데이터를 계속 유지합니다.", error);
       });
   }, []);
 
-  // 💡 수정됨 1: 숫자를 1씩 줄이거나 시간을 늘리는 "순수 타이머" 역할만 수행
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
+
     if (step === "countdown") {
       interval = setInterval(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
     } else if (step === "recording") {
-      interval = setInterval(() => setTime((prev) => prev + 1), 1000);
+      interval = setInterval(() => {
+        setTime((prev) => prev + 1);
+      }, 1000);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [step]);
 
-  // 💡 수정됨 2: 카운트다운이 0이 되었을 때 상태를 전환하는 로직을 분리
   useEffect(() => {
     if (step === "countdown" && countdown === 0) {
       setStep("recording");
-      setCountdown(3); // 다음번을 위해 3으로 초기화
+      setCountdown(3);
     }
   }, [countdown, step]);
 
   const handleResumeUpload = async (file: File) => {
     setResumeFile(file);
     setIsUploadingResume(true);
-    
+
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      const aiRecommendedId = 1; 
-      setRecommendedJobId(aiRecommendedId);
-      setSelectedJobId(aiRecommendedId); 
 
-      const recommendedJob = jobRoles.find(job => job.id === aiRecommendedId);
+      const aiRecommendedId = 1;
+      setRecommendedJobId(aiRecommendedId);
+      setSelectedJobId(aiRecommendedId);
+
+      const recommendedJob = jobRoles.find((job) => job.id === aiRecommendedId);
+
       if (recommendedJob) {
         setSelectedCategory(recommendedJob.category);
       }
 
       setStep("jobSelect");
     } catch (error) {
+      console.error("자소서 분석 실패:", error);
       alert("자소서 분석 중 오류가 발생했습니다. 직접 직무를 선택해주세요.");
       setStep("jobSelect");
     } finally {
@@ -95,28 +111,47 @@ export function useInterviewFlow() {
   };
 
   const handleStartInterview = async () => {
-    if (!selectedJobId) return;
+    if (!selectedJobId) {
+      alert("직무를 선택해주세요.");
+      return;
+    }
+
+    const token = getAccessToken();
+    const loginUserId = getLoginUserId();
+
+    if (!token || !loginUserId) {
+      alert("로그인 정보가 없습니다. 다시 로그인해주세요.");
+      window.location.href = "/login";
+      return;
+    }
+
     try {
       console.log("선택된 jobRoleId:", selectedJobId);
+      console.log("로그인 userId:", loginUserId);
 
       const result = await startInterview({
         jobRoleId: selectedJobId,
+        userId: loginUserId,
       });
+
       setInterviewId(result.interviewId);
-      setStartedUserId(result.userId);
+      setStartedUserId(result.userId ?? loginUserId);
       setJobRoleId(selectedJobId);
-      localStorage.setItem("interviewfit_user_id", String(result.userId));
+
+      localStorage.setItem(
+        "interviewfit_user_id",
+        String(result.userId ?? loginUserId)
+      );
+
       setStep("prepare");
-    } catch (e) {
-      console.error("면접 시작 API 실패:", e);
-    
+    } catch (error) {
+      console.error("면접 시작 API 실패:", error);
+
       alert(
-        e instanceof Error
-          ? e.message
+        error instanceof Error
+          ? error.message
           : "면접 시작 API 호출에 실패했습니다."
       );
-    
-      return;
     }
   };
 
