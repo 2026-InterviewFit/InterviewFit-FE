@@ -119,7 +119,7 @@ export function useDashboard() {
     let ptGroupChanged = false;
     checkedIds.forEach(id => {
       const record = ptGroupRecords.find(r => r.id === id);
-      if (record) {
+      if (record && (record.kind === "group" || record.kind === "pt")) {
         deletePtGroupRecord(record.kind, id);
         ptGroupChanged = true;
       }
@@ -136,6 +136,10 @@ export function useDashboard() {
   };
 
   const deletePtGroup = (kind: InterviewKind, id: string) => {
+    if (kind !== "group" && kind !== "pt") {
+      return;
+    }
+
     deletePtGroupRecord(kind, id);
     setPtGroupRecords(loadPtGroupRecords());
   };

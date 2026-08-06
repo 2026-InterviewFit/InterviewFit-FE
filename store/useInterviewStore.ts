@@ -121,10 +121,8 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
     if (!selectedJobId) return;
 
     try {
-      const savedUserId = localStorage.getItem("interviewfit_user_id");
       const result = await startInterview({
         jobRoleId: selectedJobId,
-        userId: savedUserId ? Number(savedUserId) : null,
       });
 
       localStorage.setItem("interviewfit_user_id", String(result.userId));

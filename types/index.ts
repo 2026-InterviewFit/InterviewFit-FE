@@ -67,34 +67,6 @@ export type AnswerUploadResponse = {
   analysisStatus: string;
 };
 
-export type GazeResultJson = {
-  total_frames?: number;
-  fps?: number;
-  duration_seconds?: number;
-  face_detected_frames?: number;
-  gaze_detected_frames?: number;
-  center_frames?: number;
-  left_frames?: number;
-  right_frames?: number;
-  up_frames?: number;
-  down_frames?: number;
-  center_ratio?: number;
-  gaze_away_ratio?: number;
-  gaze_away_count?: number;
-  [key: string]: unknown;
-};
-
-export type GazeReport = {
-  reportId?: number;
-  centerRatio: number;
-  gazeAwayRatio: number;
-  gazeAwayCount: number;
-  score: number;
-  evaluation?: string;
-  feedback?: string;
-  resultJson?: GazeResultJson;
-};
-
 export type AnswerReport = {
   answerId: number;
   questionId: number | null;
@@ -103,7 +75,6 @@ export type AnswerReport = {
   answerOrder: number;
   analysisStatus: string;
   errorMessage: string | null;
-
   eye: {
     reportId: number;
     blinkCount: number;
@@ -117,9 +88,6 @@ export type AnswerReport = {
       eventType?: string;
     }[];
   } | null;
-
-  gaze?: GazeReport | null;
-
   pose: {
     reportId: number;
     totalDuration: number;
@@ -133,21 +101,20 @@ export type AnswerReport = {
     score: number;
     grade: string;
   } | null;
-
   speech: {
     reportId: number;
     textScript: string;
     totalFillerCount: number;
     fillerDetailsJson: string;
-    repeatedExpressionsJson: string;
+    repeatedExpressionsJson: string;   // 추가
     paceEvaluation: string;
     paceFeedback: string;
     charactersPerSecond: number;
     totalSilenceSeconds: number;
-    pauseRatePercent: number;
+    pauseRatePercent: number;          // 추가
     criticalSilenceCount: number;
-    volumeDbMean: number;
-    volumeDbStd: number;
+    volumeDbMean: number;              // 추가
+    volumeDbStd: number;               // 추가
     aiEvaluationJson: string;
     modelAnswer: string;
   } | null;
@@ -180,13 +147,9 @@ export type InterviewHistoryItem = {
   userId?: number;
   jobRoleId?: number;
   jobName?: string;
-  answers?: {
-    answerId: number;
-    answerOrder?: number;
-    analysisStatus?: string;
-  }[];
-  questionTexts?: string[];
-  questionTimestamps?: number[];
+  answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
+  questionTexts?: string[];      // 🔑 질문 목록 (문항별 순서대로)
+  questionTimestamps?: number[]; // 🔑 각 질문이 영상에서 시작된 시각(초 단위)
   savedAt?: string;
 };
 

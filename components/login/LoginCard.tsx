@@ -1,29 +1,69 @@
+// components/login/LoginCard.tsx
+
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { BRAND } from "@/lib/constants";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
-export default function LoginCard() {
-  const handleLogin = () => {
-    const restApiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
-    const redirectUri =
-      process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI ??
-      "http://localhost:3000/oauth/kakao/callback";
+declare global {
+  interface Window {
+    Kakao?: {
+      init: (key: string) => void;
+      isInitialized: () => boolean;
+      Auth?: {
+        authorize: (options: { redirectUri: string }) => void;
+      };
+    };
+  }
+}
 
-    if (!restApiKey) {
-      alert("NEXT_PUBLIC_KAKAO_REST_API_KEY가 설정되지 않았습니다.");
+export default function LoginCard() {
+  const [isKakaoReady, setIsKakaoReady] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+
+    if (!kakaoKey) {
+      setErrorMessage("NEXT_PUBLIC_KAKAO_JS_KEY가 .env.local에 없습니다.");
       return;
     }
 
-    const authorizeUrl = new URL("https://kauth.kakao.com/oauth/authorize");
-    authorizeUrl.searchParams.set("client_id", restApiKey);
-    authorizeUrl.searchParams.set("redirect_uri", redirectUri);
-    authorizeUrl.searchParams.set("response_type", "code");
+    const timer = setInterval(() => {
+      if (!window.Kakao) return;
 
-    window.location.href = authorizeUrl.toString();
+      try {
+        if (!window.Kakao.isInitialized()) {
+          window.Kakao.init(kakaoKey);
+        }
+
+        setIsKakaoReady(true);
+        clearInterval(timer);
+      } catch (error) {
+        console.error("카카오 초기화 실패:", error);
+        setErrorMessage("카카오 SDK 초기화에 실패했습니다.");
+        clearInterval(timer);
+      }
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleLogin = () => {
+    setErrorMessage("");
+
+    if (!window.Kakao?.Auth) {
+      setErrorMessage("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    window.Kakao.Auth.authorize({
+      redirectUri: `${window.location.origin}/oauth/kakao/callback`,
+    });
   };
 
   return (
@@ -68,15 +108,22 @@ export default function LoginCard() {
 
           <motion.button
             onClick={handleLogin}
+            disabled={!isKakaoReady}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.55, ease: easeOut }}
             type="button"
-            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
+            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <KakaoIcon />
-            카카오로 시작하기
+            {isKakaoReady ? "카카오로 시작하기" : "카카오 로그인 준비 중..."}
           </motion.button>
+
+          {errorMessage && (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-xs font-medium text-red-600">
+              {errorMessage}
+            </p>
+          )}
 
           <motion.p
             initial={{ opacity: 0 }}
@@ -101,11 +148,17 @@ export default function LoginCard() {
             className="mt-5 text-center text-[11px] leading-relaxed text-muted/90"
           >
             로그인 시{" "}
-            <Link href="/terms" className="underline underline-offset-2 hover:text-navy">
+            <Link
+              href="/terms"
+              className="underline underline-offset-2 hover:text-navy"
+            >
               이용약관
             </Link>{" "}
             및{" "}
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-navy">
+            <Link
+              href="/privacy"
+              className="underline underline-offset-2 hover:text-navy"
+            >
               개인정보처리방침
             </Link>
             에 동의합니다.
