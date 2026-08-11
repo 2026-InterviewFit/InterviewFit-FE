@@ -98,10 +98,9 @@ export default function PtInterviewCreatePage() {
     try {
       // 1. 일반 Interview 생성
       const interviewResponse =
-        (await startInterview({
-          jobRoleId: selectedJobRole.id,
-          userId: null,
-        })) as InterviewStartResponse;
+      (await startInterview({
+        jobRoleId: selectedJobRole.id,
+      })) as InterviewStartResponse;
 
       // 2. 일반 interviewId로 PT Interview 생성
       const ptInterviewId = await createInterview(

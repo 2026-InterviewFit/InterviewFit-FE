@@ -46,9 +46,11 @@ export default function WikiSection({
 
     return MOCK_WIKI.filter((wiki) => {
       return (
-        wiki.companyName.toLowerCase().includes(keyword) ||
+        wiki.company.toLowerCase().includes(keyword) ||
         wiki.role.toLowerCase().includes(keyword) ||
-        wiki.text.toLowerCase().includes(keyword)
+        wiki.questions.some((question) =>
+          question.text.toLowerCase().includes(keyword)
+        )
       );
     });
   }, [searchTerm]);
@@ -93,88 +95,91 @@ export default function WikiSection({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            {filteredWiki.map((wiki, index) => {
-              const isChecked =
-                selectedQuestions.includes(wiki.text);
+            {filteredWiki.map((wiki, index) => (
+              <motion.div
+                key={`${wiki.company}-${wiki.role}`}
+                custom={index}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                className="overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-sm dark:border-white/5 dark:bg-[#1e293b]"
+              >
+                <div className="border-b border-black/5 bg-gray-50/50 p-6 dark:border-white/5 dark:bg-white/[0.02]">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-blue-500" />
 
-              return (
-                <motion.div
-                  key={wiki.id}
-                  custom={index}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeUp}
-                  className="overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-sm dark:border-white/5 dark:bg-[#1e293b]"
-                >
-                  <div className="border-b border-black/5 bg-gray-50/50 p-6 dark:border-white/5 dark:bg-white/[0.02]">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-blue-500" />
-
-                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                        {wiki.companyName}
-                      </span>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-navy dark:text-white">
-                      {wiki.role}
-                    </h3>
-
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-muted">
-                      <span>{wiki.tier}</span>
-                      <span>·</span>
-                      <span>검증 {wiki.verifiedCount}회</span>
-                    </div>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {wiki.company}
+                    </span>
                   </div>
 
-                  <div className="p-6">
-                    <label
-                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
-                        isChecked
-                          ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20"
-                          : "border-black/5 bg-white hover:border-gray-300 dark:border-white/5 dark:bg-[#111827]"
-                      }`}
-                    >
-                      <div className="relative mt-0.5 flex shrink-0 items-center justify-center">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() =>
-                            onToggleQuestion(
-                              wiki.id,
-                              wiki.text
-                            )
-                          }
-                          className="absolute h-5 w-5 cursor-pointer opacity-0"
-                        />
+                  <h3 className="text-xl font-bold text-navy dark:text-white">
+                    {wiki.role}
+                  </h3>
+                </div>
 
-                        <div
-                          className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
-                            isChecked
-                              ? "border-blue-600 bg-blue-600"
-                              : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800"
-                          }`}
-                        >
-                          {isChecked && (
-                            <CheckSquare className="h-3.5 w-3.5 text-white" />
-                          )}
+                <div className="flex flex-col gap-4 p-6">
+                  {wiki.questions.map((question) => {
+                    const isChecked =
+                      selectedQuestions.includes(question.text);
+
+                    return (
+                      <label
+                        key={question.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
+                          isChecked
+                            ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20"
+                            : "border-black/5 bg-white hover:border-gray-300 dark:border-white/5 dark:bg-[#111827]"
+                        }`}
+                      >
+                        <div className="relative mt-0.5 flex shrink-0 items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() =>
+                              onToggleQuestion(
+                                question.id,
+                                question.text
+                              )
+                            }
+                            className="absolute h-5 w-5 cursor-pointer opacity-0"
+                          />
+
+                          <div
+                            className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+                              isChecked
+                                ? "border-blue-600 bg-blue-600"
+                                : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800"
+                            }`}
+                          >
+                            {isChecked && (
+                              <CheckSquare className="h-3.5 w-3.5 text-white" />
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold leading-relaxed text-navy dark:text-gray-200">
-                          {wiki.text}
-                        </p>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold leading-relaxed text-navy dark:text-gray-200">
+                            {question.text}
+                          </p>
 
-                        <p className="mt-2 text-[10px] text-muted">
-                          {wiki.date}
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                </motion.div>
-              );
-            })}
+                          <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-muted">
+                            <span>{question.date}</span>
+                            <span>·</span>
+                            <span>{question.tier}</span>
+                            <span>·</span>
+                            <span>
+                              검증 {question.verifiedCount}회
+                            </span>
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ))}
           </div>
         )}
       </div>
