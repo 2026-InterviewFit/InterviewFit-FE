@@ -1,14 +1,12 @@
+// components/login/LoginCard.tsx
+
 "use client";
 
-import {
-  motion,
-} from "framer-motion";
-
+import { useState } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 
-import {
-  BRAND,
-} from "@/lib/constants";
+import { BRAND } from "@/lib/constants";
 
 const easeOut = [
   0.22,
@@ -18,26 +16,32 @@ const easeOut = [
 ] as const;
 
 export default function LoginCard() {
+  const [errorMessage, setErrorMessage] =
+    useState("");
+
   const handleLogin = () => {
-    /*
+    setErrorMessage("");
+
+    /**
      * 카카오 OAuth Authorization Code 방식에서는
      * REST API 키를 client_id로 사용한다.
+     *
+     * JavaScript SDK를 사용하지 않으므로
+     * NEXT_PUBLIC_KAKAO_JS_KEY는 여기서 필요하지 않다.
      */
     const restApiKey =
-      process.env
-        .NEXT_PUBLIC_KAKAO_REST_API_KEY;
+      process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
 
     const redirectUri =
-      process.env
-        .NEXT_PUBLIC_KAKAO_REDIRECT_URI ??
+      process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI ??
       "http://localhost:3000/oauth/kakao/callback";
 
     if (!restApiKey) {
       console.error(
-        "NEXT_PUBLIC_KAKAO_REST_API_KEY가 없습니다.",
+        "NEXT_PUBLIC_KAKAO_REST_API_KEY가 .env.local에 없습니다.",
       );
 
-      alert(
+      setErrorMessage(
         "카카오 REST API 키가 설정되지 않았습니다.",
       );
 
@@ -45,14 +49,16 @@ export default function LoginCard() {
     }
 
     console.log(
-      "[Kakao] redirectUri:",
+      "[Kakao Login] redirectUri:",
       redirectUri,
     );
 
-    const authorizeUrl =
-      new URL(
-        "https://kauth.kakao.com/oauth/authorize",
-      );
+    /**
+     * 카카오 인가 코드 요청 URL 생성
+     */
+    const authorizeUrl = new URL(
+      "https://kauth.kakao.com/oauth/authorize",
+    );
 
     authorizeUrl.searchParams.set(
       "client_id",
@@ -69,6 +75,15 @@ export default function LoginCard() {
       "code",
     );
 
+    /**
+     * 카카오 로그인 페이지로 이동
+     *
+     * 로그인 성공 후:
+     *
+     * /oauth/kakao/callback?code=...
+     *
+     * 형태로 돌아오게 된다.
+     */
     window.location.href =
       authorizeUrl.toString();
   };
@@ -153,9 +168,8 @@ export default function LoginCard() {
           </motion.p>
 
           <motion.button
-            onClick={
-              handleLogin
-            }
+            type="button"
+            onClick={handleLogin}
             initial={{
               opacity: 0,
               y: 16,
@@ -169,13 +183,18 @@ export default function LoginCard() {
               delay: 0.55,
               ease: easeOut,
             }}
-            type="button"
             className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
           >
             <KakaoIcon />
 
             카카오로 시작하기
           </motion.button>
+
+          {errorMessage && (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-xs font-medium text-red-600">
+              {errorMessage}
+            </p>
+          )}
 
           <motion.p
             initial={{

@@ -3,14 +3,21 @@
 import { create } from "zustand";
 
 import {
-  createInterviewQuestions,
   getJobRoles,
   startInterview,
-  type InterviewQuestion,
 } from "@/lib/api";
 
-import type { JobRole } from "@/types";
+import type {
+  JobRole,
+} from "@/types";
 
+
+/**
+ * 백엔드 직무 목록 API가 실패했을 때
+ * 화면이 완전히 막히는 것을 방지하기 위한 임시 데이터.
+ *
+ * 질문 생성과는 관계없음.
+ */
 const FALLBACK_JOBS: JobRole[] = [
   {
     id: 1,
@@ -29,6 +36,7 @@ const FALLBACK_JOBS: JobRole[] = [
   },
 ];
 
+
 export type Step =
   | "resumePrompt"
   | "resumeUpload"
@@ -39,6 +47,7 @@ export type Step =
   | "confirmStop"
   | "analyzing";
 
+
 interface InterviewState {
   step: Step;
 
@@ -46,12 +55,6 @@ interface InterviewState {
   time: number;
 
   currentQuestionIdx: number;
-
-  /*
-   * 이제 하드코딩 문자열이 아니라
-   * 서버에서 생성된 질문 ID + 질문 내용을 저장한다.
-   */
-  questions: InterviewQuestion[];
 
   jobRoles: JobRole[];
 
@@ -62,352 +65,466 @@ interface InterviewState {
   resumeFile: File | null;
   isUploadingResume: boolean;
 
+  /**
+   * 실제 Spring에서 생성된 면접 정보
+   */
   interviewId: number | null;
   startedUserId: number | null;
   jobRoleId: number | null;
 }
 
+
 interface InterviewActions {
-  setStep: (step: Step) => void;
+  setStep: (
+    step: Step,
+  ) => void;
 
   setCountdown: (
-    val: number | ((prev: number) => number)
+    val:
+      | number
+      | ((prev: number) => number),
   ) => void;
 
   setTime: (
-    val: number | ((prev: number) => number)
+    val:
+      | number
+      | ((prev: number) => number),
   ) => void;
 
   setCurrentQuestionIdx: (
-    val: number | ((prev: number) => number)
+    val:
+      | number
+      | ((prev: number) => number),
   ) => void;
 
   setSelectedCategory: (
-    category: string | null
+    category: string | null,
   ) => void;
 
   setSelectedJobId: (
-    id: number | null
+    id: number | null,
   ) => void;
 
   fetchJobRoles: () => Promise<void>;
 
   uploadResume: (
-    file: File
+    file: File,
   ) => Promise<void>;
 
-  startInterviewSession: () => Promise<void>;
+  startInterviewSession:
+    () => Promise<void>;
 
   reset: () => void;
 }
+
 
 const initialState: InterviewState = {
   step: "resumePrompt",
 
   countdown: 3,
+
   time: 0,
 
   currentQuestionIdx: 0,
 
-  questions: [],
-
   jobRoles: [],
 
-  selectedCategory: "IT/개발",
+  selectedCategory:
+    "IT/개발",
+
   selectedJobId: null,
+
   recommendedJobId: null,
 
   resumeFile: null,
+
   isUploadingResume: false,
 
   interviewId: null,
+
   startedUserId: null,
+
   jobRoleId: null,
 };
 
+
 export const useInterviewStore =
-  create<InterviewState & InterviewActions>(
+  create<
+    InterviewState &
+      InterviewActions
+  >(
     (set, get) => ({
       ...initialState,
 
-      setStep: (step) =>
-        set({
-          step,
-        }),
 
-      setCountdown: (val) =>
-        set((state) => ({
-          countdown:
-            typeof val === "function"
-              ? val(state.countdown)
-              : val,
-        })),
-
-      setTime: (val) =>
-        set((state) => ({
-          time:
-            typeof val === "function"
-              ? val(state.time)
-              : val,
-        })),
-
-      setCurrentQuestionIdx: (val) =>
-        set((state) => ({
-          currentQuestionIdx:
-            typeof val === "function"
-              ? val(state.currentQuestionIdx)
-              : val,
-        })),
-
-      setSelectedCategory: (
-        category
-      ) =>
-        set({
-          selectedCategory: category,
-          selectedJobId: null,
-        }),
-
-      setSelectedJobId: (id) =>
-        set({
-          selectedJobId: id,
-        }),
-
-      fetchJobRoles: async () => {
-        try {
-          const data =
-            await getJobRoles();
-
-          if (
-            data &&
-            data.length > 0
-          ) {
-            const firstCategory =
-              Array.from(
-                new Set(
-                  data.map(
-                    (job) =>
-                      job.category
-                  )
-                )
-              )[0];
-
-            set({
-              jobRoles: data,
-              selectedCategory:
-                firstCategory,
-            });
-
-            return;
-          }
-        } catch (error) {
-          console.warn(
-            "백엔드 직무 목록 조회 실패. 임시 데이터를 사용합니다.",
-            error
-          );
-        }
-
-        set({
-          jobRoles:
-            FALLBACK_JOBS,
-
-          selectedCategory:
-            "IT/개발",
-        });
-      },
-
-      uploadResume: async (
-        file
+      /**
+       * 현재 면접 화면 단계 변경
+       */
+      setStep: (
+        step,
       ) => {
         set({
-          resumeFile: file,
-          isUploadingResume: true,
+          step,
         });
-
-        try {
-          await new Promise(
-            (resolve) =>
-              setTimeout(
-                resolve,
-                2000
-              )
-          );
-
-          const {
-            jobRoles,
-          } = get();
-
-          const aiRecommendedId =
-            1;
-
-          const recommendedJob =
-            jobRoles.find(
-              (job) =>
-                job.id ===
-                aiRecommendedId
-            );
-
-          set({
-            recommendedJobId:
-              aiRecommendedId,
-
-            selectedJobId:
-              aiRecommendedId,
-
-            selectedCategory:
-              recommendedJob
-                ? recommendedJob.category
-                : get()
-                    .selectedCategory,
-
-            step: "jobSelect",
-          });
-        } catch (error) {
-          console.error(
-            "자소서 분석 실패:",
-            error
-          );
-
-          alert(
-            "자소서 분석 중 오류가 발생했습니다. 직접 직무를 선택해주세요."
-          );
-
-          set({
-            step: "jobSelect",
-          });
-        } finally {
-          set({
-            isUploadingResume:
-              false,
-          });
-        }
       },
 
+
+      /**
+       * 카운트다운 변경
+       */
+      setCountdown: (
+        val,
+      ) => {
+        set(
+          (state) => ({
+            countdown:
+              typeof val ===
+              "function"
+                ? val(
+                    state.countdown,
+                  )
+                : val,
+          }),
+        );
+      },
+
+
+      /**
+       * 녹화 시간 변경
+       */
+      setTime: (
+        val,
+      ) => {
+        set(
+          (state) => ({
+            time:
+              typeof val ===
+              "function"
+                ? val(
+                    state.time,
+                  )
+                : val,
+          }),
+        );
+      },
+
+
+      /**
+       * 현재 질문 번호 변경
+       */
+      setCurrentQuestionIdx: (
+        val,
+      ) => {
+        set(
+          (state) => ({
+            currentQuestionIdx:
+              typeof val ===
+              "function"
+                ? val(
+                    state.currentQuestionIdx,
+                  )
+                : val,
+          }),
+        );
+      },
+
+
+      /**
+       * 직무 카테고리 선택
+       */
+      setSelectedCategory: (
+        category,
+      ) => {
+        set({
+          selectedCategory:
+            category,
+
+          /**
+           * 카테고리가 바뀌면
+           * 기존 직무 선택은 초기화
+           */
+          selectedJobId:
+            null,
+        });
+      },
+
+
+      /**
+       * 직무 선택
+       */
+      setSelectedJobId: (
+        id,
+      ) => {
+        set({
+          selectedJobId: id,
+        });
+      },
+
+
+      /**
+       * Spring에서 직무 목록 조회
+       */
+      fetchJobRoles:
+        async () => {
+          try {
+            const data =
+              await getJobRoles();
+
+            if (
+              data &&
+              data.length >
+                0
+            ) {
+              const categories =
+                Array.from(
+                  new Set(
+                    data.map(
+                      (
+                        job,
+                      ) =>
+                        job.category,
+                    ),
+                  ),
+                );
+
+              const firstCategory =
+                categories[0] ??
+                "IT/개발";
+
+              set({
+                jobRoles: data,
+
+                selectedCategory:
+                  firstCategory,
+              });
+
+              return;
+            }
+          } catch (
+            error
+          ) {
+            console.warn(
+              "백엔드 직무 목록 조회 실패. 임시 데이터를 사용합니다.",
+              error,
+            );
+          }
+
+          /**
+           * 직무 목록 조회만 fallback 허용.
+           *
+           * 면접 ID와 달리
+           * 화면 표시용 데이터이기 때문에
+           * 임시 데이터를 사용할 수 있음.
+           */
+          set({
+            jobRoles:
+              FALLBACK_JOBS,
+
+            selectedCategory:
+              "IT/개발",
+          });
+        },
+
+
+      /**
+       * 현재는 자소서 분석 임시 처리
+       *
+       * 질문 생성 담당 코드와는 관계없음.
+       */
+      uploadResume:
+        async (
+          file,
+        ) => {
+          set({
+            resumeFile:
+              file,
+
+            isUploadingResume:
+              true,
+          });
+
+          try {
+            /**
+             * 현재 임시 분석 대기
+             */
+            await new Promise(
+              (
+                resolve,
+              ) =>
+                setTimeout(
+                  resolve,
+                  2000,
+                ),
+            );
+
+            const {
+              jobRoles,
+            } = get();
+
+            /**
+             * 현재 임시 추천 직무
+             */
+            const aiRecommendedId =
+              1;
+
+            const recommendedJob =
+              jobRoles.find(
+                (
+                  job,
+                ) =>
+                  job.id ===
+                  aiRecommendedId,
+              );
+
+            set({
+              recommendedJobId:
+                aiRecommendedId,
+
+              selectedJobId:
+                aiRecommendedId,
+
+              selectedCategory:
+                recommendedJob
+                  ? recommendedJob.category
+                  : get()
+                      .selectedCategory,
+
+              step:
+                "jobSelect",
+            });
+          } catch (
+            error
+          ) {
+            console.error(
+              "자소서 분석 실패:",
+              error,
+            );
+
+            alert(
+              "자소서 분석 중 오류가 발생했습니다. 직접 직무를 선택해주세요.",
+            );
+
+            set({
+              step:
+                "jobSelect",
+            });
+          } finally {
+            set({
+              isUploadingResume:
+                false,
+            });
+          }
+        },
+
+
+      /**
+       * 실제 면접 생성
+       *
+       * 중요:
+       * userId를 프론트에서 보내지 않는다.
+       *
+       * Authorization Bearer JWT를 통해
+       * Spring이 현재 로그인 사용자를 판단한다.
+       *
+       * 질문 생성은 여기서 하지 않는다.
+       * 질문 생성 담당 팀원의 흐름과 분리한다.
+       */
       startInterviewSession:
         async () => {
           const {
             selectedJobId,
-            jobRoles,
           } = get();
 
           if (
             !selectedJobId
           ) {
             alert(
-              "직무를 선택해주세요."
-            );
-
-            return;
-          }
-
-          const selectedJob =
-            jobRoles.find(
-              (job) =>
-                job.id ===
-                selectedJobId
-            );
-
-          if (!selectedJob) {
-            alert(
-              "선택한 직무 정보를 찾을 수 없습니다."
+              "직무를 선택해주세요.",
             );
 
             return;
           }
 
           try {
-            /*
-             * 1. 면접 생성
-             *
-             * userId는 JWT에서 처리한다.
+            const result =
+              await startInterview(
+                {
+                  jobRoleId:
+                    selectedJobId,
+                },
+              );
+
+            console.log(
+              "[Interview] 면접 생성 성공:",
+              result,
+            );
+
+            /**
+             * 기존 코드에서 참조하는
+             * userId도 실제 응답값으로 저장.
              */
-            const interview =
-              await startInterview({
-                jobRoleId:
-                  selectedJobId,
-              });
-
-            /*
-             * 2. 질문 생성
-             *
-             * 여기서 DB Question ID까지 함께 받아온다.
-             */
-            const questions =
-              await createInterviewQuestions({
-                count: 3,
-
-                jobRoleId:
-                  selectedJobId,
-
-                jobName:
-                  selectedJob.name,
-              });
-
             if (
-              !questions ||
-              questions.length ===
-                0
+              result.userId !=
+              null
             ) {
-              throw new Error(
-                "생성된 면접 질문이 없습니다."
+              localStorage.setItem(
+                "interviewfit_user_id",
+                String(
+                  result.userId,
+                ),
               );
             }
 
-            localStorage.setItem(
-              "interviewfit_user_id",
-              String(
-                interview.userId
-              )
-            );
-
-            console.log(
-              "면접 생성 완료:",
-              interview
-            );
-
-            console.log(
-              "면접 질문 생성 완료:",
-              questions
-            );
-
             set({
               interviewId:
-                interview.interviewId,
+                result.interviewId,
 
               startedUserId:
-                interview.userId,
+                result.userId,
 
               jobRoleId:
                 selectedJobId,
 
-              questions,
-
               currentQuestionIdx:
                 0,
 
-              step: "prepare",
+              step:
+                "prepare",
             });
-          } catch (error) {
+          } catch (
+            error
+          ) {
             console.error(
-              "면접 시작 또는 질문 생성 실패:",
-              error
+              "[Interview] 면접 시작 API 실패:",
+              error,
             );
 
-            /*
-             * followup 실제 연동에서는
-             * fake interviewId=9999로 넘어가면 안 된다.
+            /**
+             * 실제 followup / 영상 분석 / DB 저장에서는
              *
-             * 실제 questionId가 필요하기 때문.
+             * interviewId = 9999
+             *
+             * 같은 가짜 ID를 사용하면
+             * 뒤 API가 전부 꼬이기 때문에
+             * 로컬 테스트 모드로 강제 진행하지 않는다.
              */
             alert(
               error instanceof
                 Error
                 ? error.message
-                : "면접 시작에 실패했습니다."
+                : "면접 시작에 실패했습니다.",
             );
           }
         },
 
-      reset: () =>
-        set(initialState),
-    })
+
+      /**
+       * 면접 상태 초기화
+       */
+      reset: () => {
+        set(
+          initialState,
+        );
+      },
+    }),
   );
