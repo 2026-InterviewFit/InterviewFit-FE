@@ -3,31 +3,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getLoginUser } from "@/lib/auth";
+
+import {
+  getAuthUser,
+  subscribeToAuthChanges,
+} from "@/lib/auth";
 
 interface TopbarProps {
   userName?: string;
 }
 
-export default function Topbar({ userName }: TopbarProps) {
-  const [displayName, setDisplayName] = useState(userName ?? "사용자");
-
-  const refreshUser = () => {
-    const user = getLoginUser();
-    setDisplayName(userName ?? user?.name?.trim() ?? "사용자");
-  };
+export default function Topbar({
+  userName,
+}: TopbarProps) {
+  const [
+    displayName,
+    setDisplayName,
+  ] = useState(
+    userName ?? "사용자",
+  );
 
   useEffect(() => {
-    refreshUser();
+    /**
+     * props로 이름을 직접 넘겨준 경우에는
+     * 해당 이름을 우선 사용한다.
+     */
+    if (userName) {
+      setDisplayName(
+        userName,
+      );
 
-    window.addEventListener("auth-changed", refreshUser);
-    window.addEventListener("storage", refreshUser);
+      return;
+    }
 
-    return () => {
-      window.removeEventListener("auth-changed", refreshUser);
-      window.removeEventListener("storage", refreshUser);
+    /**
+     * userName prop이 없으면
+     * 실제 카카오 로그인 사용자 정보를 사용한다.
+     */
+    const syncName = () => {
+      const user =
+        getAuthUser();
+
+      setDisplayName(
+        user?.name?.trim() ||
+          "사용자",
+      );
     };
+
+    // 최초 렌더링 시 사용자 정보 적용
+    syncName();
+
+    // 로그인 / 로그아웃 상태 변경 감지
+    return subscribeToAuthChanges(
+      syncName,
+    );
   }, [userName]);
+
+  const initial =
+    displayName.charAt(0) ||
+    "?";
 
   return (
     <div className="flex items-center justify-between">
@@ -42,7 +76,7 @@ export default function Topbar({ userName }: TopbarProps) {
       </div>
 
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-navy text-sm font-bold text-white dark:bg-blue-600">
-        {displayName.charAt(0)}
+        {initial}
       </div>
     </div>
   );
