@@ -127,6 +127,45 @@ export async function startInterview(params: {
   return response.json();
 }
 
+export type InterviewQuestion = {
+  id: number;
+  question: string;
+};
+
+export async function createInterviewQuestions(params: {
+  count: number;
+  jobRoleId: number;
+  jobName: string;
+  coverLetterId?: number;
+}): Promise<InterviewQuestion[]> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/question/one-to-one/create`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        count: params.count,
+        jobRoleId: params.jobRoleId,
+        jobName: params.jobName,
+        coverLetterId: params.coverLetterId,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorMessage =
+      await readErrorMessage(response);
+
+    throw new Error(
+      `면접 질문 생성 실패 (${response.status}): ${errorMessage}`
+    );
+  }
+
+  return response.json();
+}
+
 export async function uploadAnswerVideo(params: {
   interviewId: number;
   file: Blob;
