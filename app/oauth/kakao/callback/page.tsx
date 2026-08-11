@@ -2,24 +2,26 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveLogin } from "@/lib/auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
-export default function KakaoCallbackPage() {
+function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [message, setMessage] = useState("카카오 로그인 처리 중입니다...");
+  const [message, setMessage] =
+    useState("카카오 로그인 처리 중입니다...");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const code = searchParams.get("code");
     const error = searchParams.get("error");
-    const errorDescription = searchParams.get("error_description");
+    const errorDescription =
+      searchParams.get("error_description");
 
     if (error) {
       setErrorMessage(
@@ -35,15 +37,20 @@ export default function KakaoCallbackPage() {
 
     const sendCodeToBackend = async () => {
       try {
-        setMessage("백엔드로 로그인 정보를 전달하는 중입니다...");
+        setMessage(
+          "백엔드로 로그인 정보를 전달하는 중입니다..."
+        );
 
-        const response = await fetch(`${API_BASE_URL}/api/users/kakao-login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ code }),
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/api/users/kakao-login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code }),
+          }
+        );
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -66,10 +73,10 @@ export default function KakaoCallbackPage() {
 
         setMessage("로그인 성공! 홈으로 이동합니다...");
 
-        // 대시보드로 바로 보내기 싫다고 했으니까 홈으로 이동
         router.replace("/");
       } catch (error) {
         console.error("로그인 에러:", error);
+
         setErrorMessage(
           error instanceof Error
             ? error.message
@@ -78,13 +85,15 @@ export default function KakaoCallbackPage() {
       }
     };
 
-    sendCodeToBackend();
+    void sendCodeToBackend();
   }, [router, searchParams]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
-        <p className="text-sm font-bold text-navy/70">InterviewFit</p>
+        <p className="text-sm font-bold text-navy/70">
+          InterviewFit
+        </p>
 
         <h1 className="mt-3 text-2xl font-bold text-navy">
           카카오 로그인
@@ -106,12 +115,44 @@ export default function KakaoCallbackPage() {
           </>
         ) : (
           <>
-            <p className="mt-4 text-sm text-muted">{message}</p>
+            <p className="mt-4 text-sm text-muted">
+              {message}
+            </p>
 
             <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
           </>
         )}
       </div>
     </main>
+  );
+}
+
+function KakaoCallbackFallback() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg px-6">
+      <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+        <p className="text-sm font-bold text-navy/70">
+          InterviewFit
+        </p>
+
+        <h1 className="mt-3 text-2xl font-bold text-navy">
+          카카오 로그인
+        </h1>
+
+        <p className="mt-4 text-sm text-muted">
+          카카오 로그인 정보를 확인하는 중입니다...
+        </p>
+
+        <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
+      </div>
+    </main>
+  );
+}
+
+export default function KakaoCallbackPage() {
+  return (
+    <Suspense fallback={<KakaoCallbackFallback />}>
+      <KakaoCallbackContent />
+    </Suspense>
   );
 }

@@ -1,76 +1,315 @@
+// app/pt-interview/[ptInterviewId]/questions/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Mic, ChevronRight, Play } from "lucide-react"; // 💡 Play 아이콘 추가
-import { useDeviceTest } from "@/hooks/useDeviceTest";
+import {
+  Bot,
+  Mic,
+  ChevronRight,
+  Play,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+
+import { usePtMedia } from "@/hooks/usePtMedia";
 import { usePtInterviewStore } from "@/store/usePtInterviewStore";
 import { questionTypeMeta, formatSeconds } from "@/lib/ptInterviewData";
 import { PALETTE } from "@/lib/communityData";
+import {
+  generatePtQuestions,
+  getPtQuestions,
+  uploadPtAnswer,
+} from "@/lib/api";
 
-function Spinner({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`inline-block animate-[spin_1s_linear_infinite] rounded-full border-2 border-current border-t-transparent ${className}`}
-    />
+import type {
+  PtQuestion,
+  PtQuestionResponse,
+} from "@/types/ptInterview";
+
+function mapQuestion(response: PtQuestionResponse): PtQuestion {
+  return {
+    id: String(response.id),
+    order: response.questionNumber,
+    type: "content",
+    text: response.question,
+    relatedSlideSummary: response.reason ?? undefined,
+  };
+}
+
+function getRecorderMimeType(): string | undefined {
+  const candidates = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ];
+
+  return candidates.find((type) =>
+    MediaRecorder.isTypeSupported(type)
   );
 }
 
 export default function PtQuestionsPage() {
   const router = useRouter();
   const params = useParams();
-  const ptInterviewId = params.ptInterviewId as string;
+
+  const rawPtInterviewId = params.ptInterviewId;
+  const ptInterviewId = Number(
+    Array.isArray(rawPtInterviewId)
+      ? rawPtInterviewId[0]
+      : rawPtInterviewId
+  );
 
   const {
     questions,
     currentQuestionIdx,
     setCurrentQuestionIdx,
-    loadQuestions,
+    setQuestions,
   } = usePtInterviewStore();
 
-  const { videoRef } = useDeviceTest();
+  const {
+    videoRef,
+    getStream,
+    ready,
+    error: mediaError,
+  } = usePtMedia();
 
-  // 💡 자동 시작을 막고, 버튼을 눌러야 시작되도록 변경
-  const [isRecordingStarted, setIsRecordingStarted] = useState(false); 
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  const [isLoadingQuestions, setIsLoadingQuestions] =
+    useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [answerTime, setAnswerTime] = useState(0);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  const isValidId =
+    Number.isInteger(ptInterviewId) && ptInterviewId > 0;
 
   useEffect(() => {
-    loadQuestions();
-    // 초기화 시 자동 녹화를 시작하지 않음
-  }, []);
-
-  // 💡 답변 경과 시간 측정 (시작버튼 누른 이후부터 멈추지 않고 쭉 측정)
-  useEffect(() => {
-    if (!isRecordingStarted) return;
-    const t = setInterval(() => setAnswerTime((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [isRecordingStarted]);
-
-  const q = questions[currentQuestionIdx];
-  const isLast = currentQuestionIdx === questions.length - 1;
-
-  const handleStartRecording = () => {
-    setIsRecordingStarted(true);
-  };
-
-  const handleNext = () => {
-    if (isLast) {
-      router.push(`/pt-interview/${ptInterviewId}/analyzing`);
+    if (!isValidId || questions.length > 0) {
       return;
     }
 
-    // 💡 녹화를 중단하지 않고 쭉 이어가기 위해 setAnswering(false) 및 시간 초기화 코드 제거
-    setAnalyzing(true);
-    setTimeout(() => {
-      setCurrentQuestionIdx((p) => p + 1);
-      setAnalyzing(false);
-    }, 1400);
+    let cancelled = false;
+
+    const loadQuestions = async () => {
+      setIsLoadingQuestions(true);
+      setPageError(null);
+
+      try {
+        let responses = await getPtQuestions(ptInterviewId);
+
+        if (responses.length === 0) {
+          responses = await generatePtQuestions(ptInterviewId);
+        }
+
+        if (!cancelled) {
+          setQuestions(responses.map(mapQuestion));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPageError(
+            error instanceof Error
+              ? error.message
+              : "질문을 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingQuestions(false);
+        }
+      }
+    };
+
+    void loadQuestions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isValidId,
+    ptInterviewId,
+    questions.length,
+    setQuestions,
+  ]);
+
+  useEffect(() => {
+    if (!isRecording) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setAnswerTime((current) => current + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRecording]);
+
+  useEffect(() => {
+    return () => {
+      const recorder = recorderRef.current;
+
+      if (recorder && recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    };
+  }, []);
+
+  const question = questions[currentQuestionIdx];
+  const isLast =
+    currentQuestionIdx === questions.length - 1;
+
+  const startRecording = () => {
+    const stream = getStream();
+
+    if (!stream) {
+      setPageError("카메라와 마이크가 아직 준비되지 않았습니다.");
+      return;
+    }
+
+    try {
+      chunksRef.current = [];
+
+      const mimeType = getRecorderMimeType();
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(1000);
+      recorderRef.current = recorder;
+
+      setAnswerTime(0);
+      setPageError(null);
+      setIsRecording(true);
+    } catch (error) {
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : "녹화를 시작하지 못했습니다."
+      );
+    }
   };
 
-  if (!q) return null;
-  const typeMeta = questionTypeMeta(q.type);
+  const stopRecording = (): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const recorder = recorderRef.current;
+
+      if (!recorder || recorder.state === "inactive") {
+        reject(new Error("진행 중인 녹화가 없습니다."));
+        return;
+      }
+
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "video/webm";
+
+        const blob = new Blob(chunksRef.current, {
+          type: mimeType,
+        });
+
+        recorderRef.current = null;
+        chunksRef.current = [];
+        setIsRecording(false);
+
+        if (blob.size === 0) {
+          reject(new Error("녹화된 영상이 비어 있습니다."));
+          return;
+        }
+
+        resolve(blob);
+      };
+
+      recorder.onerror = () => {
+        reject(new Error("영상 녹화 중 오류가 발생했습니다."));
+      };
+
+      recorder.stop();
+    });
+  };
+
+  const handleAnswerComplete = async () => {
+    if (!question || isUploading) {
+      return;
+    }
+
+    setIsUploading(true);
+    setPageError(null);
+
+    try {
+      const recordedBlob = await stopRecording();
+
+      await uploadPtAnswer({
+        ptInterviewId,
+        ptQuestionId: Number(question.id),
+        file: recordedBlob,
+      });
+
+      setAnswerTime(0);
+
+      if (isLast) {
+        router.push(
+          `/pt-interview/${ptInterviewId}/analyzing`
+        );
+        return;
+      }
+
+      setCurrentQuestionIdx((previous) => previous + 1);
+    } catch (error) {
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : "답변 영상을 업로드하지 못했습니다."
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (!isValidId) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg">
+        잘못된 PT 면접 ID입니다.
+      </main>
+    );
+  }
+
+  if (isLoadingQuestions) {
+    return (
+      <main className="flex min-h-screen items-center justify-center gap-2 bg-bg text-muted">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        예상 질문을 불러오는 중입니다.
+      </main>
+    );
+  }
+
+  if (!question) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg">
+        <div className="text-center">
+          <p className="font-bold text-ink">
+            표시할 질문이 없습니다.
+          </p>
+
+          {pageError && (
+            <p className="mt-2 text-sm text-red-500">
+              {pageError}
+            </p>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  const typeMeta = questionTypeMeta(question.type);
 
   return (
     <main className="relative flex min-h-screen flex-col bg-bg transition-colors duration-300 dark:bg-[#0f1729]">
@@ -79,82 +318,78 @@ export default function PtQuestionsPage() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-5xl flex-1 px-6 pb-20 pt-16">
-        {/* 질문 번호 */}
         <div className="mb-6 flex items-center justify-between">
           <span className="text-sm font-bold text-muted">
-            질문 <span className="text-navy">{currentQuestionIdx + 1}</span> / {questions.length}
+            질문{" "}
+            <span className="text-navy">
+              {currentQuestionIdx + 1}
+            </span>{" "}
+            / {questions.length}
           </span>
+
           <span
             className="rounded-full px-3 py-1 text-[11px] font-bold"
-            style={{ backgroundColor: typeMeta.bg, color: typeMeta.fg }}
+            style={{
+              backgroundColor: typeMeta.bg,
+              color: typeMeta.fg,
+            }}
           >
             {typeMeta.label}
           </span>
         </div>
 
+        {pageError && (
+          <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {pageError}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* AI 면접관 + 질문 */}
           <div className="lg:col-span-7">
             <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
               <div className="mb-5 flex items-center gap-3">
                 <div
                   className="flex h-11 w-11 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: PALETTE.navy, color: PALETTE.lime }}
+                  style={{
+                    backgroundColor: PALETTE.navy,
+                    color: PALETTE.lime,
+                  }}
                 >
                   <Bot className="h-5 w-5" />
                 </div>
+
                 <div>
-                  <p className="text-sm font-bold text-ink">AI 면접관</p>
-                  <p className="text-xs font-medium text-muted">발표 내용 기반 질문</p>
+                  <p className="text-sm font-bold text-ink">
+                    AI 면접관
+                  </p>
+                  <p className="text-xs font-medium text-muted">
+                    발표 내용 기반 질문
+                  </p>
                 </div>
               </div>
 
-              {analyzing ? (
-                <div className="flex flex-col items-center gap-3 py-10">
-                  <Spinner className="h-7 w-7 text-navy" />
-                  <p className="text-sm font-bold text-muted">
-                    답변을 분석하여 꼬리 질문을 준비하고 있어요...
-                  </p>
-                </div>
-              ) : (
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={q.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="text-lg font-bold leading-relaxed text-ink"
-                  >
-                    {q.text}
-                  </motion.p>
-                </AnimatePresence>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={question.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-lg font-bold leading-relaxed text-ink"
+                >
+                  {question.text}
+                </motion.p>
+              </AnimatePresence>
+
+              {question.relatedSlideSummary && (
+                <p className="mt-5 rounded-xl bg-bg px-4 py-3 text-sm text-muted">
+                  질문 생성 이유:{" "}
+                  {question.relatedSlideSummary}
+                </p>
               )}
             </div>
-
-            {/* 관련 슬라이드 */}
-            {q.relatedSlide && (
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm">
-                <div
-                  className="flex aspect-video w-24 shrink-0 items-center justify-center rounded-lg"
-                  style={{
-                    background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
-                  }}
-                >
-                  <span className="text-2xl font-bold text-white/40">{q.relatedSlide}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold text-muted">
-                    관련 슬라이드 {q.relatedSlide}
-                  </p>
-                  <p className="truncate text-sm font-semibold text-ink">
-                    {q.relatedSlideSummary}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* 답변 녹화 및 조작 */}
           <div className="flex flex-col gap-4 lg:col-span-5">
             <div className="rounded-[24px] border border-line bg-surface p-6 shadow-sm">
               <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl bg-[#0f1729]">
@@ -165,37 +400,63 @@ export default function PtQuestionsPage() {
                   muted
                   className="h-full w-full -scale-x-100 object-cover"
                 />
-                {/* 💡 시작 버튼을 눌렀을 때만 녹화 뱃지 표시 */}
-                {isRecordingStarted && (
+
+                {isRecording && (
                   <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded bg-red-500/80 px-2 py-0.5 text-[10px] font-bold text-white">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> REC {formatSeconds(answerTime)}
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                    REC {formatSeconds(answerTime)}
                   </span>
                 )}
               </div>
 
+              {mediaError && (
+                <p className="mb-3 text-xs font-bold text-red-500">
+                  {mediaError}
+                </p>
+              )}
+
               <div className="flex items-center justify-between text-xs font-medium text-muted">
                 <span className="flex items-center gap-1.5">
-                  <Mic className="h-3.5 w-3.5" /> 마이크 활성
+                  <Mic className="h-3.5 w-3.5" />
+                  {ready ? "마이크 준비 완료" : "장치 준비 중"}
                 </span>
-                <span>총 누적 답변 시간 {formatSeconds(answerTime)}</span>
+
+                <span>
+                  답변 시간 {formatSeconds(answerTime)}
+                </span>
               </div>
             </div>
 
-            {/* 💡 시작 버튼과 진행 버튼 분리 */}
-            {!isRecordingStarted ? (
+            {!isRecording ? (
               <button
-                onClick={handleStartRecording}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-4 text-sm font-bold text-white shadow-md transition-all hover:bg-red-600 hover:-translate-y-0.5"
+                type="button"
+                onClick={startRecording}
+                disabled={!ready || isUploading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Play className="h-4 w-4 fill-current" /> 녹화 시작 (답변 시작)
+                <Play className="h-4 w-4 fill-current" />
+                답변 녹화 시작
               </button>
             ) : (
               <button
-                onClick={handleNext}
-                disabled={analyzing}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-4 text-sm font-bold text-white shadow-md transition-all hover:bg-navy-dark hover:-translate-y-0.5 disabled:opacity-40"
+                type="button"
+                onClick={handleAnswerComplete}
+                disabled={isUploading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLast ? "최종 답변 완료" : "답변 완료 및 다음 질문"} <ChevronRight className="h-4 w-4" />
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    답변 업로드 중
+                  </>
+                ) : (
+                  <>
+                    {isLast
+                      ? "최종 답변 완료"
+                      : "답변 완료 및 다음 질문"}
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
             )}
           </div>

@@ -117,13 +117,17 @@ export function useDashboard() {
     }
 
     let ptGroupChanged = false;
-    checkedIds.forEach(id => {
-      const record = ptGroupRecords.find(r => r.id === id);
-      if (record && (record.kind === "group" || record.kind === "pt")) {
-        deletePtGroupRecord(record.kind, id);
-        ptGroupChanged = true;
-      }
-    });
+    checkedIds.forEach((id) => {
+  const record = ptGroupRecords.find((r) => r.id === id);
+
+  if (
+    record &&
+    (record.kind === "group" || record.kind === "pt")
+  ) {
+    deletePtGroupRecord(record.kind, id);
+    ptGroupChanged = true;
+  }
+});
     
     if (ptGroupChanged) setPtGroupRecords(loadPtGroupRecords());
     setCheckedIds([]);
@@ -135,14 +139,13 @@ export function useDashboard() {
     localStorage.setItem("interviewAnalysisHistory", JSON.stringify(next));
   };
 
-  const deletePtGroup = (kind: InterviewKind, id: string) => {
-    if (kind !== "group" && kind !== "pt") {
-      return;
-    }
-
-    deletePtGroupRecord(kind, id);
-    setPtGroupRecords(loadPtGroupRecords());
-  };
+  const deletePtGroup = (
+  kind: "group" | "pt",
+  id: string
+) => {
+  deletePtGroupRecord(kind, id);
+  setPtGroupRecords(loadPtGroupRecords());
+};
 
   return {
     activeTab, setActiveTab,

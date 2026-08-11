@@ -8,6 +8,14 @@ import type {
   VideoUploadResponse,
 } from "@/types";
 
+import type {
+  PtInterviewResponse,
+  PtDocumentUploadResponse,
+  PtDocumentDetailResponse,
+  PtQuestionResponse,
+  PtReportResponse,
+} from "@/types/ptInterview";
+
 import {
   clearAuth,
   getAuthToken,
@@ -247,15 +255,20 @@ export async function uploadAnswerVideo(params: {
 export async function getInterviewReport(
   interviewId: number
 ): Promise<InterviewReportResponse> {
-  const response = await authFetch(
-    `${API_BASE_URL}/api/interview/${interviewId}/report`
+  const response = await fetch(
+    `${API_BASE_URL}/api/interview/${interviewId}/report`,
+    {
+      method: "GET",
+    }
   );
 
   if (!response.ok) {
-    const errorMessage = await readErrorMessage(response);
+    const errorText = await response.text();
 
     throw new Error(
-      `리포트 조회 실패: ${errorMessage}`
+      `리포트 조회 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
     );
   }
 
@@ -345,27 +358,17 @@ export async function analyzeEyeBlinking(params: {
 }) {
   const formData = new FormData();
 
-  formData.append(
-    "file",
-    params.file,
-    "interview.webm"
-  );
+  formData.append("file", params.file, "interview.webm");
 
   if (params.userId !== undefined) {
-    formData.append(
-      "userId",
-      String(params.userId)
-    );
+    formData.append("userId", String(params.userId));
   }
 
   if (params.interviewId !== undefined) {
-    formData.append(
-      "interviewId",
-      String(params.interviewId)
-    );
+    formData.append("interviewId", String(params.interviewId));
   }
 
-  const response = await authFetch(
+  const response = await fetch(
     `${API_BASE_URL}/api/eye-blinking/analyze/upload`,
     {
       method: "POST",
@@ -374,10 +377,217 @@ export async function analyzeEyeBlinking(params: {
   );
 
   if (!response.ok) {
-    const errorMessage = await readErrorMessage(response);
+    const errorText = await response.text();
 
     throw new Error(
-      `눈 깜빡임 분석 실패: ${errorMessage}`
+      `눈 깜빡임 분석 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+// ── PT 면접 API ────────────────────────────────────────────────
+
+export async function createPtInterview(params: {
+  interviewId: number;
+  topic: string;
+  instruction: string;
+  preparationSeconds: number;
+  presentationSeconds: number;
+}): Promise<PtInterviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/pt-interviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 면접 생성 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function uploadPtDocument(
+  ptInterviewId: number,
+  file: File
+): Promise<PtDocumentUploadResponse> {
+  const formData = new FormData();
+
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/document`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 발표 자료 업로드 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function getPtDocument(
+  ptInterviewId: number
+): Promise<PtDocumentDetailResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/document`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 발표 자료 조회 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function generatePtQuestions(
+  ptInterviewId: number
+): Promise<PtQuestionResponse[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/questions/generate`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 예상 질문 생성 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function getPtQuestions(
+  ptInterviewId: number
+): Promise<PtQuestionResponse[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/questions`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 예상 질문 조회 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function uploadPtAnswer(params: {
+  ptInterviewId: number;
+  ptQuestionId: number;
+  file: Blob;
+}): Promise<unknown> {
+  const formData = new FormData();
+
+  formData.append("ptQuestionId", String(params.ptQuestionId));
+  formData.append("file", params.file, `pt-answer-${params.ptQuestionId}.webm`);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${params.ptInterviewId}/answers`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 답변 영상 업로드 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function generatePtReport(
+  ptInterviewId: number
+): Promise<PtReportResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/report/generate`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 종합 리포트 생성 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
+    );
+  }
+
+  return response.json();
+}
+
+export async function getPtReport(
+  ptInterviewId: number
+): Promise<PtReportResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/report`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `PT 종합 리포트 조회 실패 (${response.status}): ${
+        errorText || response.statusText
+      }`
     );
   }
 

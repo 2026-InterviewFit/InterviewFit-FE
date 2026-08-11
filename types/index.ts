@@ -67,66 +67,99 @@ export type AnswerUploadResponse = {
   analysisStatus: string;
 };
 
+export type GazeResultJson = {
+  total_frames?: number;
+  fps?: number;
+  duration_seconds?: number;
+  face_detected_frames?: number;
+  gaze_detected_frames?: number;
+  center_frames?: number;
+  left_frames?: number;
+  right_frames?: number;
+  up_frames?: number;
+  down_frames?: number;
+  center_ratio?: number;
+  gaze_away_ratio?: number;
+  gaze_away_count?: number;
+  [key: string]: unknown;
+};
+
+export type GazeReport = {
+  reportId?: number;
+  centerRatio: number;
+  gazeAwayRatio: number;
+  gazeAwayCount: number;
+  score: number;
+  evaluation?: string;
+  feedback?: string;
+  resultJson?: GazeResultJson;
+};
+
+export type EyeReport = {
+  reportId: number;
+  blinkCount: number;
+  blinkRate: number;
+  durationSeconds?: number;
+  notDetectedCount?: number;
+  notDetectedRatio?: number;
+  score: number;
+  grade?: string | null;
+  feedback: string;
+  blinkLogs?: {
+    logId?: number;
+    timestamp: number;
+    eventType?: string;
+  }[];
+};
+
+export type PoseReport = {
+  reportId: number;
+  totalDuration: number;
+  badCount: number;
+  badDuration: number;
+  shoulderBadCount: number;
+  faceBadCount: number;
+  shoulderBadDuration: number;
+  faceBadDuration: number;
+  badRatio: number;
+  score: number;
+  grade: string | null;
+};
+
+export type SpeechReport = {
+  reportId: number;
+  textScript: string;
+  totalFillerCount: number;
+  fillerDetailsJson: string;
+  repeatedExpressionsJson: string;
+  paceEvaluation: string;
+  paceFeedback: string;
+  charactersPerSecond: number;
+  totalSilenceSeconds: number;
+  pauseRatePercent: number;
+  criticalSilenceCount: number;
+  volumeDbMean?: number;
+  volumeDbStd?: number;
+  aiEvaluationJson?: string;
+  modelAnswer?: string;
+};
+
 export type AnswerReport = {
   answerId: number;
   questionId: number | null;
   questionText: string | null;
-  videoObjectKey: string;
+  videoObjectKey?: string;
+  answerText?: string | null;
   answerOrder: number;
+  startTime?: number | null;
+  endTime?: number | null;
   analysisStatus: string;
   errorMessage: string | null;
-  eye: {
-    reportId: number;
-    blinkCount: number;
-    blinkRate: number;
-    durationSeconds?: number;
-    score: number;
-    feedback: string;
-    blinkLogs?: {
-      logId?: number;
-      timestamp: number;
-      eventType?: string;
-    }[];
-  } | null;
-  pose: {
-    reportId: number;
-    totalDuration: number;
-    badCount: number;
-    badDuration: number;
-    shoulderBadCount: number;
-    faceBadCount: number;
-    shoulderBadDuration: number;
-    faceBadDuration: number;
-    badRatio: number;
-    score: number;
-    grade: string;
-  } | null;
-  speech: {
-    reportId: number;
-    textScript: string;
-    totalFillerCount: number;
-    fillerDetailsJson: string;
-    repeatedExpressionsJson: string;   // 추가
-    paceEvaluation: string;
-    paceFeedback: string;
-    charactersPerSecond: number;
-    totalSilenceSeconds: number;
-    pauseRatePercent: number;          // 추가
-    criticalSilenceCount: number;
-    volumeDbMean: number;              // 추가
-    volumeDbStd: number;               // 추가
-    aiEvaluationJson: string;
-    modelAnswer: string;
-  } | null;
-  gaze: {
-    reportId: number;
-    centerRatio: number;
-    gazeAwayRatio: number;
-    gazeAwayCount: number;
-    score: number;
-    feedback?: string;
-    evaluation?: string;
-  } | null;
+
+  eye: EyeReport | null;
+  gaze: GazeReport | null;
+  pose: PoseReport | null;
+  speech: SpeechReport | null;
 };
 
 export type InterviewReportResponse = {
@@ -138,6 +171,11 @@ export type InterviewReportResponse = {
   createdAt: string;
   analysisStatus: string;
   completed: boolean;
+
+  eye?: EyeReport | null;
+  gaze?: GazeReport | null;
+  pose?: PoseReport | null;
+
   answers: AnswerReport[];
 };
 
