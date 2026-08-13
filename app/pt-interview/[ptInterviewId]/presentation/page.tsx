@@ -1,4 +1,3 @@
-// app/pt-interview/[ptInterviewId]/presentation/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +8,7 @@ import {
   AlertTriangle,
   HelpCircle,
   Loader2,
+  Bot,
 } from "lucide-react";
 
 import SlideStage from "@/components/pt-interview/shared/SlideStage";
@@ -186,9 +186,9 @@ export default function PtPresentationPage() {
           {pageError}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 justify-center overflow-hidden px-6 py-4">
-          {slides.length > 0 ? (
-            <div className="flex h-full w-full max-w-6xl flex-col">
+        <div className="flex min-h-0 flex-1 gap-6 overflow-hidden px-6 py-4">
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
+            {slides.length > 0 ? (
               <SlideStage
                 slides={slides}
                 currentIdx={currentSlideIdx}
@@ -198,36 +198,55 @@ export default function PtPresentationPage() {
                 fitHeight
                 activeColor="white"
               />
+            ) : (
+              <div className="flex items-center justify-center text-white/50">
+                표시할 슬라이드가 없습니다.
+              </div>
+            )}
+          </div>
+
+          <div className="flex w-[280px] shrink-0 flex-col gap-4">
+            <div className="relative flex aspect-[4/3] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl">
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-[#1e293b] shadow-[0_0_20px_rgba(79,70,229,0.3)]">
+                <Bot className="h-10 w-10 text-indigo-400" />
+                <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-green-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                </span>
+              </div>
+              <span className="mt-4 text-[13px] font-medium text-white/70">
+                AI 면접관 경청 중...
+              </span>
+              
+              <div className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-md">
+                AI 면접관
+              </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center text-white/50">
-              표시할 슬라이드가 없습니다.
+
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-xl">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full -scale-x-100 object-cover"
+              />
+              {!ready && (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-white/50">
+                  카메라 준비 중
+                </div>
+              )}
+              {mediaError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80 px-3 text-center text-xs text-red-300">
+                  {mediaError}
+                </div>
+              )}
+              <div className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-md">
+                지원자 (나)
+              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
-
-      <div className="absolute bottom-24 right-6 h-28 w-44 overflow-hidden rounded-xl border-2 border-white/20 bg-black shadow-2xl">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="h-full w-full -scale-x-100 object-cover"
-        />
-
-        {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-white/50">
-            카메라 준비 중
-          </div>
-        )}
-
-        {mediaError && (
-          <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-red-300">
-            {mediaError}
-          </div>
-        )}
-      </div>
 
       <div className="flex shrink-0 items-center justify-center border-t border-white/10 py-4">
         <button
