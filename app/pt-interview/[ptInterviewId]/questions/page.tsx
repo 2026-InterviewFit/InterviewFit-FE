@@ -1,4 +1,3 @@
-// app/pt-interview/[ptInterviewId]/questions/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -78,8 +77,7 @@ export default function PtQuestionsPage() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  const [isLoadingQuestions, setIsLoadingQuestions] =
-    useState(false);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [answerTime, setAnswerTime] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -129,12 +127,7 @@ export default function PtQuestionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    isValidId,
-    ptInterviewId,
-    questions.length,
-    setQuestions,
-  ]);
+  }, [isValidId, ptInterviewId, questions.length, setQuestions]);
 
   useEffect(() => {
     if (!isRecording) {
@@ -159,8 +152,7 @@ export default function PtQuestionsPage() {
   }, []);
 
   const question = questions[currentQuestionIdx];
-  const isLast =
-    currentQuestionIdx === questions.length - 1;
+  const isLast = currentQuestionIdx === questions.length - 1;
 
   const startRecording = () => {
     const stream = getStream();
@@ -256,9 +248,7 @@ export default function PtQuestionsPage() {
       setAnswerTime(0);
 
       if (isLast) {
-        router.push(
-          `/pt-interview/${ptInterviewId}/analyzing`
-        );
+        router.push(`/pt-interview/${ptInterviewId}/analyzing`);
         return;
       }
 
@@ -317,14 +307,10 @@ export default function PtQuestionsPage() {
         <div className="absolute right-0 top-1/4 h-[500px] w-[500px] rounded-full bg-[#95B1EE]/40 blur-[150px]" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl flex-1 px-6 pb-20 pt-16">
+      <div className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-6 pb-20 pt-16">
         <div className="mb-6 flex items-center justify-between">
           <span className="text-sm font-bold text-muted">
-            질문{" "}
-            <span className="text-navy">
-              {currentQuestionIdx + 1}
-            </span>{" "}
-            / {questions.length}
+            질문 <span className="text-navy">{currentQuestionIdx + 1}</span> / {questions.length}
           </span>
 
           <span
@@ -346,44 +332,52 @@ export default function PtQuestionsPage() {
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
-              <div className="mb-5 flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-xl"
-                  style={{
-                    backgroundColor: PALETTE.navy,
-                    color: PALETTE.lime,
-                  }}
-                >
-                  <Bot className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-ink">
-                    AI 면접관
-                  </p>
-                  <p className="text-xs font-medium text-muted">
-                    발표 내용 기반 질문
-                  </p>
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            
+            <div className="relative aspect-video w-full overflow-hidden rounded-[24px] bg-slate-900 shadow-lg border border-slate-800">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 to-slate-900" />
+              
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-navy border-2 border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+                  <Bot className="h-12 w-12 text-indigo-300" />
+                  
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 border-2 border-slate-900">
+                    <span className="h-2 w-2 animate-ping rounded-full bg-white" />
+                  </span>
                 </div>
               </div>
 
+              <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-full bg-black/60 px-4 py-2 backdrop-blur-md">
+                <div className="flex items-center gap-1.5">
+                  <Bot className="h-4 w-4 text-white" />
+                  <span className="text-[13px] font-bold text-white">AI 면접관</span>
+                </div>
+                
+                <div className="flex h-3.5 items-end gap-[3px] border-l border-white/20 pl-3">
+                  <motion.div animate={{ height: ["40%", "100%", "60%", "90%", "40%"] }} transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }} className="w-[3px] bg-green-400 rounded-full" />
+                  <motion.div animate={{ height: ["80%", "30%", "100%", "50%", "80%"] }} transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }} className="w-[3px] bg-green-400 rounded-full" />
+                  <motion.div animate={{ height: ["30%", "80%", "40%", "100%", "30%"] }} transition={{ duration: 0.7, repeat: Infinity, ease: "easeInOut" }} className="w-[3px] bg-green-400 rounded-full" />
+                  <motion.div animate={{ height: ["100%", "50%", "90%", "30%", "100%"] }} transition={{ duration: 1.0, repeat: Infinity, ease: "easeInOut" }} className="w-[3px] bg-green-400 rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
               <AnimatePresence mode="wait">
                 <motion.p
                   key={question.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-lg font-bold leading-relaxed text-ink"
+                  className="text-lg font-bold leading-relaxed text-ink mt-2"
                 >
                   {question.text}
                 </motion.p>
               </AnimatePresence>
 
               {question.relatedSlideSummary && (
-                <p className="mt-5 rounded-xl bg-bg px-4 py-3 text-sm text-muted">
-                  질문 생성 이유:{" "}
+                <p className="mt-6 rounded-xl bg-bg px-4 py-3 text-sm text-muted border border-line">
+                  <strong className="text-navy">질문 생성 배경: </strong>
                   {question.relatedSlideSummary}
                 </p>
               )}
@@ -392,7 +386,7 @@ export default function PtQuestionsPage() {
 
           <div className="flex flex-col gap-4 lg:col-span-5">
             <div className="rounded-[24px] border border-line bg-surface p-6 shadow-sm">
-              <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl bg-[#0f1729]">
+              <div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#0f1729]">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -402,7 +396,7 @@ export default function PtQuestionsPage() {
                 />
 
                 {isRecording && (
-                  <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded bg-red-500/80 px-2 py-0.5 text-[10px] font-bold text-white">
+                  <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded bg-red-500/90 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                     REC {formatSeconds(answerTime)}
                   </span>
@@ -415,15 +409,12 @@ export default function PtQuestionsPage() {
                 </p>
               )}
 
-              <div className="flex items-center justify-between text-xs font-medium text-muted">
+              <div className="flex items-center justify-between text-xs font-medium text-muted px-1">
                 <span className="flex items-center gap-1.5">
                   <Mic className="h-3.5 w-3.5" />
                   {ready ? "마이크 준비 완료" : "장치 준비 중"}
                 </span>
-
-                <span>
-                  답변 시간 {formatSeconds(answerTime)}
-                </span>
+                <span>답변 시간 {formatSeconds(answerTime)}</span>
               </div>
             </div>
 
@@ -432,7 +423,7 @@ export default function PtQuestionsPage() {
                 type="button"
                 onClick={startRecording}
                 disabled={!ready || isUploading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Play className="h-4 w-4 fill-current" />
                 답변 녹화 시작
@@ -442,12 +433,12 @@ export default function PtQuestionsPage() {
                 type="button"
                 onClick={handleAnswerComplete}
                 disabled={isUploading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-navy py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-navy py-4 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    답변 업로드 중
+                    답변 업로드 중...
                   </>
                 ) : (
                   <>
