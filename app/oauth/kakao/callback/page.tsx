@@ -19,7 +19,7 @@ import {
 } from "@/lib/api";
 
 import {
-  saveAuth,
+  setAuthUser,
 } from "@/lib/auth";
 
 
@@ -93,7 +93,7 @@ function KakaoCallbackContent() {
 
 
     /**
-     * 카카오 자체 로그인 단계에서
+     * 카카오 로그인 단계에서
      * 오류가 발생한 경우
      */
     if (error) {
@@ -135,8 +135,14 @@ function KakaoCallbackContent() {
           /**
            * lib/api.ts의 kakaoLogin() 사용
            *
-           * POST
-           * /api/users/kakao-login
+           * POST /api/users/kakao-login
+           *
+           * Spring에서 로그인 성공 시:
+           *
+           * interviewfit_access_token
+           * interviewfit_refresh_token
+           *
+           * 두 개의 HttpOnly Cookie를 내려준다.
            */
           const response =
             await kakaoLogin(
@@ -151,29 +157,15 @@ function KakaoCallbackContent() {
 
 
           /**
-           * 백엔드 정상 응답 구조:
+           * 이제 JWT는 HttpOnly Cookie에 저장되므로
+           * 프론트에서 response.token을 검사하거나
+           * localStorage에 저장하지 않는다.
            *
-           * {
-           *   token: "...",
-           *   user: {
-           *     id: ...,
-           *     name: ...,
-           *     ...
-           *   }
-           * }
+           * 화면에 사용자 이름 등을 표시하기 위한
+           * 사용자 정보만 프론트 메모리에 저장한다.
            */
           if (
-            !response ||
-            !response.token
-          ) {
-            throw new Error(
-              "백엔드 로그인 응답에 JWT 토큰이 없습니다.",
-            );
-          }
-
-
-          if (
-            !response.user ||
+            !response?.user ||
             response.user.id ==
               null
           ) {
@@ -183,25 +175,14 @@ function KakaoCallbackContent() {
           }
 
 
-          /**
-           * JWT + 사용자 정보 저장
-           *
-           * lib/auth.ts에서
-           *
-           * interviewfit_access_token
-           * interviewfit_user
-           * interviewfit_user_id
-           *
-           * 로 저장된다.
-           */
-          saveAuth(
-            response.token,
+          setAuthUser(
             response.user,
           );
 
 
           console.log(
-            "[Kakao] JWT 및 사용자 정보 저장 완료",
+            "[Kakao] 사용자 정보 반영 완료:",
+            response.user,
           );
 
 
@@ -216,6 +197,7 @@ function KakaoCallbackContent() {
           router.replace(
             "/",
           );
+
         } catch (
           errorValue
         ) {
@@ -228,13 +210,14 @@ function KakaoCallbackContent() {
             errorValue instanceof
               Error
               ? errorValue.message
-              : "로그인 처리 중 알 수 없는 오류가 발생했습니다.",
+              : "카카오 로그인 처리 중 오류가 발생했습니다.",
           );
         }
       };
 
 
     void completeLogin();
+
   }, [
     router,
     searchParams,
@@ -244,6 +227,7 @@ function KakaoCallbackContent() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+
         <p className="text-sm font-bold text-navy/70">
           InterviewFit
         </p>
@@ -280,6 +264,7 @@ function KakaoCallbackContent() {
             <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
           </>
         )}
+
       </div>
     </main>
   );
@@ -290,6 +275,7 @@ function KakaoCallbackFallback() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+
         <p className="text-sm font-bold text-navy/70">
           InterviewFit
         </p>
@@ -303,6 +289,7 @@ function KakaoCallbackFallback() {
         </p>
 
         <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
+
       </div>
     </main>
   );
