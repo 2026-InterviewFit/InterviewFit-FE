@@ -32,12 +32,12 @@ function KakaoCallbackContent() {
 
   /**
    * React Strict Mode에서
-   * 동일한 인가 코드로 로그인 요청이
-   * 두 번 실행되는 것을 방지한다.
+   * useEffect가 두 번 실행되면서
+   * 동일한 카카오 인가 코드를
+   * 두 번 백엔드로 보내는 것을 방지한다.
    */
   const requestedRef =
     useRef(false);
-
 
   const [
     message,
@@ -46,7 +46,6 @@ function KakaoCallbackContent() {
     "카카오 로그인 처리 중입니다...",
   );
 
-
   const [
     errorMessage,
     setErrorMessage,
@@ -54,28 +53,38 @@ function KakaoCallbackContent() {
 
 
   useEffect(() => {
+    /**
+     * 이미 로그인 요청을 실행했다면
+     * 중복 요청하지 않는다.
+     */
     if (
       requestedRef.current
     ) {
       return;
     }
 
-
     requestedRef.current =
       true;
 
 
+    /**
+     * 카카오 callback query parameter
+     *
+     * 성공:
+     * ?code=...
+     *
+     * 실패:
+     * ?error=...
+     */
     const code =
       searchParams.get(
         "code",
       );
 
-
     const error =
       searchParams.get(
         "error",
       );
-
 
     const errorDescription =
       searchParams.get(
@@ -84,8 +93,8 @@ function KakaoCallbackContent() {
 
 
     /**
-     * 카카오 로그인 자체가
-     * 취소되거나 실패한 경우
+     * 카카오 로그인 단계에서
+     * 오류가 발생한 경우
      */
     if (error) {
       setErrorMessage(
@@ -100,7 +109,7 @@ function KakaoCallbackContent() {
 
 
     /**
-     * Authorization Code 없음
+     * 인가 코드가 없는 경우
      */
     if (!code) {
       setErrorMessage(
@@ -118,17 +127,22 @@ function KakaoCallbackContent() {
             "백엔드로 로그인 정보를 전달하는 중입니다...",
           );
 
+          console.log(
+            "[Kakao] 인가 코드 수신 완료",
+          );
+
 
           /**
-           * Spring:
+           * lib/api.ts의 kakaoLogin() 사용
+           *
            * POST /api/users/kakao-login
            *
-           * 이 요청에서 Spring이
+           * Spring에서 로그인 성공 시:
            *
            * interviewfit_access_token
            * interviewfit_refresh_token
            *
-           * 두 HttpOnly Cookie를 내려준다.
+           * 두 개의 HttpOnly Cookie를 내려준다.
            */
           const response =
             await kakaoLogin(
@@ -136,12 +150,19 @@ function KakaoCallbackContent() {
             );
 
 
+          console.log(
+            "[Kakao] 백엔드 로그인 응답:",
+            response,
+          );
+
+
           /**
-           * JWT는 HttpOnly Cookie에 있으므로
-           * 프론트 localStorage에 저장하지 않는다.
+           * 이제 JWT는 HttpOnly Cookie에 저장되므로
+           * 프론트에서 response.token을 검사하거나
+           * localStorage에 저장하지 않는다.
            *
-           * 화면 표시용 사용자 정보만
-           * 브라우저 메모리에 저장한다.
+           * 화면에 사용자 이름 등을 표시하기 위한
+           * 사용자 정보만 프론트 메모리에 저장한다.
            */
           if (
             !response?.user ||
@@ -159,11 +180,20 @@ function KakaoCallbackContent() {
           );
 
 
+          console.log(
+            "[Kakao] 사용자 정보 반영 완료:",
+            response.user,
+          );
+
+
           setMessage(
             "로그인 성공! 홈으로 이동합니다...",
           );
 
 
+          /**
+           * 로그인 성공 후 메인 페이지 이동
+           */
           router.replace(
             "/",
           );
@@ -175,7 +205,6 @@ function KakaoCallbackContent() {
             "[Kakao] 로그인 처리 실패:",
             errorValue,
           );
-
 
           setErrorMessage(
             errorValue instanceof
@@ -198,6 +227,7 @@ function KakaoCallbackContent() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+
         <p className="text-sm font-bold text-navy/70">
           InterviewFit
         </p>
@@ -234,6 +264,7 @@ function KakaoCallbackContent() {
             <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
           </>
         )}
+
       </div>
     </main>
   );
@@ -244,6 +275,7 @@ function KakaoCallbackFallback() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
       <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+
         <p className="text-sm font-bold text-navy/70">
           InterviewFit
         </p>
@@ -257,6 +289,7 @@ function KakaoCallbackFallback() {
         </p>
 
         <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
+
       </div>
     </main>
   );

@@ -53,26 +53,20 @@ const LANDING_MENUS = [
 
 
 export default function Navbar() {
-
   const [
     isLoggedIn,
     setIsLoggedIn,
   ] = useState(false);
 
-
   const [
     userName,
     setUserName,
-  ] = useState(
-    "사용자",
-  );
-
+  ] = useState("사용자");
 
   const [
     isMobileMenuOpen,
     setIsMobileMenuOpen,
   ] = useState(false);
-
 
   const [
     scrolled,
@@ -80,66 +74,63 @@ export default function Navbar() {
   ] = useState(false);
 
 
+  /**
+   * 로그인 상태 및 사용자 정보 동기화
+   */
   useEffect(() => {
+    const syncAuthState = () => {
+      const authenticated =
+        isAuthenticated();
+
+      const user =
+        getAuthUser();
+
+      setIsLoggedIn(
+        authenticated,
+      );
+
+      setUserName(
+        user?.name?.trim() ||
+          "사용자",
+      );
+    };
+
 
     /**
-     * 현재 메모리에 저장되어 있는
-     * 인증 상태와 사용자 정보를 Navbar에 반영한다.
-     *
-     * AuthBootstrap에서 /api/users/me를 호출해
-     * 사용자 정보가 복구되면 auth-changed 이벤트가 발생한다.
+     * 최초 Navbar 렌더링 시
+     * 현재 인증 상태 확인
      */
-    const syncAuth =
-      () => {
-
-        const authenticated =
-          isAuthenticated();
-
-
-        const user =
-          getAuthUser();
-
-
-        setIsLoggedIn(
-          authenticated,
-        );
-
-
-        setUserName(
-          user?.name?.trim() ||
-            "사용자",
-        );
-      };
+    syncAuthState();
 
 
     /**
-     * Navbar가 처음 마운트됐을 때도
-     * 현재 인증 상태를 즉시 반영한다.
-     */
-    syncAuth();
-
-
-    /**
-     * 로그인 / 로그아웃 /
-     * AuthBootstrap 사용자 복구 감지
+     * AuthBootstrap에서
+     * /api/users/me 호출 후 사용자 정보가 복구되거나
+     * 로그인/로그아웃 상태가 변경되면 반영
      */
     const unsubscribe =
       subscribeToAuthChanges(
         () => {
-
-          syncAuth();
+          syncAuthState();
         },
       );
 
 
-    const handleScroll =
-      () => {
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
-        setScrolled(
-          window.scrollY >
-            20,
-        );
-      };
+
+  /**
+   * 스크롤 시 Navbar 배경 처리
+   */
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(
+        window.scrollY > 20,
+      );
+    };
 
 
     handleScroll();
@@ -152,41 +143,35 @@ export default function Navbar() {
 
 
     return () => {
-
-      unsubscribe();
-
-
       window.removeEventListener(
         "scroll",
         handleScroll,
       );
     };
-
   }, []);
 
 
   /**
-   * Spring:
+   * 로그아웃
+   *
    * POST /api/users/logout
    *
-   * Access / Refresh HttpOnly Cookie
-   * 둘 다 삭제된다.
+   * Spring에서
+   *
+   * interviewfit_access_token
+   * interviewfit_refresh_token
+   *
+   * 두 HttpOnly Cookie를 제거한다.
    */
   const handleLogout =
     async () => {
-
       await logout();
 
-
-      setIsLoggedIn(
-        false,
-      );
-
+      setIsLoggedIn(false);
 
       setUserName(
         "사용자",
       );
-
 
       setIsMobileMenuOpen(
         false,
@@ -233,20 +218,15 @@ export default function Navbar() {
             {LANDING_MENUS.map(
               (item) => (
                 <Link
-                  key={
-                    item.href
-                  }
-                  href={
-                    item.href
-                  }
+                  key={item.href}
+                  href={item.href}
                   className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
                 >
-                  {
-                    item.label
-                  }
+                  {item.label}
                 </Link>
               ),
             )}
+
           </div>
 
 
@@ -261,24 +241,16 @@ export default function Navbar() {
                   className="flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors hover:bg-chip"
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft/20 text-navy">
-
                     <User
                       className="h-3.5 w-3.5"
-                      strokeWidth={
-                        2.5
-                      }
+                      strokeWidth={2.5}
                     />
                   </div>
 
-
                   <span className="hidden text-sm font-medium text-ink sm:block">
-
                     <strong className="font-bold">
-                      {
-                        userName
-                      }
+                      {userName}
                     </strong>
-
                     님
                   </span>
                 </Link>
@@ -295,9 +267,7 @@ export default function Navbar() {
                 </button>
 
               </div>
-
             ) : (
-
               <Link
                 href="/login"
                 className="hidden h-9 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-bold text-white shadow-sm transition-transform hover:scale-[1.03] hover:shadow-md sm:flex"
@@ -340,9 +310,7 @@ export default function Navbar() {
 
         {/* 모바일 메뉴 */}
         <AnimatePresence>
-
           {isMobileMenuOpen && (
-
             <motion.div
               initial={{
                 opacity: 0,
@@ -361,14 +329,9 @@ export default function Navbar() {
 
               {LANDING_MENUS.map(
                 (item) => (
-
                   <Link
-                    key={
-                      item.href
-                    }
-                    href={
-                      item.href
-                    }
+                    key={item.href}
+                    href={item.href}
                     className="rounded-xl p-3 text-base font-bold text-ink transition-colors hover:bg-chip hover:text-navy"
                     onClick={() =>
                       setIsMobileMenuOpen(
@@ -376,9 +339,7 @@ export default function Navbar() {
                       )
                     }
                   >
-                    {
-                      item.label
-                    }
+                    {item.label}
                   </Link>
                 ),
               )}
@@ -400,15 +361,11 @@ export default function Navbar() {
                   >
                     <User
                       className="h-4 w-4"
-                      strokeWidth={
-                        2.5
-                      }
+                      strokeWidth={2.5}
                     />
 
                     <strong className="font-bold">
-                      {
-                        userName
-                      }
+                      {userName}
                     </strong>
 
                     님
@@ -425,9 +382,7 @@ export default function Navbar() {
                     로그아웃
                   </button>
                 </>
-
               ) : (
-
                 <Link
                   href="/login"
                   onClick={() =>
@@ -443,7 +398,6 @@ export default function Navbar() {
 
             </motion.div>
           )}
-
         </AnimatePresence>
 
       </motion.nav>
