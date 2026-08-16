@@ -3,7 +3,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
+
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import AuthBootstrap from "@/components/shared/AuthBootstrap";
+
 import "./globals.css";
 
 const satoshi = localFont({
@@ -37,7 +40,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthBootstrap />
+          {children}
+        </ThemeProvider>
 
         <Script
           src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"

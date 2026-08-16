@@ -2,91 +2,198 @@
 
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { saveLogin } from "@/lib/auth";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
+import {
+  kakaoLogin,
+} from "@/lib/api";
+
+import {
+  setAuthUser,
+} from "@/lib/auth";
+
 
 function KakaoCallbackContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router =
+    useRouter();
 
-  const [message, setMessage] =
-    useState("카카오 로그인 처리 중입니다...");
-  const [errorMessage, setErrorMessage] = useState("");
+  const searchParams =
+    useSearchParams();
+
+  /**
+   * React Strict Mode에서
+   * 동일한 인가 코드로 로그인 요청이
+   * 두 번 실행되는 것을 방지한다.
+   */
+  const requestedRef =
+    useRef(false);
+
+
+  const [
+    message,
+    setMessage,
+  ] = useState(
+    "카카오 로그인 처리 중입니다...",
+  );
+
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const error = searchParams.get("error");
-    const errorDescription =
-      searchParams.get("error_description");
+    if (
+      requestedRef.current
+    ) {
+      return;
+    }
 
+
+    requestedRef.current =
+      true;
+
+
+    const code =
+      searchParams.get(
+        "code",
+      );
+
+
+    const error =
+      searchParams.get(
+        "error",
+      );
+
+
+    const errorDescription =
+      searchParams.get(
+        "error_description",
+      );
+
+
+    /**
+     * 카카오 로그인 자체가
+     * 취소되거나 실패한 경우
+     */
     if (error) {
       setErrorMessage(
-        `카카오 로그인 실패: ${errorDescription ?? error}`
+        `카카오 로그인 실패: ${
+          errorDescription ??
+          error
+        }`,
       );
+
       return;
     }
 
+
+    /**
+     * Authorization Code 없음
+     */
     if (!code) {
-      setErrorMessage("카카오 인가 코드가 없습니다.");
+      setErrorMessage(
+        "카카오 인가 코드가 없습니다.",
+      );
+
       return;
     }
 
-    const sendCodeToBackend = async () => {
-      try {
-        setMessage(
-          "백엔드로 로그인 정보를 전달하는 중입니다..."
-        );
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/users/kakao-login`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ code }),
+    const completeLogin =
+      async () => {
+        try {
+          setMessage(
+            "백엔드로 로그인 정보를 전달하는 중입니다...",
+          );
+
+
+          /**
+           * Spring:
+           * POST /api/users/kakao-login
+           *
+           * 이 요청에서 Spring이
+           *
+           * interviewfit_access_token
+           * interviewfit_refresh_token
+           *
+           * 두 HttpOnly Cookie를 내려준다.
+           */
+          const response =
+            await kakaoLogin(
+              code,
+            );
+
+
+          /**
+           * JWT는 HttpOnly Cookie에 있으므로
+           * 프론트 localStorage에 저장하지 않는다.
+           *
+           * 화면 표시용 사용자 정보만
+           * 브라우저 메모리에 저장한다.
+           */
+          if (
+            !response?.user ||
+            response.user.id ==
+              null
+          ) {
+            throw new Error(
+              "백엔드 로그인 응답에 사용자 정보가 없습니다.",
+            );
           }
-        );
 
-        if (!response.ok) {
-          const errorText = await response.text();
 
-          console.error("========== 백엔드 오류 ==========");
-          console.error("Status :", response.status);
-          console.error("Body :", errorText);
-          console.error("===============================");
+          setAuthUser(
+            response.user,
+          );
 
-          throw new Error(
-            `백엔드 로그인 실패 (${response.status}) ${
-              errorText ? `: ${errorText}` : ""
-            }`
+
+          setMessage(
+            "로그인 성공! 홈으로 이동합니다...",
+          );
+
+
+          router.replace(
+            "/",
+          );
+
+        } catch (
+          errorValue
+        ) {
+          console.error(
+            "[Kakao] 로그인 처리 실패:",
+            errorValue,
+          );
+
+
+          setErrorMessage(
+            errorValue instanceof
+              Error
+              ? errorValue.message
+              : "카카오 로그인 처리 중 오류가 발생했습니다.",
           );
         }
+      };
 
-        const data = await response.json();
 
-        saveLogin(data);
+    void completeLogin();
 
-        setMessage("로그인 성공! 홈으로 이동합니다...");
+  }, [
+    router,
+    searchParams,
+  ]);
 
-        router.replace("/");
-      } catch (error) {
-        console.error("로그인 에러:", error);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "로그인 처리 중 알 수 없는 오류가 발생했습니다."
-        );
-      }
-    };
-
-    void sendCodeToBackend();
-  }, [router, searchParams]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg px-6">
@@ -99,6 +206,7 @@ function KakaoCallbackContent() {
           카카오 로그인
         </h1>
 
+
         {errorMessage ? (
           <>
             <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
@@ -107,7 +215,11 @@ function KakaoCallbackContent() {
 
             <button
               type="button"
-              onClick={() => router.replace("/login")}
+              onClick={() =>
+                router.replace(
+                  "/login",
+                )
+              }
               className="mt-6 h-11 rounded-full bg-navy px-6 text-sm font-bold text-white"
             >
               로그인으로 돌아가기
@@ -126,6 +238,7 @@ function KakaoCallbackContent() {
     </main>
   );
 }
+
 
 function KakaoCallbackFallback() {
   return (
@@ -149,9 +262,14 @@ function KakaoCallbackFallback() {
   );
 }
 
+
 export default function KakaoCallbackPage() {
   return (
-    <Suspense fallback={<KakaoCallbackFallback />}>
+    <Suspense
+      fallback={
+        <KakaoCallbackFallback />
+      }
+    >
       <KakaoCallbackContent />
     </Suspense>
   );
