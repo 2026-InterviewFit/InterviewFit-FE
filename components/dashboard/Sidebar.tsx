@@ -5,25 +5,39 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { logout } from "@/lib/auth";
+
+import {
+  logout,
+} from "@/lib/auth";
 
 interface SidebarProps {
   onMenuClick?: () => void;
 }
 
-export default function Sidebar({ onMenuClick }: SidebarProps) {
+export default function Sidebar({
+  onMenuClick,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace("/");
   };
 
   const menuItems = [
-    { name: "대시보드", path: "/mypage/dashboard" },
-    { name: "면접 연습", path: "/practice" },
-    { name: "설정", path: "/mypage/settings" },
+    {
+      name: "대시보드",
+      path: "/mypage/dashboard",
+    },
+    {
+      name: "면접 연습",
+      path: "/practice",
+    },
+    {
+      name: "설정",
+      path: "/mypage/settings",
+    },
   ];
 
   return (
@@ -39,7 +53,10 @@ export default function Sidebar({ onMenuClick }: SidebarProps) {
         <nav className="mt-10 flex flex-col gap-2">
           {menuItems.map((item) => {
             const isActive =
-              pathname === item.path || pathname?.startsWith(item.path + "/");
+              pathname === item.path ||
+              pathname?.startsWith(
+                `${item.path}/`,
+              );
 
             return (
               <Link
@@ -61,7 +78,9 @@ export default function Sidebar({ onMenuClick }: SidebarProps) {
 
       <div className="mb-4">
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            void handleLogout();
+          }}
           className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
           type="button"
         >
