@@ -10,6 +10,7 @@ export type RoomStatus =
 
 export interface GroupRoom {
   roomId: string;
+  id: number;
   title: string;
   category: string; // 대분류 (예: "IT/개발")
   role: string; // 세부 직무 (예: "백엔드", 없으면 "")
@@ -18,6 +19,7 @@ export interface GroupRoom {
   status: RoomStatus;
   startAt: string; //
   hostName: string;
+  jobRoleId?: number;
 }
 
 export interface GroupParticipant {
@@ -31,8 +33,12 @@ export interface GroupParticipant {
 
 export interface CreateRoomPayload {
   title: string;
-  category: string;
-  role: string;
+  jobRoleId: number;
   maxParticipants: number;
-  startAt: string;
+  scheduledStartTime: string;
+}
+
+export interface LiveKitCredentials {
+  url: string;
+  token: string;
 }

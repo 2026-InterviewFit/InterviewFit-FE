@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Video, VideoOff, CheckCircle2, Radio } from "lucide-react";
 import type { RoomParticipant } from "@/hooks/useRoomConnection";
+import { Track } from "livekit-client";
+import { useTracks, VideoTrack } from "@livekit/components-react";
 
 const getAvatarColor = (name?: string) => {
   if (!name) return { bg: "#364C84", fg: "#FFFDF5" };
@@ -18,11 +20,11 @@ const getAvatarColor = (name?: string) => {
 
 interface ParticipantGridProps {
   participants: RoomParticipant[];
-  myVideoStream?: React.Ref<HTMLVideoElement>;
   activeSpeakerId?: string;
 }
 
-export default function ParticipantGrid({ participants, myVideoStream, activeSpeakerId }: ParticipantGridProps) {
+export default function ParticipantGrid({ participants, activeSpeakerId }: ParticipantGridProps) {
+  const cameraTracks = useTracks([Track.Source.Camera]);
   return (
     // 💡 변경됨: h-fit 대신 flex-1 min-h-0 h-full 적용, sm:grid-rows-2 추가로 세로 2줄 강제 배분
     <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-rows-2 gap-3 md:gap-4 w-full max-w-5xl mx-auto flex-1 min-h-0 h-full">
@@ -31,6 +33,7 @@ export default function ParticipantGrid({ participants, myVideoStream, activeSpe
           const avatar = getAvatarColor(p.nickname);
           const displayName = p.nickname || "익명";
           const isSpeaking = !!activeSpeakerId && p.userId === activeSpeakerId;
+          const cameraTrack = cameraTracks.find((track) => track.participant.identity === p.userId);
 
           return (
             <motion.div
@@ -48,23 +51,7 @@ export default function ParticipantGrid({ participants, myVideoStream, activeSpe
                   : "border-2 border-transparent dark:border-white/5"
               }`}
             >
-              {p.isMe && myVideoStream && (
-                <video
-                  ref={myVideoStream}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`absolute inset-0 h-full w-full object-cover -scale-x-100 transition-opacity duration-300 ${
-                    p.cameraOn ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              )}
-
-              {(!p.isMe && p.cameraOn) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#0f1729]">
-                  <span className="text-white/10 text-sm font-medium tracking-widest uppercase">Video Stream</span>
-                </div>
-              )}
+              {cameraTrack && p.cameraOn && <VideoTrack trackRef={cameraTrack} className={`absolute inset-0 h-full w-full object-cover ${p.isMe ? "-scale-x-100" : ""}`} />}
 
               {!p.cameraOn && (
                 <div className="absolute inset-0 flex items-center justify-center bg-[#111827]/80 backdrop-blur-sm z-10">

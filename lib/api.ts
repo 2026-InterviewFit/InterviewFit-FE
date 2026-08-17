@@ -45,7 +45,7 @@ export type KakaoLoginResponse = {
  *
  * 일반 문자열 응답도 처리한다.
  */
-async function readErrorMessage(
+export async function readErrorMessage(
   response: Response,
 ): Promise<string> {
   const text = await response.text();
@@ -69,7 +69,7 @@ async function readErrorMessage(
 /**
  * JWT 인증이 필요한 API 요청
  */
-async function authFetch(
+export async function authFetch(
   input: string,
   init: RequestInit = {},
 ): Promise<Response> {

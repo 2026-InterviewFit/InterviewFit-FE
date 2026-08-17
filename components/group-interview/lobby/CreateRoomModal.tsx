@@ -3,58 +3,54 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Users, Briefcase, Type, CalendarClock, UserPlus } from "lucide-react";
-import { GROUP_CATEGORIES } from "@/lib/groupInterviewData";
-import { JOB_CATEGORIES } from "@/lib/communityData"; // 💡 세부 직무 데이터를 위해 추가
+import { getJobRoles } from "@/lib/api";
+import type { JobRole } from "@/types";
 import type { CreateRoomPayload } from "@/types/groupInterview";
 
 interface CreateRoomModalProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (payload: CreateRoomPayload) => void;
+  onCreate: (payload: CreateRoomPayload) => Promise<void>;
 }
 
 export default function CreateRoomModal({ open, onClose, onCreate }: CreateRoomModalProps) {
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState(GROUP_CATEGORIES[0]);
-  const [role, setRole] = useState("");
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [jobRoleId, setJobRoleId] = useState(0);
   const [maxParticipants, setMaxParticipants] = useState(4);
-  const [startAt, setStartAt] = useState("");
+  const [scheduledStartTime, setScheduledStartTime] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 💡 선택된 대분류(category)에 따른 세부 직무 리스트 추출
-  const availableRoles = JOB_CATEGORIES.find(c => c.category === category)?.roles || [];
-
-  // 💡 카테고리가 변경될 때 세부 직무를 첫 번째 항목으로 자동 초기화
   useEffect(() => {
-    if (availableRoles.length > 0) {
-      setRole(availableRoles[0]);
-    } else {
-      setRole("");
-    }
-  }, [category]);
+    if (!open || jobRoles.length > 0) return;
+    void getJobRoles().then((roles) => {
+      setJobRoles(roles);
+      setJobRoleId(roles[0]?.id ?? 0);
+    }).catch(() => alert("직무 목록을 불러오지 못했습니다."));
+  }, [open, jobRoles.length]);
 
   const reset = () => {
     setTitle("");
-    setCategory(GROUP_CATEGORIES[0]);
-    setRole(JOB_CATEGORIES.find(c => c.category === GROUP_CATEGORIES[0])?.roles[0] || "");
+    setJobRoleId(jobRoles[0]?.id ?? 0);
     setMaxParticipants(4);
-    setStartAt("");
+    setScheduledStartTime("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !startAt) {
-      alert("방 제목과 시작 시간을 입력해주세요.");
+    if (!title.trim() || !scheduledStartTime || !jobRoleId) {
+      alert("방 제목, 직무, 시작 시간을 입력해주세요.");
       return;
     }
-    onCreate({
-      title: title.trim(),
-      category,
-      role: role.trim(),
-      maxParticipants,
-      startAt,
-    });
-    reset();
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onCreate({ title: title.trim(), jobRoleId, maxParticipants, scheduledStartTime });
+      reset();
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -113,39 +109,21 @@ export default function CreateRoomModal({ open, onClose, onCreate }: CreateRoomM
               </div>
 
               {/* 직무 */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <label className="flex items-center gap-1.5 text-sm font-bold text-ink">
                     <Briefcase className="h-4 w-4" style={{ color: "#95B1EE" }} /> 직군
                   </label>
                   <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    value={jobRoleId}
+                    onChange={(e) => setJobRoleId(Number(e.target.value))}
                     className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-bg p-3.5 text-sm text-ink transition-all focus:border-navy focus:outline-none focus:ring-2 focus:ring-brand-soft/40"
                   >
-                    {GROUP_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                    {jobRoles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.category} · {role.name}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-ink">세부 직무</label>
-                  {/* 💡 직접 입력(input)에서 드롭다운(select)으로 변경 */}
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-bg p-3.5 text-sm text-ink transition-all focus:border-navy focus:outline-none focus:ring-2 focus:ring-brand-soft/40"
-                    disabled={availableRoles.length === 0}
-                  >
-                    {availableRoles.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {/* 최대 인원 */}
@@ -178,17 +156,18 @@ export default function CreateRoomModal({ open, onClose, onCreate }: CreateRoomM
                 </label>
                 <input
                   type="datetime-local"
-                  value={startAt}
-                  onChange={(e) => setStartAt(e.target.value)}
+                  value={scheduledStartTime}
+                  onChange={(e) => setScheduledStartTime(e.target.value)}
                   className="w-full rounded-xl border border-line bg-bg p-3.5 text-sm text-ink transition-all focus:border-navy focus:outline-none focus:ring-2 focus:ring-brand-soft/40"
                 />
               </div>
 
               <button
                 type="submit"
+                disabled={isSubmitting || jobRoles.length === 0}
                 className="w-full rounded-xl bg-navy py-4 text-sm font-bold text-white shadow-md transition-all hover:bg-navy-dark hover:-translate-y-0.5"
               >
-                방 개설하고 입장하기
+                {isSubmitting ? "개설 중..." : "방 개설하고 입장하기"}
               </button>
             </form>
           </motion.div>
