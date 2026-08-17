@@ -1,98 +1,141 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { GroupParticipant } from "@/types/groupInterview";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Client } from "@stomp/stompjs";
+import { useLocalParticipant, useParticipants } from "@livekit/components-react";
+import SockJS from "sockjs-client";
+import {
+  getGroupParticipants,
+  getGroupSession,
+  setGroupReady,
+} from "@/lib/groupInterviewApi";
+import { getAuthUser } from "@/lib/auth";
+import type {
+  GroupInterviewEvent,
+  GroupInterviewProgress,
+  GroupParticipant,
+} from "@/types/groupInterview";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const PARTICIPANT_EVENTS = new Set([
+  "PARTICIPANT_JOINED",
+  "PARTICIPANT_LEFT",
+  "PARTICIPANT_READY",
+  "PARTICIPANT_UNREADY",
+]);
 
 export interface RoomParticipant extends GroupParticipant {
   isMe?: boolean;
 }
 
-export function useRoomConnection(roomId: string, userId: string, nickname: string) {
-  const [participants, setParticipants] = useState<RoomParticipant[]>([]);
+export function useRoomConnection(roomId: string) {
+  const liveParticipants = useParticipants();
+  const { localParticipant } = useLocalParticipant();
+  const [apiParticipants, setApiParticipants] = useState<GroupParticipant[]>([]);
+  const [progress, setProgress] = useState<GroupInterviewProgress | null>(null);
+  const [connectionError, setConnectionError] = useState("");
+  const [isReadyUpdating, setIsReadyUpdating] = useState(false);
+
+  const loadParticipants = useCallback(async () => {
+    const value = await getGroupParticipants(roomId);
+    setApiParticipants(value);
+  }, [roomId]);
 
   useEffect(() => {
-    // [0초] 나 자신 입장
-    setParticipants([
-      {
-        userId: userId,
-        nickname: nickname,
-        isHost: true,
-        isReady: false,
-        cameraOn: true,
-        micOn: true,
-        isMe: true,
+    let cancelled = false;
+
+    void Promise.all([getGroupParticipants(roomId), getGroupSession(roomId)])
+      .then(([participantValue, progressValue]) => {
+        if (cancelled) return;
+        setApiParticipants(participantValue);
+        setProgress(progressValue);
+      })
+      .catch((cause) => {
+        if (!cancelled) {
+          setConnectionError(cause instanceof Error ? cause.message : "면접방 상태를 불러오지 못했습니다.");
+        }
+      });
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws-interview`),
+      reconnectDelay: 3000,
+      onConnect: () => {
+        setConnectionError("");
+        client.subscribe(`/topic/room/${roomId}`, (frame) => {
+          try {
+            const event = JSON.parse(frame.body) as GroupInterviewEvent;
+            if (event.progress) setProgress(event.progress);
+            if (PARTICIPANT_EVENTS.has(event.type)) void loadParticipants();
+          } catch {
+            setConnectionError("면접방 실시간 이벤트를 해석하지 못했습니다.");
+          }
+        });
       },
-    ]);
+      onStompError: (frame) => {
+        setConnectionError(frame.headers.message || "면접방 실시간 연결에 실패했습니다.");
+      },
+      onWebSocketError: () => {
+        setConnectionError("면접방 실시간 연결이 끊겼습니다. 재연결 중입니다.");
+      },
+    });
 
-    // [3초] 가짜 참여자 1 입장 (캠 OFF, 마이크 ON)
-    const t1 = setTimeout(() => {
-      setParticipants((prev) => [
-        ...prev,
-        { userId: "user_2", nickname: "프론트장인", isHost: false, isReady: false, cameraOn: false, micOn: true },
-      ]);
-    }, 3000);
-
-    // [7초] 가짜 참여자 2 입장 (캠 OFF, 마이크 OFF)
-    const t2 = setTimeout(() => {
-      setParticipants((prev) => [
-        ...prev,
-        { userId: "user_3", nickname: "스프링깎는노인", isHost: false, isReady: false, cameraOn: false, micOn: false },
-      ]);
-    }, 7000);
-
-    // [9초] 가짜 참여자 1 '준비 완료'
-    const t3 = setTimeout(() => {
-      setParticipants((prev) =>
-        prev.map((p) => (p.userId === "user_2" ? { ...p, isReady: true } : p))
-      );
-    }, 9000);
-
-    // [12초] 마지막 유저 입장 (캠 ON, 마이크 ON, 들어오자마자 준비 완료)
-    const t4 = setTimeout(() => {
-      setParticipants((prev) => [
-        ...prev,
-        { userId: "user_4", nickname: "면접마스터", isHost: false, isReady: true, cameraOn: true, micOn: true },
-      ]);
-    }, 12000);
-
-    // 💡 [15초] 가짜 참여자 2 (스프링깎는노인) '준비 완료'
-    const t5 = setTimeout(() => {
-      setParticipants((prev) =>
-        prev.map((p) => (p.userId === "user_3" ? { ...p, isReady: true } : p))
-      );
-    }, 15000);
-
-    // 컴포넌트 언마운트 시 타이머 정리
+    client.activate();
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      clearTimeout(t5);
+      cancelled = true;
+      void client.deactivate();
     };
-  }, [roomId, userId, nickname]);
+  }, [loadParticipants, roomId]);
 
-  // 내 준비 상태 토글 함수
-  const toggleReady = useCallback(() => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.isMe ? { ...p, isReady: !p.isReady } : p))
-    );
-  }, []);
+  const participants = useMemo<RoomParticipant[]>(() => {
+    const me = getAuthUser();
+    return liveParticipants.map((participant) => {
+      const api = apiParticipants.find((item) => item.userId === participant.identity);
+      return {
+        userId: participant.identity,
+        nickname: participant.name || api?.nickname || "참가자",
+        isHost: api?.isHost ?? false,
+        isReady: api?.isReady ?? false,
+        cameraOn: participant.isCameraEnabled,
+        micOn: participant.isMicrophoneEnabled,
+        isMe: participant.isLocal || participant.identity === String(me?.id ?? ""),
+      };
+    });
+  }, [apiParticipants, liveParticipants]);
 
-  // 💡 참여자의 캠/마이크 UI 상태를 동기화하는 함수
-  const toggleCamera = useCallback(() => {
-    setParticipants((prev) => prev.map((p) => (p.isMe ? { ...p, cameraOn: !p.cameraOn } : p)));
-  }, []);
+  const toggleReady = useCallback(async () => {
+    if (isReadyUpdating) return;
+    try {
+      setIsReadyUpdating(true);
+      setConnectionError("");
+      const me = getAuthUser();
+      const current = apiParticipants.find((participant) => participant.userId === String(me?.id));
+      const updated = await setGroupReady(roomId, !current?.isReady);
+      setApiParticipants((participantsValue) => participantsValue.map((participant) => (
+        participant.userId === updated.userId ? updated : participant
+      )));
+    } catch (cause) {
+      setConnectionError(cause instanceof Error ? cause.message : "준비 상태를 변경하지 못했습니다.");
+    } finally {
+      setIsReadyUpdating(false);
+    }
+  }, [apiParticipants, isReadyUpdating, roomId]);
 
-  const toggleMic = useCallback(() => {
-    setParticipants((prev) => prev.map((p) => (p.isMe ? { ...p, micOn: !p.micOn } : p)));
-  }, []);
+  const toggleCamera = useCallback(
+    () => void localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled),
+    [localParticipant],
+  );
+  const toggleMic = useCallback(
+    () => void localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled),
+    [localParticipant],
+  );
 
-  // 참여자가 2명 이상이고, 모두 Ready 상태인지 확인
-  const isAllReady = participants.length > 1 && participants.every((p) => p.isReady);
+  const isAllReady = participants.length > 1 && participants.every((participant) => participant.isReady);
 
   return {
     participants,
+    progress,
+    connectionError,
+    isReadyUpdating,
     toggleReady,
     toggleCamera,
     toggleMic,

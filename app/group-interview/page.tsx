@@ -11,7 +11,7 @@ import CategoryFilter from "@/components/group-interview/lobby/CategoryFilter";
 import RoomCard from "@/components/group-interview/lobby/RoomCard";
 import CreateRoomModal from "@/components/group-interview/lobby/CreateRoomModal";
 import { getGroupRooms, createGroupRoom } from "@/lib/groupInterviewApi";
-import { MOCK_GROUP_ROOMS } from "@/lib/groupInterviewData";
+import { initializeAuth } from "@/lib/auth";
 import type { GroupRoom, CreateRoomPayload } from "@/types/groupInterview";
 
 export default function GroupInterviewLobbyPage() {
@@ -21,21 +21,24 @@ export default function GroupInterviewLobbyPage() {
   const [onlyRecruiting, setOnlyRecruiting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [error, setError] = useState("");
 
   const loadRooms = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getGroupRooms(activeCategory);
-      setRooms(data && data.length > 0 ? data : MOCK_GROUP_ROOMS);
-    } catch {
-      // 💡 백엔드 미가동 시 mock 폴백 (기존 프로젝트 정책과 동일)
-      setRooms(MOCK_GROUP_ROOMS);
+      setRooms(await getGroupRooms());
+      setError("");
+    } catch (cause) {
+      setRooms([]);
+      setError(cause instanceof Error ? cause.message : "면접방 목록을 불러오지 못했습니다.");
     } finally {
       setIsLoading(false);
     }
-  }, [activeCategory]);
+  }, []);
 
   useEffect(() => {
+    // API 응답으로 초기 화면 상태를 동기화한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRooms();
   }, [loadRooms]);
 
@@ -47,13 +50,18 @@ export default function GroupInterviewLobbyPage() {
   });
 
   const handleCreate = async (payload: CreateRoomPayload) => {
+    const user = await initializeAuth();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     try {
       const room = await createGroupRoom(payload);
       router.push(`/group-interview/room/${room.roomId}`);
-    } catch {
-      // 폴백: 백엔드 없이도 대기실로 진입할 수 있도록 임시 roomId 생성
-      const tempId = `local_${Date.now()}`;
-      router.push(`/group-interview/room/${tempId}`);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "면접방 개설에 실패했습니다.";
+      setError(message);
+      alert(message);
     }
   };
 
@@ -73,6 +81,8 @@ export default function GroupInterviewLobbyPage() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1100px] flex-1 px-6 pb-28 pt-32">
         <LobbyHeader roomCount={filtered.length} onCreate={() => setShowCreate(true)} />
+
+        {error && <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p>}
 
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <CategoryFilter active={activeCategory} onChange={setActiveCategory} />

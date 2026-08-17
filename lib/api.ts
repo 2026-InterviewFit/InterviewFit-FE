@@ -84,7 +84,7 @@ export type FollowUpQuestionResponse = {
 /**
  * 백엔드 오류 응답을 문자열로 변환한다.
  */
-async function readErrorMessage(
+export async function readErrorMessage(
   response: Response,
 ): Promise<string> {
 
@@ -138,7 +138,7 @@ async function readErrorMessage(
  * 3. 401이면 Refresh Token으로 Access Token 재발급
  * 4. 원래 요청 자동 재시도
  */
-async function authFetch(
+export async function authFetch(
   input: string,
   init: RequestInit = {},
 ): Promise<Response> {
@@ -1136,6 +1136,5 @@ export const LIVE_STATS = {
 
 
 export const BRAND = {
-  name:
-    "InterviewFit",
+  name: "InterviewFit",
 } as const;
