@@ -11,7 +11,7 @@ import CategoryFilter from "@/components/group-interview/lobby/CategoryFilter";
 import RoomCard from "@/components/group-interview/lobby/RoomCard";
 import CreateRoomModal from "@/components/group-interview/lobby/CreateRoomModal";
 import { getGroupRooms, createGroupRoom } from "@/lib/groupInterviewApi";
-import { getAuthToken } from "@/lib/auth";
+import { initializeAuth } from "@/lib/auth";
 import type { GroupRoom, CreateRoomPayload } from "@/types/groupInterview";
 
 export default function GroupInterviewLobbyPage() {
@@ -50,7 +50,8 @@ export default function GroupInterviewLobbyPage() {
   });
 
   const handleCreate = async (payload: CreateRoomPayload) => {
-    if (!getAuthToken()) {
+    const user = await initializeAuth();
+    if (!user) {
       router.push("/login");
       return;
     }

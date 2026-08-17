@@ -23,6 +23,7 @@ export interface GroupRoom {
 }
 
 export interface GroupParticipant {
+  id?: number;
   userId: string;
   nickname: string;
   isHost: boolean;
@@ -41,4 +42,35 @@ export interface CreateRoomPayload {
 export interface LiveKitCredentials {
   url: string;
   token: string;
+}
+
+export interface GroupInterviewProgress {
+  roomId: number;
+  currentRound: number;
+  currentQuestionIndex: number;
+  currentQuestionId: number | null;
+  currentQuestionText: string;
+  currentParticipantIndex: number;
+  currentParticipantUserId: number | null;
+  status: string;
+}
+
+export interface GroupInterviewEvent {
+  type:
+    | "PARTICIPANT_JOINED"
+    | "PARTICIPANT_LEFT"
+    | "PARTICIPANT_READY"
+    | "PARTICIPANT_UNREADY"
+    | "INTERVIEW_STARTED"
+    | "ANSWER_STARTED"
+    | "ANSWER_ENDED"
+    | "SPEAKER_CHANGED"
+    | "QUESTION_CHANGED"
+    | "ROUND_CHANGED"
+    | "INTERVIEW_FINISHED";
+  roomId: number;
+  actorUserId: number | null;
+  participant?: unknown;
+  progress?: GroupInterviewProgress;
+  occurredAt: string;
 }

@@ -8,10 +8,22 @@ import Navbar from "@/components/shared/Navbar";
 import { Camera, CameraOff, Mic, MicOff, PhoneOff, Send, Sparkles, Bot, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GROUP_INTERVIEW_QUESTIONS } from "@/lib/groupInterviewData";
-import { getGroupParticipants, getGroupRoom, getLiveKitCredentials, GroupInterviewApiError, joinGroupRoom } from "@/lib/groupInterviewApi";
+import {
+  endGroupAnswer,
+  finishGroupInterview,
+  getGroupParticipants,
+  getGroupRoom,
+  getLiveKitCredentials,
+  GroupInterviewApiError,
+  joinGroupRoom,
+  nextGroupQuestion,
+  nextGroupRound,
+  startGroupAnswer,
+  startGroupInterview,
+} from "@/lib/groupInterviewApi";
 import GroupAnalyzing from "@/components/group-interview/room/GroupAnalyzing";
 import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
-import { getAuthToken, getAuthUser } from "@/lib/auth";
+import { getAuthUser, initializeAuth } from "@/lib/auth";
 import type { LiveKitCredentials } from "@/types/groupInterview";
 import { Track } from "livekit-client";
 
@@ -32,13 +44,13 @@ export default function GroupInterviewRoomPage() {
   useEffect(() => {
     let cancelled = false;
     const enter = async () => {
-      if (!getAuthToken()) {
+      const me = await initializeAuth();
+      if (!me) {
         router.replace("/login");
         return;
       }
       try {
         await getGroupRoom(roomId);
-        const me = getAuthUser();
         const participants = await getGroupParticipants(roomId);
         const alreadyJoined = participants.some((participant) => participant.userId === String(me?.id));
         if (!alreadyJoined) {
@@ -71,18 +83,23 @@ export default function GroupInterviewRoomPage() {
 }
 
 function GroupInterviewRoom({ roomId }: { roomId: string }) {
-  // 💡 컴포넌트 내부로 이동한 상태 선언
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
   const router = useRouter();
   const me = getAuthUser();
   const myNickname = me?.name || "나";
   const { localParticipant } = useLocalParticipant();
-  const { participants, toggleReady, toggleCamera, toggleMic, isAllReady } = useRoomConnection(roomId);
+  const {
+    participants,
+    progress,
+    connectionError,
+    isReadyUpdating,
+    toggleReady,
+    toggleCamera,
+    toggleMic,
+    isAllReady,
+  } = useRoomConnection(roomId);
   const cameraOn = localParticipant.isCameraEnabled;
   const micOn = localParticipant.isMicrophoneEnabled;
 
-  const [isInterviewing, setIsInterviewing] = useState(false);
   const [tipIndex, setTipIndex] = useState(0);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<{ id: number; sender: string; text: string; isMe: boolean }[]>([
@@ -90,19 +107,29 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   ]);
 
   // 💡 슬라이스(발언 순번) 상태
-  const [questionIdx, setQuestionIdx] = useState(0);
-  const [speakerIdx, setSpeakerIdx] = useState(0);
+  const questionIdx = 0;
+  const speakerIdx = 0;
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const syncedParticipants = participants;
 
-  const currentQuestion = GROUP_INTERVIEW_QUESTIONS[questionIdx];
-  const currentSpeaker = syncedParticipants[speakerIdx];
+  const serverQuestionIndex = Math.max(0, (progress?.currentQuestionIndex ?? 1) - 1);
+  const currentQuestion = progress?.currentQuestionText || GROUP_INTERVIEW_QUESTIONS[serverQuestionIndex] || GROUP_INTERVIEW_QUESTIONS[questionIdx];
+  const currentSpeaker = syncedParticipants.find(
+    (participant) => participant.userId === String(progress?.currentParticipantUserId ?? ""),
+  ) ?? syncedParticipants[speakerIdx];
   const isMyTurn = !!currentSpeaker?.isMe;
-  const isLastSpeaker = speakerIdx >= syncedParticipants.length - 1;
-  const isLastQuestion = questionIdx >= GROUP_INTERVIEW_QUESTIONS.length - 1;
-  const nextLabel = !isLastSpeaker ? "다음 발언자" : !isLastQuestion ? "다음 질문" : "면접 종료";
+  const currentSpeakerIndex = Math.max(0, progress?.currentParticipantIndex ?? speakerIdx);
+  const currentQuestionIndex = progress?.currentQuestionIndex ?? questionIdx + 1;
+  const isLastSpeaker = currentSpeakerIndex >= syncedParticipants.length - 1;
+  const isLastQuestion = currentQuestionIndex >= GROUP_INTERVIEW_QUESTIONS.length;
+  const nextLabel = progress?.status === "ANSWERING" ? "답변 종료" : "답변 시작";
+  const meParticipant = syncedParticipants.find((participant) => participant.isMe);
+  const isHost = !!meParticipant?.isHost;
+  const serverStatus = progress?.status?.toUpperCase() ?? "WAITING";
+  const isAnalyzing = ["FINISHED", "COMPLETED"].includes(serverStatus);
+  const isInterviewing = !["WAITING", "READY", "FINISHED", "COMPLETED"].includes(serverStatus);
 
   // ── 내 슬라이스 녹화 시작/종료+업로드 ──
   const startMyRecording = () => {
@@ -139,14 +166,6 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     // 백엔드 GroupInterview API에 녹화 업로드 계약이 없어 로컬 버퍼만 정리한다.
   };
 
-  // 대기실 → 전원 준비 완료 시 실전 진입
-  useEffect(() => {
-    if (isAllReady) {
-      const timer = setTimeout(() => setIsInterviewing(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isAllReady]);
-
   useEffect(() => {
     const tipTimer = setInterval(() => setTipIndex((prev) => (prev + 1) % INTERVIEW_TIPS.length), 6000);
     return () => clearInterval(tipTimer);
@@ -159,7 +178,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       startMyRecording();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInterviewing, questionIdx, speakerIdx]);
+  }, [isInterviewing, currentQuestionIndex, currentSpeakerIndex]);
 
   // 언마운트 시 녹화 정리
   useEffect(() => {
@@ -179,19 +198,29 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
 
   const handleFinish = async () => {
     if (isMyTurn) await stopMyRecording();
-    setIsAnalyzing(true); // 💡 바로 대시보드 X → 분석 로딩으로
+    await finishGroupInterview(roomId);
   };
 
   const handleNextSpeaker = async () => {
-    if (isMyTurn) await stopMyRecording();
+    if (progress?.status === "ANSWERING") {
+      if (isMyTurn) await stopMyRecording();
+      await endGroupAnswer(roomId);
+      return;
+    }
+    await startGroupAnswer(roomId);
+  };
 
-    if (!isLastSpeaker) {
-      setSpeakerIdx((i) => i + 1);
-    } else if (!isLastQuestion) {
-      setQuestionIdx((q) => q + 1);
-      setSpeakerIdx(0);
-    } else {
-      setIsAnalyzing(true); // 💡 마지막 발언까지 끝나면 분석 로딩으로
+  const handleAdvance = async () => {
+    if (!isLastSpeaker) await nextGroupRound(roomId);
+    else if (!isLastQuestion) await nextGroupQuestion(roomId);
+    else await finishGroupInterview(roomId);
+  };
+
+  const handleStartInterview = async () => {
+    try {
+      await startGroupInterview(roomId);
+    } catch (cause) {
+      alert(cause instanceof Error ? cause.message : "면접을 시작하지 못했습니다.");
     }
   };
 
@@ -219,7 +248,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
             </span>
             <span className="text-xs md:text-sm font-bold text-navy dark:text-white">실시간 다대일 면접 진행 중</span>
             <span className="hidden sm:inline text-[11px] font-bold text-muted">
-              질문 {questionIdx + 1}/{GROUP_INTERVIEW_QUESTIONS.length} · 발언 {speakerIdx + 1}/{syncedParticipants.length}
+              질문 {currentQuestionIndex}/{GROUP_INTERVIEW_QUESTIONS.length} · 발언 {currentSpeakerIndex + 1}/{syncedParticipants.length}
             </span>
           </div>
           <div className="flex gap-2 md:gap-4">
@@ -253,7 +282,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
                 </div>
                 <AnimatePresence mode="wait">
                   <motion.p
-                    key={questionIdx}
+                    key={progress?.currentQuestionId ?? currentQuestionIndex}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
@@ -280,12 +309,21 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
           <p className="text-xs font-medium text-muted">
             {isMyTurn ? "내 차례입니다. 답변 후 '다음'을 누르면 녹화가 종료되고 서버로 전송됩니다." : "다른 지원자의 답변을 경청하세요."}
           </p>
-          <button
-            onClick={handleNextSpeaker}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-navy px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-white shadow-md transition-transform hover:scale-105 hover:bg-navy-dark"
-          >
-            {nextLabel} <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 gap-2">
+            {isHost && progress?.status !== "ANSWERING" && (
+              <button onClick={() => void handleAdvance()} className="rounded-full border border-navy px-5 py-2.5 text-sm font-bold text-navy">
+                다음 순서
+              </button>
+            )}
+            {(isMyTurn || isHost) && (
+              <button
+                onClick={() => void handleNextSpeaker()}
+                className="flex items-center gap-1.5 rounded-full bg-navy px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-white shadow-md transition-transform hover:scale-105 hover:bg-navy-dark"
+              >
+                {nextLabel} <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </main>
     );
@@ -316,24 +354,40 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
                 </div>
 
                 <button
-                  onClick={toggleReady}
+                  disabled={isReadyUpdating}
+                  onClick={() => void toggleReady()}
                   className={`px-8 py-4 rounded-2xl text-[15px] font-bold transition-all shadow-md shrink-0 ${
                     isMeReady
                       ? "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-800"
                       : "bg-navy text-white hover:bg-navy-dark hover:-translate-y-0.5"
                   }`}
                 >
-                  {isMeReady ? "준비 해제" : "준비 완료"}
+                  {isReadyUpdating ? "처리 중..." : isMeReady ? "준비 해제" : "준비 완료"}
                 </button>
               </div>
             </div>
 
             <div className="w-full flex flex-col gap-3 mb-6 shrink-0">
+              {connectionError && (
+                <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700">
+                  {connectionError}
+                </div>
+              )}
               {isAllReady && (
                 <div className="w-full rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-5 py-3.5 flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white animate-pulse">🎉</span>
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">모든 참여자가 준비를 마쳤습니다. 잠시 후 실전 화면으로 전환됩니다.</span>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">모든 참여자가 준비를 마쳤습니다. 방장이 면접을 시작할 수 있습니다.</span>
                 </div>
+              )}
+              {isHost && (
+                <button
+                  type="button"
+                  disabled={!isAllReady}
+                  onClick={() => void handleStartInterview()}
+                  className="self-end rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  면접 시작
+                </button>
               )}
             </div>
 

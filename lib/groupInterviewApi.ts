@@ -2,6 +2,7 @@ import { authFetch, readErrorMessage } from "@/lib/api";
 import type {
   CreateRoomPayload,
   GroupParticipant,
+  GroupInterviewProgress,
   GroupRoom,
   LiveKitCredentials,
   RoomStatus,
@@ -73,10 +74,11 @@ function normalizeParticipant(value: unknown): GroupParticipant {
   const raw = (value ?? {}) as JsonObject;
   const user = (raw.user ?? {}) as JsonObject;
   return {
+    id: number(raw.id) || undefined,
     userId: String(raw.userId ?? user.id ?? raw.id ?? ""),
     nickname: text(raw.nickname ?? raw.userName ?? raw.name ?? user.name, "참가자"),
     isHost: Boolean(raw.isHost ?? raw.host),
-    isReady: Boolean(raw.isReady ?? raw.ready),
+    isReady: text(raw.status).toUpperCase() === "READY" || Boolean(raw.isReady ?? raw.ready),
     cameraOn: raw.cameraOn !== false,
     micOn: raw.micOn !== false,
   };
@@ -89,11 +91,11 @@ export async function getGroupRooms(): Promise<GroupRoom[]> {
 }
 
 export async function getGroupRoom(roomId: string): Promise<GroupRoom> {
-  return normalizeRoom(await unwrap(await fetch(`${GROUP_API}/${encodeURIComponent(roomId)}`)));
+  return normalizeRoom(await unwrap(await authFetch(`${GROUP_API}/${encodeURIComponent(roomId)}`)));
 }
 
 export async function getGroupParticipants(roomId: string): Promise<GroupParticipant[]> {
-  const data = await unwrap(await fetch(`${GROUP_API}/${encodeURIComponent(roomId)}/participants`));
+  const data = await unwrap(await authFetch(`${GROUP_API}/${encodeURIComponent(roomId)}/participants`));
   const list = Array.isArray(data) ? data : ((data as JsonObject)?.content ?? []);
   return (Array.isArray(list) ? list : []).map(normalizeParticipant);
 }
@@ -109,6 +111,58 @@ export async function createGroupRoom(payload: CreateRoomPayload): Promise<Group
 
 export async function joinGroupRoom(roomId: string): Promise<void> {
   await unwrap(await authFetch(`${GROUP_API}/${encodeURIComponent(roomId)}/join`, { method: "POST" }));
+}
+
+export async function setGroupReady(roomId: string, ready: boolean): Promise<GroupParticipant> {
+  const response = await authFetch(`${GROUP_API}/${encodeURIComponent(roomId)}/ready`, {
+    method: ready ? "POST" : "DELETE",
+  });
+  return normalizeParticipant(await unwrap(response));
+}
+
+export async function leaveGroupRoom(roomId: string): Promise<void> {
+  await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/participants/me`,
+    { method: "DELETE" },
+  ));
+}
+
+async function mutateSession(roomId: string, action: string): Promise<GroupInterviewProgress> {
+  return (await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/${action}`,
+    { method: "POST" },
+  ))) as GroupInterviewProgress;
+}
+
+export function startGroupInterview(roomId: string) {
+  return mutateSession(roomId, "start");
+}
+
+export function startGroupAnswer(roomId: string) {
+  return mutateSession(roomId, "answer/start");
+}
+
+export function endGroupAnswer(roomId: string) {
+  return mutateSession(roomId, "answer/end");
+}
+
+export function nextGroupQuestion(roomId: string) {
+  return mutateSession(roomId, "next-question");
+}
+
+export function nextGroupRound(roomId: string) {
+  return mutateSession(roomId, "next-round");
+}
+
+export function finishGroupInterview(roomId: string) {
+  return mutateSession(roomId, "finish");
+}
+
+export async function getGroupSession(roomId: string): Promise<GroupInterviewProgress | null> {
+  const response = await authFetch(`${GROUP_API}/${encodeURIComponent(roomId)}/session`);
+  // 면접 시작 전에는 백엔드가 아직 세션이 없다는 의미로 400 또는 404를 반환한다.
+  if (response.status === 400 || response.status === 404) return null;
+  return (await unwrap(response)) as GroupInterviewProgress;
 }
 
 export async function getLiveKitCredentials(roomId: string): Promise<LiveKitCredentials> {
