@@ -53,6 +53,7 @@ export interface GroupInterviewProgress {
   currentParticipantIndex: number;
   currentParticipantUserId: number | null;
   status: string;
+  answerId: number | null;
   answerStartedAt: string | null;
   answerDeadlineAt: string | null;
 }
@@ -74,6 +75,7 @@ export interface GroupInterviewEvent {
     | "INTERVIEW_FINISHED";
   roomId: number;
   actorUserId: number | null;
+  answerId?: number | null;
   participant?: unknown;
   progress?: GroupInterviewProgress;
   occurredAt: string;

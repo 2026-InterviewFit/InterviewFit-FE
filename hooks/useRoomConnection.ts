@@ -33,6 +33,7 @@ export function useRoomConnection(roomId: string) {
   const { localParticipant } = useLocalParticipant();
   const [apiParticipants, setApiParticipants] = useState<GroupParticipant[]>([]);
   const [progress, setProgress] = useState<GroupInterviewProgress | null>(null);
+  const [lastEvent, setLastEvent] = useState<GroupInterviewEvent | null>(null);
   const [connectionError, setConnectionError] = useState("");
   const [isReadyUpdating, setIsReadyUpdating] = useState(false);
 
@@ -70,6 +71,7 @@ export function useRoomConnection(roomId: string) {
         client.subscribe(`/topic/room/${roomId}`, (frame) => {
           try {
             const event = JSON.parse(frame.body) as GroupInterviewEvent;
+            setLastEvent(event);
             // 진행 상태는 이벤트명을 해석해 계산하지 않고 서버 payload를 그대로 쓴다.
             if (event.progress) setProgress(event.progress);
             if (PARTICIPANT_EVENTS.has(event.type)) void loadParticipants();
@@ -141,6 +143,7 @@ export function useRoomConnection(roomId: string) {
   return {
     participants,
     progress,
+    lastEvent,
     connectionError,
     isReadyUpdating,
     toggleReady,

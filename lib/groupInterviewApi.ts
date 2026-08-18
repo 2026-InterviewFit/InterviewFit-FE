@@ -146,6 +146,22 @@ export function completeGroupAnswer(roomId: string) {
   return mutateSession(roomId, "answer-complete");
 }
 
+export async function uploadGroupAnswerVideo(
+  roomId: string,
+  answerId: number,
+  blob: Blob,
+): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", blob, `group-answer-${answerId}.webm`);
+  await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answers/${answerId}/video`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  ));
+}
+
 export function finishGroupInterview(roomId: string) {
   return mutateSession(roomId, "finish");
 }

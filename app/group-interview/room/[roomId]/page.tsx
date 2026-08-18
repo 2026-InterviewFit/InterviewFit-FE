@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRoomConnection } from "@/hooks/useRoomConnection";
+import { useGroupAnswerRecording, type GroupVideoUploadStatus } from "@/hooks/useGroupAnswerRecording";
 import ParticipantGrid from "@/components/group-interview/room/ParticipantGrid";
 import Navbar from "@/components/shared/Navbar";
-import { Camera, CameraOff, Mic, MicOff, PhoneOff, Send, Sparkles, Bot, ChevronRight } from "lucide-react";
+import { Camera, CameraOff, Mic, MicOff, PhoneOff, Send, Sparkles, Bot, ChevronRight, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GROUP_INTERVIEW_QUESTIONS } from "@/lib/groupInterviewData";
 import {
@@ -23,7 +24,6 @@ import GroupAnalyzing from "@/components/group-interview/room/GroupAnalyzing";
 import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
 import { getAuthUser, initializeAuth } from "@/lib/auth";
 import type { LiveKitCredentials } from "@/types/groupInterview";
-import { Track } from "livekit-client";
 
 const INTERVIEW_TIPS = [
   "모르는 질문이 나오면 '잠시 생각할 시간을 주시겠습니까?'라고 정중히 요청하세요.",
@@ -31,6 +31,51 @@ const INTERVIEW_TIPS = [
   "면접관의 눈을 맞추는 것이 부담스럽다면 미간이나 코를 바라보세요.",
   "다른 지원자가 답변할 때에도 경청하는 태도를 유지하는 것이 좋습니다."
 ];
+
+function GroupVideoUploadNotice({
+  statuses,
+  onRetry,
+}: {
+  statuses: GroupVideoUploadStatus[];
+  onRetry: (answerId: number) => void;
+}) {
+  if (statuses.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-24 right-4 z-[70] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2">
+      {statuses.map((item) => (
+        <div
+          key={item.answerId}
+          className={`rounded-2xl border p-4 shadow-lg ${
+            item.status === "failed"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-blue-200 bg-blue-50 text-blue-700"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold">
+                {item.status === "failed" ? "답변 영상 업로드 실패" : "답변 영상 업로드 중"}
+              </p>
+              <p className="mt-1 text-xs opacity-80">
+                답변 #{item.answerId}{item.error ? ` · ${item.error}` : ""}
+              </p>
+            </div>
+            {item.status === "failed" && (
+              <button
+                type="button"
+                onClick={() => onRetry(item.answerId)}
+                className="flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-2 text-xs font-bold shadow-sm"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> 재시도
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function GroupInterviewRoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -88,6 +133,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const {
     participants,
     progress,
+    lastEvent,
     connectionError,
     isReadyUpdating,
     toggleReady,
@@ -110,9 +156,6 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
 
   // 💡 슬라이스(발언 순번) 상태
   const questionIdx = 0;
-  const speakerIdx = 0;
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
 
   const syncedParticipants = participants;
 
@@ -123,7 +166,6 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   );
   const isMyTurn = progress?.currentParticipantUserId != null
     && String(progress.currentParticipantUserId) === String(me?.id ?? "");
-  const currentSpeakerIndex = Math.max(0, progress?.currentParticipantIndex ?? speakerIdx);
   const currentQuestionIndex = progress?.currentQuestionIndex ?? questionIdx + 1;
   const meParticipant = syncedParticipants.find((participant) => participant.isMe);
   const isHost = !!meParticipant?.isHost;
@@ -138,61 +180,24 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     progress?.currentQuestionIndex ?? "",
     progress?.answerStartedAt ?? "",
   ].join(":");
-
-  // ── 내 슬라이스 녹화 시작/종료+업로드 ──
-  const startMyRecording = () => {
-    if (recorderRef.current && recorderRef.current.state === "recording") return;
-    const cameraTrack = localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
-    const microphoneTrack = localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack;
-    if (!cameraTrack && !microphoneTrack) return;
-    const stream = new MediaStream([cameraTrack, microphoneTrack].filter((track): track is MediaStreamTrack => Boolean(track)));
-    chunksRef.current = [];
-    try {
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-        ? "video/webm;codecs=vp8,opus"
-        : "video/webm";
-      const rec = new MediaRecorder(stream, { mimeType });
-      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      rec.start(1000);
-      recorderRef.current = rec;
-    } catch (e) {
-      console.error("녹화 시작 실패:", e);
-    }
-  };
-
-  const stopMyRecording = async () => {
-    const rec = recorderRef.current;
-    if (!rec || rec.state === "inactive") return;
-    await new Promise<void>((resolve) => {
-      rec.onstop = () => resolve();
-      rec.stop();
-    });
-    recorderRef.current = null;
-    const blob = new Blob(chunksRef.current, { type: "video/webm" });
-    chunksRef.current = [];
-    if (blob.size === 0) return;
-    // 백엔드 GroupInterview API에 녹화 업로드 계약이 없어 로컬 버퍼만 정리한다.
-  };
+  const {
+    rememberAnswerId,
+    stopRecording,
+    uploadStatuses,
+    recordingError,
+    retryUpload,
+  } = useGroupAnswerRecording({
+    roomId,
+    myUserId: String(me?.id ?? ""),
+    localParticipant,
+    progress,
+    lastEvent,
+  });
 
   useEffect(() => {
     const tipTimer = setInterval(() => setTipIndex((prev) => (prev + 1) % INTERVIEW_TIPS.length), 6000);
     return () => clearInterval(tipTimer);
   }, []);
-
-  // 💡 현재 발언자가 '나'로 바뀌면 자동으로 내 슬라이스 녹화 시작
-  useEffect(() => {
-    if (!isInterviewing) return;
-    if (isMyTurn && isAnswering) {
-      startMyRecording();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInterviewing, isMyTurn, isAnswering, currentQuestionIndex, currentSpeakerIndex]);
-
-  useEffect(() => {
-    if (isMyTurn && isAnswering) return;
-    if (recorderRef.current?.state === "recording") void stopMyRecording();
-    // 서버 timeout/broadcast에서는 로컬 녹화만 정리하며 진행 API를 호출하지 않는다.
-  }, [isMyTurn, isAnswering, currentQuestionIndex, currentSpeakerIndex]);
 
   useEffect(() => {
     const deadline = progress?.answerDeadlineAt ? Date.parse(progress.answerDeadlineAt) : Number.NaN;
@@ -209,15 +214,6 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     };
   }, [isAnswering, progress?.answerDeadlineAt]);
 
-  // 언마운트 시 녹화 정리
-  useEffect(() => {
-    return () => {
-      if (recorderRef.current && recorderRef.current.state === "recording") {
-        recorderRef.current.stop();
-      }
-    };
-  }, []);
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -226,7 +222,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   };
 
   const handleFinish = async () => {
-    if (isMyTurn) await stopMyRecording();
+    if (isMyTurn) stopRecording();
     await finishGroupInterview(roomId);
   };
 
@@ -237,7 +233,8 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       setRequestedActionKey(answerActionKey);
       setPendingAnswerAction("start");
       setAnswerError("");
-      await startGroupAnswer(roomId);
+      const started = await startGroupAnswer(roomId);
+      rememberAnswerId(started.answerId);
       // ANSWERING 전환과 녹화 시작은 ANSWER_STARTED의 progress를 받은 뒤 일어난다.
     } catch (cause) {
       setRequestedActionKey("");
@@ -254,7 +251,8 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       setRequestedActionKey(answerActionKey);
       setPendingAnswerAction("complete");
       setAnswerError("");
-      await stopMyRecording();
+      // stop 요청만 먼저 보내고, Blob 생성/업로드는 recorder.onstop에서 비동기로 처리한다.
+      stopRecording();
       await completeGroupAnswer(roomId);
     } catch (cause) {
       setRequestedActionKey("");
@@ -275,13 +273,25 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const isMeReady = syncedParticipants.find((p) => p.isMe)?.isReady;
 
   if (isAnalyzing) {
-    return <GroupAnalyzing onDone={() => router.push("/mypage/dashboard")} />;
+    return (
+      <>
+        <GroupAnalyzing onDone={() => {
+          if (uploadStatuses.length > 0) {
+            alert("답변 영상 업로드가 끝나거나 실패한 영상을 재시도한 뒤 이동해주세요.");
+            return;
+          }
+          router.push("/mypage/dashboard");
+        }} />
+        <GroupVideoUploadNotice statuses={uploadStatuses} onRetry={retryUpload} />
+      </>
+    );
   }
 
   // ── 1. 실전 면접 진행 화면 ──
   if (isInterviewing) {
     return (
       <main className="fixed inset-0 z-50 flex flex-col bg-bg text-ink overflow-hidden transition-colors duration-300 dark:bg-[#0f1729] dark:text-white">
+        <GroupVideoUploadNotice statuses={uploadStatuses} onRetry={retryUpload} />
         {/* 밝은 블롭 배경 */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40 dark:opacity-25">
           <div className="absolute -left-20 top-10 h-[500px] w-[500px] rounded-full bg-[#E7F1A8]/40 blur-[140px]" />
@@ -362,7 +372,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
         {/* 하단 컨트롤 */}
         <div className="relative z-10 flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 md:px-8 py-4 dark:border-white/10">
           <p className="text-xs font-medium text-muted">
-            {answerError || (isMyTurn
+            {answerError || recordingError || (isMyTurn
               ? isQuestionView
                 ? "질문을 확인한 뒤 답변을 시작해주세요."
                 : isAnswering
