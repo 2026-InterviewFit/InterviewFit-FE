@@ -41,6 +41,10 @@ export function useRoomConnection(roomId: string) {
     setApiParticipants(value);
   }, [roomId]);
 
+  const loadProgress = useCallback(async () => {
+    setProgress(await getGroupSession(roomId));
+  }, [roomId]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -61,9 +65,12 @@ export function useRoomConnection(roomId: string) {
       reconnectDelay: 3000,
       onConnect: () => {
         setConnectionError("");
+        // 재연결 사이에 놓친 broadcast가 있어도 서버의 현재 세션으로 복구한다.
+        void loadProgress();
         client.subscribe(`/topic/room/${roomId}`, (frame) => {
           try {
             const event = JSON.parse(frame.body) as GroupInterviewEvent;
+            // 진행 상태는 이벤트명을 해석해 계산하지 않고 서버 payload를 그대로 쓴다.
             if (event.progress) setProgress(event.progress);
             if (PARTICIPANT_EVENTS.has(event.type)) void loadParticipants();
           } catch {
@@ -84,7 +91,7 @@ export function useRoomConnection(roomId: string) {
       cancelled = true;
       void client.deactivate();
     };
-  }, [loadParticipants, roomId]);
+  }, [loadParticipants, loadProgress, roomId]);
 
   const participants = useMemo<RoomParticipant[]>(() => {
     const me = getAuthUser();

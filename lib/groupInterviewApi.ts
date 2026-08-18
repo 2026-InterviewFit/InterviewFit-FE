@@ -142,16 +142,8 @@ export function startGroupAnswer(roomId: string) {
   return mutateSession(roomId, "answer/start");
 }
 
-export function endGroupAnswer(roomId: string) {
-  return mutateSession(roomId, "answer/end");
-}
-
-export function nextGroupQuestion(roomId: string) {
-  return mutateSession(roomId, "next-question");
-}
-
-export function nextGroupRound(roomId: string) {
-  return mutateSession(roomId, "next-round");
+export function completeGroupAnswer(roomId: string) {
+  return mutateSession(roomId, "answer-complete");
 }
 
 export function finishGroupInterview(roomId: string) {

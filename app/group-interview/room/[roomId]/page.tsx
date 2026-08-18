@@ -9,15 +9,13 @@ import { Camera, CameraOff, Mic, MicOff, PhoneOff, Send, Sparkles, Bot, ChevronR
 import { motion, AnimatePresence } from "framer-motion";
 import { GROUP_INTERVIEW_QUESTIONS } from "@/lib/groupInterviewData";
 import {
-  endGroupAnswer,
+  completeGroupAnswer,
   finishGroupInterview,
   getGroupParticipants,
   getGroupRoom,
   getLiveKitCredentials,
   GroupInterviewApiError,
   joinGroupRoom,
-  nextGroupQuestion,
-  nextGroupRound,
   startGroupAnswer,
   startGroupInterview,
 } from "@/lib/groupInterviewApi";
@@ -102,6 +100,10 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
 
   const [tipIndex, setTipIndex] = useState(0);
   const [chatInput, setChatInput] = useState("");
+  const [pendingAnswerAction, setPendingAnswerAction] = useState<"start" | "complete" | null>(null);
+  const [requestedActionKey, setRequestedActionKey] = useState("");
+  const [answerError, setAnswerError] = useState("");
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [messages, setMessages] = useState<{ id: number; sender: string; text: string; isMe: boolean }[]>([
     { id: 1, sender: "시스템", text: "대기실에 입장하셨습니다. 다른 지원자들을 기다리며 장비를 점검해주세요.", isMe: false }
   ]);
@@ -118,18 +120,24 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const currentQuestion = progress?.currentQuestionText || GROUP_INTERVIEW_QUESTIONS[serverQuestionIndex] || GROUP_INTERVIEW_QUESTIONS[questionIdx];
   const currentSpeaker = syncedParticipants.find(
     (participant) => participant.userId === String(progress?.currentParticipantUserId ?? ""),
-  ) ?? syncedParticipants[speakerIdx];
-  const isMyTurn = !!currentSpeaker?.isMe;
+  );
+  const isMyTurn = progress?.currentParticipantUserId != null
+    && String(progress.currentParticipantUserId) === String(me?.id ?? "");
   const currentSpeakerIndex = Math.max(0, progress?.currentParticipantIndex ?? speakerIdx);
   const currentQuestionIndex = progress?.currentQuestionIndex ?? questionIdx + 1;
-  const isLastSpeaker = currentSpeakerIndex >= syncedParticipants.length - 1;
-  const isLastQuestion = currentQuestionIndex >= GROUP_INTERVIEW_QUESTIONS.length;
-  const nextLabel = progress?.status === "ANSWERING" ? "답변 종료" : "답변 시작";
   const meParticipant = syncedParticipants.find((participant) => participant.isMe);
   const isHost = !!meParticipant?.isHost;
   const serverStatus = progress?.status?.toUpperCase() ?? "WAITING";
+  const isQuestionView = serverStatus === "QUESTION_VIEW";
+  const isAnswering = serverStatus === "ANSWERING";
   const isAnalyzing = ["FINISHED", "COMPLETED"].includes(serverStatus);
   const isInterviewing = !["WAITING", "READY", "FINISHED", "COMPLETED"].includes(serverStatus);
+  const answerActionKey = [
+    serverStatus,
+    progress?.currentParticipantUserId ?? "",
+    progress?.currentQuestionIndex ?? "",
+    progress?.answerStartedAt ?? "",
+  ].join(":");
 
   // ── 내 슬라이스 녹화 시작/종료+업로드 ──
   const startMyRecording = () => {
@@ -174,11 +182,32 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   // 💡 현재 발언자가 '나'로 바뀌면 자동으로 내 슬라이스 녹화 시작
   useEffect(() => {
     if (!isInterviewing) return;
-    if (syncedParticipants[speakerIdx]?.isMe) {
+    if (isMyTurn && isAnswering) {
       startMyRecording();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInterviewing, currentQuestionIndex, currentSpeakerIndex]);
+  }, [isInterviewing, isMyTurn, isAnswering, currentQuestionIndex, currentSpeakerIndex]);
+
+  useEffect(() => {
+    if (isMyTurn && isAnswering) return;
+    if (recorderRef.current?.state === "recording") void stopMyRecording();
+    // 서버 timeout/broadcast에서는 로컬 녹화만 정리하며 진행 API를 호출하지 않는다.
+  }, [isMyTurn, isAnswering, currentQuestionIndex, currentSpeakerIndex]);
+
+  useEffect(() => {
+    const deadline = progress?.answerDeadlineAt ? Date.parse(progress.answerDeadlineAt) : Number.NaN;
+    if (!isAnswering || !Number.isFinite(deadline)) return;
+
+    const updateRemainingTime = () => {
+      setRemainingSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    };
+    const initialTimer = window.setTimeout(updateRemainingTime, 0);
+    const timer = window.setInterval(updateRemainingTime, 250);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
+  }, [isAnswering, progress?.answerDeadlineAt]);
 
   // 언마운트 시 녹화 정리
   useEffect(() => {
@@ -201,19 +230,38 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     await finishGroupInterview(roomId);
   };
 
-  const handleNextSpeaker = async () => {
-    if (progress?.status === "ANSWERING") {
-      if (isMyTurn) await stopMyRecording();
-      await endGroupAnswer(roomId);
-      return;
+  const handleStartAnswer = async () => {
+    if (!isMyTurn || !isQuestionView || pendingAnswerAction || requestedActionKey === answerActionKey) return;
+
+    try {
+      setRequestedActionKey(answerActionKey);
+      setPendingAnswerAction("start");
+      setAnswerError("");
+      await startGroupAnswer(roomId);
+      // ANSWERING 전환과 녹화 시작은 ANSWER_STARTED의 progress를 받은 뒤 일어난다.
+    } catch (cause) {
+      setRequestedActionKey("");
+      setAnswerError(cause instanceof Error ? cause.message : "답변을 시작하지 못했습니다.");
+    } finally {
+      setPendingAnswerAction(null);
     }
-    await startGroupAnswer(roomId);
   };
 
-  const handleAdvance = async () => {
-    if (!isLastSpeaker) await nextGroupRound(roomId);
-    else if (!isLastQuestion) await nextGroupQuestion(roomId);
-    else await finishGroupInterview(roomId);
+  const handleCompleteAnswer = async () => {
+    if (!isMyTurn || !isAnswering || pendingAnswerAction || requestedActionKey === answerActionKey) return;
+
+    try {
+      setRequestedActionKey(answerActionKey);
+      setPendingAnswerAction("complete");
+      setAnswerError("");
+      await stopMyRecording();
+      await completeGroupAnswer(roomId);
+    } catch (cause) {
+      setRequestedActionKey("");
+      setAnswerError(cause instanceof Error ? cause.message : "답변 완료를 처리하지 못했습니다.");
+    } finally {
+      setPendingAnswerAction(null);
+    }
   };
 
   const handleStartInterview = async () => {
@@ -248,8 +296,13 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
             </span>
             <span className="text-xs md:text-sm font-bold text-navy dark:text-white">실시간 다대일 면접 진행 중</span>
             <span className="hidden sm:inline text-[11px] font-bold text-muted">
-              질문 {currentQuestionIndex}/{GROUP_INTERVIEW_QUESTIONS.length} · 발언 {currentSpeakerIndex + 1}/{syncedParticipants.length}
+              질문 {currentQuestionIndex}/{GROUP_INTERVIEW_QUESTIONS.length} · 라운드 {progress?.currentRound ?? "-"}
             </span>
+            {isAnswering && progress?.answerDeadlineAt && (
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ${remainingSeconds <= 10 ? "bg-red-100 text-red-600" : "bg-chip text-navy"}`}>
+                남은 시간 {remainingSeconds}초
+              </span>
+            )}
           </div>
           <div className="flex gap-2 md:gap-4">
             <div className="flex gap-1 md:gap-2">
@@ -261,9 +314,11 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
               </button>
             </div>
             <div className="w-px h-6 md:h-8 bg-line dark:bg-white/10 my-auto mx-1 md:mx-2" />
-            <button onClick={handleFinish} className="flex items-center gap-1.5 md:gap-2 bg-red-500 hover:bg-red-600 px-4 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold text-white transition-transform hover:scale-105">
-              <PhoneOff className="h-3 w-3 md:h-4 md:w-4" /> 종료
-            </button>
+            {isHost && (
+              <button onClick={() => void handleFinish()} className="flex items-center gap-1.5 md:gap-2 bg-red-500 hover:bg-red-600 px-4 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold text-white transition-transform hover:scale-105">
+                <PhoneOff className="h-3 w-3 md:h-4 md:w-4" /> 면접 종료
+              </button>
+            )}
           </div>
         </div>
 
@@ -307,22 +362,30 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
         {/* 하단 컨트롤 */}
         <div className="relative z-10 flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 md:px-8 py-4 dark:border-white/10">
           <p className="text-xs font-medium text-muted">
-            {isMyTurn ? "내 차례입니다. 답변 후 '다음'을 누르면 녹화가 종료되고 서버로 전송됩니다." : "다른 지원자의 답변을 경청하세요."}
+            {answerError || (isMyTurn
+              ? isQuestionView
+                ? "질문을 확인한 뒤 답변을 시작해주세요."
+                : isAnswering
+                  ? "답변을 마치면 '답변 완료'를 눌러주세요."
+                  : "서버의 다음 진행 상태를 기다리고 있습니다."
+              : "다른 지원자의 답변을 경청하세요.")}
           </p>
           <div className="flex shrink-0 gap-2">
-            {isHost && progress?.status !== "ANSWERING" && (
-              <button onClick={() => void handleAdvance()} className="rounded-full border border-navy px-5 py-2.5 text-sm font-bold text-navy">
-                다음 순서
-              </button>
-            )}
-            {(isMyTurn || isHost) && (
-              <button
-                onClick={() => void handleNextSpeaker()}
-                className="flex items-center gap-1.5 rounded-full bg-navy px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-white shadow-md transition-transform hover:scale-105 hover:bg-navy-dark"
-              >
-                {nextLabel} <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={!isMyTurn
+                || (!isQuestionView && !isAnswering)
+                || pendingAnswerAction !== null
+                || requestedActionKey === answerActionKey}
+              onClick={() => void (isQuestionView ? handleStartAnswer() : handleCompleteAnswer())}
+              className="flex items-center gap-1.5 rounded-full bg-navy px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-white shadow-md transition-transform enabled:hover:scale-105 enabled:hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {pendingAnswerAction
+                ? "처리 중..."
+                : isQuestionView
+                  ? "답변 시작"
+                  : "답변 완료"} <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </main>

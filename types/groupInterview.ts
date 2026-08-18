@@ -53,6 +53,8 @@ export interface GroupInterviewProgress {
   currentParticipantIndex: number;
   currentParticipantUserId: number | null;
   status: string;
+  answerStartedAt: string | null;
+  answerDeadlineAt: string | null;
 }
 
 export interface GroupInterviewEvent {
@@ -63,10 +65,12 @@ export interface GroupInterviewEvent {
     | "PARTICIPANT_UNREADY"
     | "INTERVIEW_STARTED"
     | "ANSWER_STARTED"
-    | "ANSWER_ENDED"
-    | "SPEAKER_CHANGED"
-    | "QUESTION_CHANGED"
-    | "ROUND_CHANGED"
+    | "ANSWER_COMPLETED_SPEAKER_CHANGED"
+    | "ANSWER_COMPLETED_QUESTION_CHANGED"
+    | "ANSWER_COMPLETED_INTERVIEW_FINISHED"
+    | "ANSWER_TIMED_OUT_SPEAKER_CHANGED"
+    | "ANSWER_TIMED_OUT_QUESTION_CHANGED"
+    | "ANSWER_TIMED_OUT_INTERVIEW_FINISHED"
     | "INTERVIEW_FINISHED";
   roomId: number;
   actorUserId: number | null;
