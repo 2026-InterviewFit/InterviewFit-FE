@@ -10,12 +10,11 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ReportDetailView from "@/components/dashboard/ReportDetailView";
 import InterviewTabs from "@/components/dashboard/InterviewTabs";
 import PtReportDetail from "@/components/dashboard/pt/PtReportDetail";
-import GroupReportDetail from "@/components/dashboard/group/GroupReportDetail"; // 💡 그룹 면접 리포트 컴포넌트 추가
 import { useCounter } from "@/hooks/useCounter";
 import { useDashboard } from "@/hooks/useDashboard";
-import { formatKoreanDate, getOverallScore, getStatusClassName, getReportStatusLabel, getRecordDate, getRecordJobName } from "@/lib/reportUtils";
+import { GROUP_ANALYSIS_STATUS_LABEL, getGroupAnalysisStatusClassName } from "@/lib/groupInterviewDashboard";
+import { formatKoreanDate, formatKoreanDateTime, getOverallScore, getStatusClassName, getReportStatusLabel, getRecordDate, getRecordJobName } from "@/lib/reportUtils";
 import type { PtReport } from "@/types/ptInterview";
-import type { GroupReport } from "@/lib/groupInterviewData"; // 💡 그룹 리포트 타입 추가
 import type { InterviewKind } from "@/lib/interviewHistoryStore";
 
 function AnimatedScore({ score }: { score: number }) {
@@ -34,7 +33,8 @@ export default function DashboardPage() {
   
   const {
     activeTab, setActiveTab, sortOrder, setSortOrder, checkedIds, toggleCheck, handleBulkDelete,
-    counts, sortedSingle, sortedPtGroup, showSingle, showPtGroup, deleteSingle, deletePtGroup, singleRecords
+    counts, sortedSingle, sortedPtGroup, sortedGroup, showSingle, showPt, showGroup,
+    isGroupLoading, groupError, deleteSingle, deletePtGroup, singleRecords
   } = useDashboard();
 
   // 순수 UI 상태만 관리
@@ -60,7 +60,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ── 상세 화면: PT/그룹 ──
+  // ── 상세 화면: PT ──
   const selectedPtGroup = sortedPtGroup.find(r => r.id === selectedPtGroupId);
   if (selectedPtGroup) {
     // 1. PT 면접 렌더링
@@ -71,29 +71,14 @@ export default function DashboardPage() {
             <PtReportDetail
               title={selectedPtGroup.title} jobName={selectedPtGroup.jobName} roundLabel={selectedPtGroup.roundLabel} savedAt={selectedPtGroup.savedAt} report={selectedPtGroup.detail as PtReport}
               onBack={() => setSelectedPtGroupId(null)}
-              onDelete={() => {if (window.confirm("기록을 삭제하시겠습니까?")) {deletePtGroup("pt", selectedPtGroup.id);setSelectedPtGroupId(null);}}}
+              onDelete={() => {if (window.confirm("기록을 삭제하시겠습니까?")) {deletePtGroup(selectedPtGroup.id);setSelectedPtGroupId(null);}}}
             />
           </main>
         </DashboardLayout>
       );
     }
     
-    // 2. 그룹 면접 렌더링 분기 추가!
-    if (selectedPtGroup.kind === "group" && selectedPtGroup.detail) {
-      return (
-        <DashboardLayout>
-          <main className="px-6 pb-32 pt-6 lg:px-10 lg:pt-10">
-            <GroupReportDetail
-              title={selectedPtGroup.title} jobName={selectedPtGroup.jobName} roundLabel={selectedPtGroup.roundLabel} savedAt={selectedPtGroup.savedAt} report={selectedPtGroup.detail as GroupReport}
-              onBack={() => setSelectedPtGroupId(null)}
-              onDelete={() => {if (window.confirm("기록을 삭제하시겠습니까?")) {deletePtGroup("group", selectedPtGroup.id);setSelectedPtGroupId(null);}}}
-            />
-          </main>
-        </DashboardLayout>
-      );
-    }
-
-    // 3. detail이 없는 과거 데이터 폴백
+    // detail이 없는 과거 PT 데이터 폴백
     return (
       <DashboardLayout>
         <main className="px-6 pb-32 pt-6 lg:px-10 lg:pt-10">
@@ -154,7 +139,9 @@ export default function DashboardPage() {
 
           {/* 카드 목록 */}
           <div className="mt-6 flex w-full flex-col gap-4">
-            {((showSingle ? sortedSingle.length : 0) + (showPtGroup ? sortedPtGroup.length : 0)) === 0 && (
+            {activeTab !== "group" && !isGroupLoading && !groupError && ((showSingle ? sortedSingle.length : 0)
+              + (showPt ? sortedPtGroup.length : 0)
+              + (showGroup ? sortedGroup.length : 0)) === 0 && (
               <div className="flex flex-col items-center justify-center rounded-[32px] border border-line bg-white px-8 py-20 text-center shadow-sm dark:border-white/[0.02] dark:bg-[#1e293b]/60">
                 <motion.div animate={{ y: [0, -12, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }} className="relative mb-6 h-32 w-32">
                   <Image src="/3d-computer.png" alt="Empty" fill className="object-contain drop-shadow-lg" />
@@ -203,8 +190,65 @@ export default function DashboardPage() {
               );
             })}
 
-            {/* PT/그룹 리스트 */}
-            {showPtGroup && sortedPtGroup.map((record) => {
+            {showGroup && isGroupLoading && (
+              <div className="rounded-[24px] border border-line bg-white p-8 text-center text-sm font-bold text-muted dark:border-white/10 dark:bg-[#1e293b]">
+                그룹 면접 기록을 불러오는 중입니다.
+              </div>
+            )}
+
+            {showGroup && groupError && (
+              <div className="rounded-[24px] border border-red-200 bg-red-50 p-8 text-center text-sm font-bold text-red-600">
+                {groupError}
+              </div>
+            )}
+
+            {/* 그룹 면접: 백엔드 /me/history */}
+            {showGroup && sortedGroup.map((record) => (
+              <div key={`group_${record.roomId}`} className="flex w-full items-center gap-4 group">
+                <div
+                  onClick={() => router.push(`/mypage/dashboard/group/${record.roomId}`)}
+                  className="flex flex-1 cursor-pointer items-center justify-between rounded-[24px] border border-line bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 dark:border-white/10 dark:bg-[#1e293b]"
+                >
+                  <div className="flex min-w-0 items-center gap-5">
+                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full border border-line bg-slate-50 dark:bg-[#0f1729]">
+                      <span className="text-[9px] font-medium text-muted">참가자</span>
+                      <span className="text-sm font-bold text-navy dark:text-white">{record.participantCount}명</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-muted">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatKoreanDate(record.endedAt ?? record.startedAt ?? undefined)}
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: KIND_BADGE.group.bg, color: KIND_BADGE.group.fg }}>그룹 면접</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${getGroupAnalysisStatusClassName(record.analysisStatus)}`}>
+                          {GROUP_ANALYSIS_STATUS_LABEL[record.analysisStatus]}
+                        </span>
+                      </div>
+                      <h3 className="mt-1.5 line-clamp-1 text-base font-bold text-ink group-hover:text-emerald-600 dark:text-white">{record.title}</h3>
+                      <p className="mt-1 text-xs font-medium text-muted">
+                        {[record.jobCategory, record.jobName].filter(Boolean).join(" · ") || "직무 미지정"}
+                        {` · 내 답변 ${record.totalAnswers}개 · 분석 완료 ${record.completedAnalyses}/${record.totalAnswers}`}
+                        {record.failedAnalyses > 0 ? ` · 분석 실패 ${record.failedAnalyses}개` : ""}
+                      </p>
+                      <p className="mt-1 text-[11px] font-medium text-muted">
+                        {formatKoreanDateTime(record.startedAt)} → {formatKoreanDateTime(record.endedAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <button type="button" aria-label="그룹 면접 상세 보기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-slate-50 text-navy hover:bg-emerald-100 dark:border-none">
+                    <Play className="h-4 w-4 pl-0.5" strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {showGroup && !isGroupLoading && !groupError && sortedGroup.length === 0 && activeTab === "group" && (
+              <div className="rounded-[24px] border border-line bg-white p-10 text-center text-sm font-bold text-muted dark:border-white/10 dark:bg-[#1e293b]">
+                완료된 다대일 면접 기록이 없습니다.
+              </div>
+            )}
+
+            {/* PT 리스트 */}
+            {showPt && sortedPtGroup.map((record) => {
               const badge = KIND_BADGE[record.kind];
               return (
                 <div key={record.id} className="flex items-center gap-4 w-full group">

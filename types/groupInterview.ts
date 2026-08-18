@@ -80,3 +80,55 @@ export interface GroupInterviewEvent {
   progress?: GroupInterviewProgress;
   occurredAt: string;
 }
+
+export type GroupAnalysisStatus = "WAITING" | "UPLOADED" | "RUNNING" | "DONE" | "FAILED";
+
+export interface GroupInterviewHistory {
+  roomId: number;
+  title: string;
+  jobRoleId: number | null;
+  jobCategory: string | null;
+  jobName: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  roomStatus: string;
+  participantCount: number;
+  totalAnswers: number;
+  completedAnalyses: number;
+  failedAnalyses: number;
+  analysisStatus: GroupAnalysisStatus;
+}
+
+export type GroupAnswerCompletionType = "COMPLETED" | "TIMED_OUT";
+
+export interface GroupInterviewMyAnswer {
+  answerId: number;
+  round: number;
+  questionIndex: number;
+  questionId: number | null;
+  questionText: string | null;
+  answerStartedAt: string;
+  answerCompletedAt: string | null;
+  completionType: GroupAnswerCompletionType | null;
+  videoUploaded: boolean;
+  analysisStatus: GroupAnalysisStatus;
+}
+
+export interface GroupInterviewAnswerAnalysis {
+  analysisId: number;
+  answerId: number;
+  roomId: number;
+  participantUserId: number;
+  round: number;
+  questionIndex: number;
+  status: Exclude<GroupAnalysisStatus, "WAITING">;
+  speechText: string | null;
+  speechResultJson: string | null;
+  aiEvaluationJson: string | null;
+  eyeBlinkingResultJson: string | null;
+  eyeGazeResultJson: string | null;
+  poseResultJson: string | null;
+  analysisStartedAt: string | null;
+  analysisCompletedAt: string | null;
+  errorMessage: string | null;
+}

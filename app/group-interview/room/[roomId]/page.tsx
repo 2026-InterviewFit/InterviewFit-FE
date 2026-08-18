@@ -181,11 +181,12 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     progress?.answerStartedAt ?? "",
   ].join(":");
   const {
-    rememberAnswerId,
+    rememberAnswerContext,
     stopRecording,
     uploadStatuses,
     recordingError,
     retryUpload,
+    wasAnswerTimedOut,
   } = useGroupAnswerRecording({
     roomId,
     myUserId: String(me?.id ?? ""),
@@ -222,7 +223,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   };
 
   const handleFinish = async () => {
-    if (isMyTurn) stopRecording();
+    if (isMyTurn) await stopRecording();
     await finishGroupInterview(roomId);
   };
 
@@ -234,7 +235,11 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       setPendingAnswerAction("start");
       setAnswerError("");
       const started = await startGroupAnswer(roomId);
-      rememberAnswerId(started.answerId);
+      rememberAnswerContext({
+        answerId: started.answerId,
+        participantUserId: started.currentParticipantUserId,
+        serverStartedAt: started.answerStartedAt,
+      });
       // ANSWERING 전환과 녹화 시작은 ANSWER_STARTED의 progress를 받은 뒤 일어난다.
     } catch (cause) {
       setRequestedActionKey("");
@@ -251,8 +256,9 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       setRequestedActionKey(answerActionKey);
       setPendingAnswerAction("complete");
       setAnswerError("");
-      // stop 요청만 먼저 보내고, Blob 생성/업로드는 recorder.onstop에서 비동기로 처리한다.
-      stopRecording();
+      // Blob 생성까지만 기다린다. duration 보정과 영상 업로드는 별도로 계속 진행된다.
+      const stoppedContext = await stopRecording();
+      if (stoppedContext && wasAnswerTimedOut(stoppedContext.answerId)) return;
       await completeGroupAnswer(roomId);
     } catch (cause) {
       setRequestedActionKey("");

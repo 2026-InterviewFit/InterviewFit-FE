@@ -1,6 +1,9 @@
 import { authFetch, readErrorMessage } from "@/lib/api";
 import type {
   CreateRoomPayload,
+  GroupInterviewAnswerAnalysis,
+  GroupInterviewHistory,
+  GroupInterviewMyAnswer,
   GroupParticipant,
   GroupInterviewProgress,
   GroupRoom,
@@ -160,6 +163,40 @@ export async function uploadGroupAnswerVideo(
       body: formData,
     },
   ));
+}
+
+export async function getGroupAnswerAnalysis(
+  roomId: string,
+  answerId: number,
+): Promise<GroupInterviewAnswerAnalysis> {
+  const value = (await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answers/${answerId}/analysis`,
+  ))) as JsonObject;
+  return {
+    ...value,
+    answerId: number(value.answerId, answerId),
+    status: text(value.status ?? value.analysisStatus) as GroupInterviewAnswerAnalysis["status"],
+  } as GroupInterviewAnswerAnalysis;
+}
+
+export async function retryGroupAnswerAnalysis(roomId: string, answerId: number): Promise<void> {
+  const response = await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answers/${answerId}/analysis`,
+    { method: "POST" },
+  );
+  if (!response.ok) await unwrap(response);
+}
+
+export async function getMyGroupInterviewHistory(): Promise<GroupInterviewHistory[]> {
+  const data = await unwrap(await authFetch(`${GROUP_API}/me/history`));
+  return Array.isArray(data) ? data as GroupInterviewHistory[] : [];
+}
+
+export async function getMyGroupInterviewAnswers(roomId: string): Promise<GroupInterviewMyAnswer[]> {
+  const data = await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answers/me`,
+  ));
+  return Array.isArray(data) ? data as GroupInterviewMyAnswer[] : [];
 }
 
 export function finishGroupInterview(roomId: string) {
