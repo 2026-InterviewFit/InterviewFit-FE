@@ -5,12 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function safeJSONParse<T>(jsonString: string | null | undefined, fallback: T): T {
-  if (!jsonString) return fallback;
+export function safeParseJson<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback;
   try {
-    return JSON.parse(jsonString) as T;
-  } catch (e) {
-    console.error("JSON 파싱 에러 발생:", e);
+    return JSON.parse(value) as T;
+  } catch {
     return fallback;
   }
 }
+
+export const safeJSONParse = safeParseJson;

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 // 💡 getInterviewReport API를 가져와서 백엔드 분석 완료 여부를 체크할 거야!
 import { uploadAnswerVideo, getInterviewReport } from "@/lib/api";
-import fixWebmDuration from "fix-webm-duration";
+import { fixWebmBlobDuration, getSupportedWebmMimeType } from "@/lib/mediaRecorder";
 
 interface UseInterviewCameraProps {
   step: string;
@@ -55,7 +55,7 @@ export function useInterviewCamera({
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         streamRef.current = mediaStream;
         if (videoRef.current) videoRef.current.srcObject = mediaStream;
-      } catch (error) {
+      } catch {
         alert("카메라와 마이크 권한을 허용해주세요!");
         onExit();
       }
@@ -67,9 +67,7 @@ export function useInterviewCamera({
   useEffect(() => {
     if (step === "recording" && streamRef.current && !mediaRecorderRef.current) {
       chunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-        ? "video/webm;codecs=vp8,opus"
-        : "video/webm";
+      const mimeType = getSupportedWebmMimeType();
       const recorder = new MediaRecorder(streamRef.current, { mimeType });
       mediaRecorderRef.current = recorder;
 
@@ -95,12 +93,7 @@ export function useInterviewCamera({
           setAnalysisProgress(15);
 
           const recordedDurationMs = Date.now() - recordStartTimeRef.current;
-          const blob: Blob = await new Promise((resolve, reject) => {
-            fixWebmDuration(rawBlob, recordedDurationMs, (fixedBlob: Blob) => {
-              if (fixedBlob) resolve(fixedBlob);
-              else reject(new Error("영상 길이 정보 복구에 실패했습니다."));
-            });
-          });
+          const blob = await fixWebmBlobDuration(rawBlob, recordedDurationMs);
 
           setAnalysisProgress(30);
           const result = await uploadAnswerVideo({
@@ -126,7 +119,10 @@ export function useInterviewCamera({
           const prev = JSON.parse(localStorage.getItem("interviewAnalysisHistory") || "[]");
           localStorage.setItem(
             "interviewAnalysisHistory",
-            JSON.stringify([historyItem, ...prev.filter((h: any) => h.interviewId !== interviewId)].slice(0, 20))
+            JSON.stringify([
+              historyItem,
+              ...prev.filter((item: { interviewId?: number }) => item.interviewId !== interviewId),
+            ].slice(0, 20))
           );
 
           setAnalysisProgress(40); // 💡 업로드 완료 지점 (이제 백엔드 분석을 기다립니다)
@@ -146,7 +142,7 @@ export function useInterviewCamera({
                 // RUNNING 상태일 때 진행률을 천천히 99%까지 올림 (심리적 안정감 제공)
                 setAnalysisProgress((prev) => (prev < 98 ? prev + Math.floor(Math.random() * 3) + 1 : 99));
               }
-            } catch (err) {
+            } catch {
               // 폴링 중 일시적 네트워크 에러는 무시하고 계속 진행
             }
           }, 3000); // 3초마다 상태 확인
