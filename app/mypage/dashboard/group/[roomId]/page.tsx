@@ -152,6 +152,37 @@ export default function GroupInterviewDashboardDetailPage() {
   const selectedAnswer = answers.find((answer) => answer.answerId === selectedAnswerId) ?? null;
   const analysis = selectedAnswerId ? analysisByAnswerId[selectedAnswerId] : undefined;
   const answerReport = analysis ? toGroupAnswerReport(analysis) : undefined;
+  const hasPendingAnalysis = answers.some((answer) =>
+    ["WAITING", "UPLOADED", "RUNNING"].includes(answer.analysisStatus),
+  );
+
+  useEffect(() => {
+    if (!hasPendingAnalysis || !isValidRoomId) return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void getMyGroupInterviewAnswers(roomId)
+        .then((nextAnswers) => {
+          if (!cancelled) setAnswers(nextAnswers);
+        })
+        .catch((cause) => {
+          if (!cancelled) setAnalysisError(handleError(cause, "분석 상태를 확인하지 못했습니다."));
+        });
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // router는 App Router에서 안정적인 참조다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPendingAnalysis, isValidRoomId, roomId]);
+
+  useEffect(() => {
+    if (selectedAnswer?.analysisStatus !== "DONE") return;
+    // 선택된 답변이 polling 중 DONE으로 바뀔 때 상세 결과를 한 번 조회한다.
+    const timer = window.setTimeout(() => void loadAnalysis(selectedAnswer.answerId), 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAnswer?.answerId, selectedAnswer?.analysisStatus]);
 
   return (
     <DashboardLayout>

@@ -105,6 +105,35 @@ export function useDashboard() {
     return () => { cancelled = true; };
   }, [router]);
 
+  const hasPendingGroupAnalysis = groupRecords.some((record) =>
+    ["WAITING", "UPLOADED", "RUNNING"].includes(record.analysisStatus),
+  );
+
+  useEffect(() => {
+    if (!hasPendingGroupAnalysis) return;
+    let cancelled = false;
+    const interval = window.setInterval(() => {
+      void getMyGroupInterviewHistory()
+        .then((records) => {
+          if (cancelled) return;
+          setGroupRecords(records);
+          setGroupError("");
+        })
+        .catch((cause) => {
+          if (cancelled) return;
+          if (cause instanceof GroupInterviewApiError && cause.status === 401) {
+            router.replace("/login");
+            return;
+          }
+          setGroupError(cause instanceof Error ? cause.message : "그룹 면접 분석 상태를 확인하지 못했습니다.");
+        });
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [hasPendingGroupAnalysis, router]);
+
   // 3. 통계 및 정렬 연산
   const counts = useMemo(() => {
     return {

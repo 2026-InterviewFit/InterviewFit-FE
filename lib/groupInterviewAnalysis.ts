@@ -34,7 +34,7 @@ const pick = (value: JsonObject | null, ...keys: string[]) => {
   return undefined;
 };
 
-const numberValue = (value: unknown, fallback = 0) => {
+const numberValue = (value: unknown, fallback = Number.NaN) => {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };

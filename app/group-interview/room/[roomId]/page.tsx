@@ -6,9 +6,8 @@ import { useRoomConnection } from "@/hooks/useRoomConnection";
 import { useGroupAnswerRecording, type GroupVideoUploadStatus } from "@/hooks/useGroupAnswerRecording";
 import ParticipantGrid from "@/components/group-interview/room/ParticipantGrid";
 import Navbar from "@/components/shared/Navbar";
-import { Camera, CameraOff, Mic, MicOff, PhoneOff, Send, Sparkles, Bot, ChevronRight, RefreshCw } from "lucide-react";
+import { Camera, CameraOff, Mic, MicOff, PhoneOff, Sparkles, Bot, ChevronRight, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GROUP_INTERVIEW_QUESTIONS } from "@/lib/groupInterviewData";
 import {
   completeGroupAnswer,
   finishGroupInterview,
@@ -128,7 +127,6 @@ export default function GroupInterviewRoomPage() {
 function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const me = getAuthUser();
-  const myNickname = me?.name || "나";
   const { localParticipant } = useLocalParticipant();
   const {
     participants,
@@ -145,28 +143,19 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const micOn = localParticipant.isMicrophoneEnabled;
 
   const [tipIndex, setTipIndex] = useState(0);
-  const [chatInput, setChatInput] = useState("");
   const [pendingAnswerAction, setPendingAnswerAction] = useState<"start" | "complete" | null>(null);
   const [requestedActionKey, setRequestedActionKey] = useState("");
   const [answerError, setAnswerError] = useState("");
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const [messages, setMessages] = useState<{ id: number; sender: string; text: string; isMe: boolean }[]>([
-    { id: 1, sender: "시스템", text: "대기실에 입장하셨습니다. 다른 지원자들을 기다리며 장비를 점검해주세요.", isMe: false }
-  ]);
-
-  // 💡 슬라이스(발언 순번) 상태
-  const questionIdx = 0;
-
   const syncedParticipants = participants;
 
-  const serverQuestionIndex = Math.max(0, (progress?.currentQuestionIndex ?? 1) - 1);
-  const currentQuestion = progress?.currentQuestionText || GROUP_INTERVIEW_QUESTIONS[serverQuestionIndex] || GROUP_INTERVIEW_QUESTIONS[questionIdx];
+  const currentQuestion = progress?.currentQuestionText || "질문을 불러오는 중입니다.";
   const currentSpeaker = syncedParticipants.find(
     (participant) => participant.userId === String(progress?.currentParticipantUserId ?? ""),
   );
   const isMyTurn = progress?.currentParticipantUserId != null
     && String(progress.currentParticipantUserId) === String(me?.id ?? "");
-  const currentQuestionIndex = progress?.currentQuestionIndex ?? questionIdx + 1;
+  const currentQuestionIndex = progress?.currentQuestionIndex;
   const meParticipant = syncedParticipants.find((participant) => participant.isMe);
   const isHost = !!meParticipant?.isHost;
   const serverStatus = progress?.status?.toUpperCase() ?? "WAITING";
@@ -215,16 +204,15 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     };
   }, [isAnswering, progress?.answerDeadlineAt]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    setMessages(prev => [...prev, { id: Date.now(), sender: myNickname, text: chatInput, isMe: true }]);
-    setChatInput("");
-  };
-
   const handleFinish = async () => {
-    if (isMyTurn) await stopRecording();
-    await finishGroupInterview(roomId);
+    try {
+      setAnswerError("");
+      if (isMyTurn) await stopRecording();
+      await finishGroupInterview(roomId);
+    } catch (cause) {
+      setAnswerError(cause instanceof Error ? cause.message : "면접을 종료하지 못했습니다.");
+      alert(cause instanceof Error ? cause.message : "면접을 종료하지 못했습니다.");
+    }
   };
 
   const handleStartAnswer = async () => {
@@ -281,7 +269,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   if (isAnalyzing) {
     return (
       <>
-        <GroupAnalyzing onDone={() => {
+        <GroupAnalyzing roomId={roomId} onDone={() => {
           if (uploadStatuses.length > 0) {
             alert("답변 영상 업로드가 끝나거나 실패한 영상을 재시도한 뒤 이동해주세요.");
             return;
@@ -312,7 +300,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
             </span>
             <span className="text-xs md:text-sm font-bold text-navy dark:text-white">실시간 다대일 면접 진행 중</span>
             <span className="hidden sm:inline text-[11px] font-bold text-muted">
-              질문 {currentQuestionIndex}/{GROUP_INTERVIEW_QUESTIONS.length} · 라운드 {progress?.currentRound ?? "-"}
+              {currentQuestionIndex ? `질문 ${currentQuestionIndex}` : "질문 확인 중"} · 라운드 {progress?.currentRound ?? "-"}
             </span>
             {isAnswering && progress?.answerDeadlineAt && (
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${remainingSeconds <= 10 ? "bg-red-100 text-red-600" : "bg-chip text-navy"}`}>
@@ -476,8 +464,8 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
           </div>
         </div>
 
-        {/* 우측 사이드 패널 */}
-        <div className="w-full lg:w-[380px] h-[400px] lg:h-full flex flex-col shrink-0 border-t lg:border-t-0 lg:border-l border-line/50 dark:border-white/5 bg-surface/50 dark:bg-[#111827]/40 backdrop-blur-xl">
+        {/* 발표 범위에서는 실제 통신이 없는 채팅을 숨기고 면접 팁만 제공한다. */}
+        <aside className="w-full shrink-0 border-t border-line/50 bg-surface/50 backdrop-blur-xl dark:border-white/5 dark:bg-[#111827]/40 lg:w-[380px] lg:self-start lg:border-l lg:border-t-0">
           <div className="flex items-start gap-3 border-b border-line/50 px-5 py-3 dark:border-white/5 shrink-0">
             <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
@@ -498,42 +486,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
             </div>
           </div>
 
-          <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.isMe ? "self-end items-end" : "self-start items-start"}`}>
-                <span className="text-[10px] font-medium text-muted mb-1 px-1">{msg.sender}</span>
-                <div className={`px-4 py-2.5 text-[13px] font-medium leading-relaxed shadow-sm ${
-                  msg.isMe
-                    ? "bg-gradient-to-br from-navy to-blue-600 text-white rounded-2xl rounded-tr-sm"
-                    : msg.sender === "시스템"
-                      ? "bg-transparent border border-line/50 dark:border-white/10 text-muted rounded-xl w-full text-center text-xs"
-                      : "bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 text-ink dark:text-white rounded-2xl rounded-tl-sm"
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <form onSubmit={handleSendMessage} className="p-5 border-t border-line/50 dark:border-white/5 bg-transparent shrink-0">
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="참여자들과 대화를 나눠보세요"
-                className="w-full bg-white dark:bg-[#0f1729] border border-line dark:border-white/10 rounded-full pl-5 pr-12 py-3.5 text-sm focus:outline-none focus:border-navy dark:focus:border-blue-500 shadow-inner transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={!chatInput.trim()}
-                className="absolute right-2 bg-navy text-white h-9 w-9 rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-chip disabled:text-muted transition-colors hover:bg-navy-dark"
-              >
-                <Send className="h-4 w-4 pl-0.5" />
-              </button>
-            </div>
-          </form>
-        </div>
+        </aside>
       </div>
     </main>
   );

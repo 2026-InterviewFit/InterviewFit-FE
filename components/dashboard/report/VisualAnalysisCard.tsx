@@ -50,17 +50,17 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
               <h4 className="text-base font-bold text-navy dark:text-white">시선 및 눈 깜빡임 분석</h4>
             </div>
             <span className="text-2xl font-bold text-blue-600">
-              {eye.score}<span className="text-sm text-muted">점</span>
+              {formatScore(eye.score)}
             </span>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="분당 깜빡임(BPM)" value={`${eye.blinkRate}회`} />
-            <StatBox label="총 깜빡임 횟수" value={`${eye.blinkCount}회`} />
-            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "-"} />
+            <StatBox label="분당 깜빡임(BPM)" value={formatCount(eye.blinkRate)} />
+            <StatBox label="총 깜빡임 횟수" value={formatCount(eye.blinkCount)} />
+            <StatBox label="영상 길이" value={pose?.totalDuration ? `${Math.round(pose.totalDuration)}초` : "분석 데이터 없음"} />
           </div>
           <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
-            {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+            {eye.feedback || "상세 분석 피드백이 없습니다."}
           </p>
         </div>
       )}
@@ -76,13 +76,13 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
               <h4 className="text-base font-bold text-navy dark:text-white">시선 방향 분석</h4>
             </div>
             <span className="text-2xl font-bold text-cyan-600">
-              {gaze.score}<span className="text-sm text-muted">점</span>
+              {formatScore(gaze.score)}
             </span>
           </div>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <StatBox label="정면 응시 비율" value={`${(gaze.centerRatio * 100).toFixed(1)}%`} />
-            <StatBox label="시선 이탈 비율" value={`${(gaze.gazeAwayRatio * 100).toFixed(1)}%`} isWarning={gaze.gazeAwayRatio > 0.3} />
-            <StatBox label="시선 이탈 횟수" value={`${gaze.gazeAwayCount}회`} />
+            <StatBox label="정면 응시 비율" value={formatRatio(gaze.centerRatio)} />
+            <StatBox label="시선 이탈 비율" value={formatRatio(gaze.gazeAwayRatio)} isWarning={Number.isFinite(gaze.gazeAwayRatio) && gaze.gazeAwayRatio > 0.3} />
+            <StatBox label="시선 이탈 횟수" value={formatCount(gaze.gazeAwayCount)} />
           </div>
           <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
             {gaze.feedback || gaze.evaluation || "시선 방향에 대한 상세 피드백이 없습니다."}
@@ -102,19 +102,19 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
-                {pose.grade} Grade
+                {pose.grade ? `${pose.grade} Grade` : "분석 데이터 없음"}
               </span>
               <span className="text-2xl font-bold text-indigo-600">
-                {pose.score}<span className="text-sm text-muted">점</span>
+                {formatScore(pose.score)}
               </span>
             </div>
           </div>
 
           {/* 1. 최상단: 전체 요약 (비율, 총 횟수, 총 시간) */}
           <div className="flex flex-wrap justify-center gap-4 mb-6">
-            <StatBox label="전체 불안정 비율" value={`${(pose.badRatio * 100).toFixed(1)}%`} isWarning={pose.badRatio > 0.3} />
-            <StatBox label="총 불안정 감지 횟수" value={`${pose.badCount}회`} />
-            <StatBox label="총 불안정 지속 시간" value={`${pose.badDuration.toFixed(1)}초`} />
+            <StatBox label="전체 불안정 비율" value={formatRatio(pose.badRatio)} isWarning={Number.isFinite(pose.badRatio) && pose.badRatio > 0.3} />
+            <StatBox label="총 불안정 감지 횟수" value={formatCount(pose.badCount)} />
+            <StatBox label="총 불안정 지속 시간" value={formatDuration(pose.badDuration)} />
           </div>
 
           {/* 2. 아코디언: 세부 부위별 분석 (얼굴, 어깨) */}
@@ -143,8 +143,8 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
                       </div>
                       
                       <div className="flex justify-center gap-4">
-                        <StatBox label="이탈 감지 횟수" value={`${pose.faceBadCount}회`} />
-                        <StatBox label="이탈 지속 시간" value={`${pose.faceBadDuration.toFixed(1)}초`} />
+                        <StatBox label="이탈 감지 횟수" value={formatCount(pose.faceBadCount)} />
+                        <StatBox label="이탈 지속 시간" value={formatDuration(pose.faceBadDuration)} />
                       </div>
                     </div>
 
@@ -156,8 +156,8 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
                         <User className="h-4 w-4" /> 어깨 흔들림 (Shoulder Bad)
                       </div>
                       <div className="flex justify-center gap-4">
-                        <StatBox label="흔들림 감지 횟수" value={`${pose.shoulderBadCount}회`} />
-                        <StatBox label="흔들림 지속 시간" value={`${pose.shoulderBadDuration.toFixed(1)}초`} />
+                        <StatBox label="흔들림 감지 횟수" value={formatCount(pose.shoulderBadCount)} />
+                        <StatBox label="흔들림 지속 시간" value={formatDuration(pose.shoulderBadDuration)} />
                       </div>
                     </div>
                     
@@ -172,6 +172,16 @@ export default function VisualAnalysisCard({ answerData, showGaze = false }: Vis
     </div>
   );
 }
+
+function formatScore(value: number) {
+  return Number.isFinite(value)
+    ? <>{value}<span className="text-sm text-muted">점</span></>
+    : <span className="text-sm text-muted">분석 데이터 없음</span>;
+}
+
+const formatCount = (value: number) => Number.isFinite(value) ? `${value}회` : "분석 데이터 없음";
+const formatDuration = (value: number) => Number.isFinite(value) ? `${value.toFixed(1)}초` : "분석 데이터 없음";
+const formatRatio = (value: number) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "분석 데이터 없음";
 
 // 스탯 박스 헬퍼 컴포넌트
 function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {
