@@ -1,4 +1,5 @@
 // hooks/useInterviewCamera.ts
+
 import {
   useCallback,
   useEffect,
@@ -11,7 +12,10 @@ import {
   uploadAnswerVideo,
 } from "@/lib/api";
 
-import fixWebmDuration from "fix-webm-duration";
+import {
+  fixWebmBlobDuration,
+  getSupportedWebmMimeType,
+} from "@/lib/mediaRecorder";
 
 
 interface UseInterviewCameraProps {
@@ -45,8 +49,8 @@ export function useInterviewCamera({
   /**
    * 면접 전체 영상 녹화용 MediaRecorder.
    *
-   * 기존 눈깜빡임 / 자세 / 전체 분석 기능을 위해
-   * 면접 시작부터 analyzing 전까지 계속 유지한다.
+   * 눈깜빡임 / 자세 / 전체 분석을 위해
+   * 면접 시작부터 analyzing 직전까지 계속 녹화한다.
    */
   const mediaRecorderRef =
     useRef<MediaRecorder | null>(null);
@@ -70,7 +74,7 @@ export function useInterviewCamera({
    * Blob -> STT -> 꼬리질문 생성
    *
    * 꼬리질문 답변:
-   * 다음 단계에서 Blob -> STT -> follow_up_answers 저장
+   * Blob -> STT -> follow_up_answers 저장
    */
   const answerRecorderRef =
     useRef<MediaRecorder | null>(null);
@@ -101,6 +105,8 @@ export function useInterviewCamera({
           (track) =>
             track.stop(),
         );
+
+      streamRef.current = null;
     }, []);
 
 
@@ -326,6 +332,9 @@ export function useInterviewCamera({
         clearInterval(
           pollIntervalRef.current,
         );
+
+        pollIntervalRef.current =
+          null;
       }
 
 
@@ -392,7 +401,9 @@ export function useInterviewCamera({
 
 
   /**
-   * 기존 전체 영상 녹화 / 업로드 / 분석 로직.
+   * =====================================================
+   * 전체 영상 녹화 / 업로드 / 분석 폴링
+   * =====================================================
    */
   useEffect(() => {
     if (
@@ -404,11 +415,7 @@ export function useInterviewCamera({
 
 
       const mimeType =
-        MediaRecorder.isTypeSupported(
-          "video/webm;codecs=vp8,opus",
-        )
-          ? "video/webm;codecs=vp8,opus"
-          : "video/webm";
+        getSupportedWebmMimeType();
 
 
       const recorder =
@@ -439,6 +446,7 @@ export function useInterviewCamera({
       recordStartTimeRef.current =
         Date.now();
 
+
       recorder.start(1000);
     }
 
@@ -447,8 +455,8 @@ export function useInterviewCamera({
       step === "analyzing"
     ) {
       /**
-       * 면접 중단/최종 종료 시 남아 있는
-       * 답변 구간 녹음은 정리한다.
+       * 마지막 꼬리질문 답변 처리 후
+       * 남아 있는 구간 녹음이 있으면 정리한다.
        */
       discardAnswerRecording();
     }
@@ -464,7 +472,11 @@ export function useInterviewCamera({
       setAnalysisProgress(1);
 
 
-      mediaRecorderRef.current.onstop =
+      const recorder =
+        mediaRecorderRef.current;
+
+
+      recorder.onstop =
         async () => {
           try {
             const rawBlob =
@@ -472,6 +484,7 @@ export function useInterviewCamera({
                 chunksRef.current,
                 {
                   type:
+                    recorder.mimeType ||
                     "video/webm",
                 },
               );
@@ -501,32 +514,16 @@ export function useInterviewCamera({
               recordStartTimeRef.current;
 
 
-            const blob: Blob =
-              await new Promise(
-                (
-                  resolve,
-                  reject,
-                ) => {
-                  fixWebmDuration(
-                    rawBlob,
-                    recordedDurationMs,
-                    (
-                      fixedBlob: Blob,
-                    ) => {
-                      if (fixedBlob) {
-                        resolve(
-                          fixedBlob,
-                        );
-                      } else {
-                        reject(
-                          new Error(
-                            "영상 길이 정보 복구에 실패했습니다.",
-                          ),
-                        );
-                      }
-                    },
-                  );
-                },
+            /**
+             * develop에서 사용하던 duration 보정 유틸을 유지한다.
+             *
+             * 녹화한 webm의 duration metadata를 복구해야
+             * FastAPI / ffmpeg 쪽 전체 분석이 안정적으로 동작한다.
+             */
+            const blob =
+              await fixWebmBlobDuration(
+                rawBlob,
+                recordedDurationMs,
               );
 
 
@@ -545,6 +542,9 @@ export function useInterviewCamera({
               });
 
 
+            /**
+             * 대시보드에서 최근 분석 기록을 찾기 위한 로컬 기록.
+             */
             const historyItem = {
               interviewId,
               userId:
@@ -580,7 +580,7 @@ export function useInterviewCamera({
             );
 
 
-            const prev =
+            const previousHistory =
               JSON.parse(
                 localStorage.getItem(
                   "interviewAnalysisHistory",
@@ -593,14 +593,17 @@ export function useInterviewCamera({
               JSON.stringify(
                 [
                   historyItem,
-                  ...prev.filter(
+                  ...previousHistory.filter(
                     (item: {
                       interviewId?: number;
                     }) =>
                       item.interviewId !==
                       interviewId,
                   ),
-                ].slice(0, 20),
+                ].slice(
+                  0,
+                  20,
+                ),
               ),
             );
 
@@ -608,6 +611,10 @@ export function useInterviewCamera({
             setAnalysisProgress(40);
 
 
+            /**
+             * 백엔드의 비동기 eye / pose 분석이
+             * 완료될 때까지 3초마다 report를 확인한다.
+             */
             pollIntervalRef.current =
               setInterval(
                 async () => {
@@ -628,6 +635,9 @@ export function useInterviewCamera({
                         clearInterval(
                           pollIntervalRef.current,
                         );
+
+                        pollIntervalRef.current =
+                          null;
                       }
 
 
@@ -651,6 +661,9 @@ export function useInterviewCamera({
                         clearInterval(
                           pollIntervalRef.current,
                         );
+
+                        pollIntervalRef.current =
+                          null;
                       }
 
 
@@ -659,6 +672,10 @@ export function useInterviewCamera({
                       );
 
                     } else {
+                      /**
+                       * RUNNING 동안에는 99%를 넘지 않도록
+                       * 표시 진행률만 조금씩 증가시킨다.
+                       */
                       setAnalysisProgress(
                         (prevProgress) =>
                           prevProgress < 98
@@ -674,7 +691,7 @@ export function useInterviewCamera({
 
                   } catch {
                     /**
-                     * 폴링 중 일시적 네트워크 오류는
+                     * 폴링 도중 일시적인 네트워크 오류는
                      * 다음 주기에 다시 확인한다.
                      */
                   }
@@ -696,7 +713,7 @@ export function useInterviewCamera({
         };
 
 
-      mediaRecorderRef.current.stop();
+      recorder.stop();
 
 
       if (
