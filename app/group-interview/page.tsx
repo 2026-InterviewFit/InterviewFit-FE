@@ -62,6 +62,7 @@ export default function GroupInterviewLobbyPage() {
       const message = cause instanceof Error ? cause.message : "면접방 개설에 실패했습니다.";
       setError(message);
       alert(message);
+      throw cause;
     }
   };
 

@@ -5,9 +5,10 @@ import type { AnswerReport } from "@/types";
 
 interface SpeechAnalysisCardProps {
   answerData?: AnswerReport;
+  useActualMetrics?: boolean;
 }
 
-export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardProps) {
+export default function SpeechAnalysisCard({ answerData, useActualMetrics = false }: SpeechAnalysisCardProps) {
   const speech = answerData?.speech;
   
   if (!speech) {
@@ -37,10 +38,8 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
     console.error("AI Evaluation JSON 파싱 실패:", e);
   }
 
-  // 백엔드 명세 확정 전 임시 변수 처리
-  const volumeStability = "우수"; 
-  const keywordRate = 78; 
-  const silenceRatio = speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10)) * 100 : 0; 
+  const pauseRate = Number.isFinite(speech.pauseRatePercent) ? speech.pauseRatePercent : undefined;
+  const volumeDeviation = Number.isFinite(speech.volumeDbStd) ? speech.volumeDbStd : undefined;
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -54,10 +53,20 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatBox label="발화 속도 (CPS)" value={`${speech.charactersPerSecond.toFixed(1)}자/초`} />
-          <StatBox label="침묵 시간 (비율)" value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${silenceRatio.toFixed(1)}%)`} isWarning={silenceRatio > 15} />
-          <StatBox label="음량 안정성" value={volumeStability} />
-          <StatBox label="핵심 키워드 포함률" value={`${keywordRate}%`} />
+          <StatBox label="발화 속도 (CPS)" value={formatMetric(speech.charactersPerSecond, "자/초")} />
+          {useActualMetrics ? (
+            <>
+              <StatBox label="침묵 시간" value={formatMetric(speech.totalSilenceSeconds, "초")} />
+              <StatBox label="침묵 비율" value={pauseRate === undefined ? "분석 데이터 없음" : `${pauseRate.toFixed(1)}%`} isWarning={pauseRate !== undefined && pauseRate > 15} />
+              <StatBox label="음량 편차" value={volumeDeviation === undefined ? "분석 데이터 없음" : `${volumeDeviation.toFixed(1)}dB`} />
+            </>
+          ) : (
+            <>
+              <StatBox label="침묵 시간 (비율)" value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10) * 100).toFixed(1) : "0.0"}%)`} />
+              <StatBox label="음량 안정성" value="우수" />
+              <StatBox label="핵심 키워드 포함률" value="78%" />
+            </>
+          )}
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-black/5">
@@ -66,7 +75,7 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
               <KeyRound className="h-4 w-4 text-amber-500" /> 습관어 및 반복 표현
             </span>
             <span className="text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-md">
-              총 {speech.totalFillerCount}회 감지
+              {Number.isFinite(speech.totalFillerCount) ? `총 ${speech.totalFillerCount}회 감지` : "분석 데이터 없음"}
             </span>
           </div>
           <p className="text-xs text-muted leading-relaxed break-keep">
@@ -111,13 +120,15 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {["S (Situation)", "T (Task)", "A (Action)", "R (Result)"].map((label, idx) => {
-            const scoreValues = Object.values(aiEvaluation.star_score || {});
-            const score = typeof scoreValues[idx] === "number" ? scoreValues[idx] : "-";
+            const starScore = aiEvaluation.star_score as Record<string, unknown>;
+            const keys = [["S", "s", "situation"], ["T", "t", "task"], ["A", "a", "action"], ["R", "r", "result"]][idx];
+            const rawScore = keys.map((key) => starScore?.[key]).find((value) => typeof value === "number");
+            const score = typeof rawScore === "number" ? rawScore : "분석 데이터 없음";
             
             return (
               <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 text-center flex flex-col gap-1 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-500">{label}</span>
-                <span className="text-lg font-bold text-amber-500">{score}점</span>
+                <span className="text-lg font-bold text-amber-500">{typeof score === "number" ? `${score}점` : score}</span>
               </div>
             );
           })}
@@ -128,6 +139,10 @@ export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardPro
       </div>
     </div>
   );
+}
+
+function formatMetric(value: number, suffix: string) {
+  return Number.isFinite(value) ? `${value.toFixed(1)}${suffix}` : "분석 데이터 없음";
 }
 
 function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {

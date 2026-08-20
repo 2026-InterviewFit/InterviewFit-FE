@@ -48,6 +48,8 @@ export default function CreateRoomModal({ open, onClose, onCreate }: CreateRoomM
       await onCreate({ title: title.trim(), jobRoleId, maxParticipants, scheduledStartTime });
       reset();
       onClose();
+    } catch {
+      // 부모가 오류 메시지를 표시한다. 입력값과 모달은 그대로 유지한다.
     } finally {
       setIsSubmitting(false);
     }

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Clock3, FileVideo, RefreshCw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, FileVideo, RefreshCw, UserRound } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import SpeechAnalysisCard from "@/components/dashboard/report/SpeechAnalysisCard";
+import VisualAnalysisCard from "@/components/dashboard/report/VisualAnalysisCard";
 import {
   getGroupAnswerAnalysis,
   getMyGroupInterviewAnswers,
@@ -12,27 +14,13 @@ import {
   retryGroupAnswerAnalysis,
 } from "@/lib/groupInterviewApi";
 import { GROUP_ANALYSIS_STATUS_LABEL, getGroupAnalysisStatusClassName } from "@/lib/groupInterviewDashboard";
+import { toGroupAnswerReport } from "@/lib/groupInterviewAnalysis";
 import { formatKoreanDateTime } from "@/lib/reportUtils";
-import { safeParseJson } from "@/lib/utils";
 import type {
   GroupInterviewAnswerAnalysis,
   GroupInterviewHistory,
   GroupInterviewMyAnswer,
 } from "@/types/groupInterview";
-
-type JsonValue = Record<string, unknown> | unknown[] | null;
-
-function JsonResult({ title, value }: { title: string; value: JsonValue }) {
-  if (value == null) return null;
-  return (
-    <section className="rounded-2xl border border-line bg-slate-50 p-5 dark:border-white/10 dark:bg-[#0f1729]">
-      <h4 className="text-sm font-bold text-navy dark:text-white">{title}</h4>
-      <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    </section>
-  );
-}
 
 export default function GroupInterviewDashboardDetailPage() {
   const params = useParams<{ roomId: string }>();
@@ -163,11 +151,38 @@ export default function GroupInterviewDashboardDetailPage() {
 
   const selectedAnswer = answers.find((answer) => answer.answerId === selectedAnswerId) ?? null;
   const analysis = selectedAnswerId ? analysisByAnswerId[selectedAnswerId] : undefined;
-  const speechResult = safeParseJson<JsonValue>(analysis?.speechResultJson, null);
-  const aiEvaluation = safeParseJson<JsonValue>(analysis?.aiEvaluationJson, null);
-  const blinkingResult = safeParseJson<JsonValue>(analysis?.eyeBlinkingResultJson, null);
-  const gazeResult = safeParseJson<JsonValue>(analysis?.eyeGazeResultJson, null);
-  const poseResult = safeParseJson<JsonValue>(analysis?.poseResultJson, null);
+  const answerReport = analysis ? toGroupAnswerReport(analysis) : undefined;
+  const hasPendingAnalysis = answers.some((answer) =>
+    ["WAITING", "UPLOADED", "RUNNING"].includes(answer.analysisStatus),
+  );
+
+  useEffect(() => {
+    if (!hasPendingAnalysis || !isValidRoomId) return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void getMyGroupInterviewAnswers(roomId)
+        .then((nextAnswers) => {
+          if (!cancelled) setAnswers(nextAnswers);
+        })
+        .catch((cause) => {
+          if (!cancelled) setAnalysisError(handleError(cause, "분석 상태를 확인하지 못했습니다."));
+        });
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // router는 App Router에서 안정적인 참조다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPendingAnalysis, isValidRoomId, roomId]);
+
+  useEffect(() => {
+    if (selectedAnswer?.analysisStatus !== "DONE") return;
+    // 선택된 답변이 polling 중 DONE으로 바뀔 때 상세 결과를 한 번 조회한다.
+    const timer = window.setTimeout(() => void loadAnalysis(selectedAnswer.answerId), 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAnswer?.answerId, selectedAnswer?.analysisStatus]);
 
   return (
     <DashboardLayout>
@@ -229,13 +244,15 @@ export default function GroupInterviewDashboardDetailPage() {
                     {analysisError && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-600">{analysisError}</div>}
                     {analysis && (
                       <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2 text-emerald-600"><CheckCircle2 className="h-5 w-5" /><h3 className="text-lg font-bold">질문별 AI 분석 완료</h3></div>
-                        <section className="rounded-2xl border border-line p-5 dark:border-white/10"><h4 className="text-sm font-bold text-navy dark:text-white">답변 내용</h4><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted">{analysis.speechText || "변환된 답변 텍스트가 없습니다."}</p></section>
-                        <JsonResult title="음성 분석" value={speechResult} />
-                        <JsonResult title="AI 평가" value={aiEvaluation} />
-                        <JsonResult title="눈 깜빡임 분석" value={blinkingResult} />
-                        <JsonResult title="시선 분석" value={gazeResult} />
-                        <JsonResult title="자세 분석" value={poseResult} />
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-emerald-600"><CheckCircle2 className="h-5 w-5" /><h3 className="text-lg font-bold">질문별 AI 분석 완료</h3></div>
+                          <div className="flex flex-wrap gap-2 text-[11px] font-bold text-muted">
+                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-600">라운드 {analysis.round} · 질문 {analysis.questionIndex}</span>
+                            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800"><UserRound className="h-3.5 w-3.5" />참가자 #{analysis.participantUserId}</span>
+                          </div>
+                        </div>
+                        <VisualAnalysisCard answerData={answerReport} showGaze />
+                        <SpeechAnalysisCard answerData={answerReport} useActualMetrics />
                       </div>
                     )}
                   </div>
