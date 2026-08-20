@@ -76,6 +76,11 @@ export type FollowUpQuestionResponse = {
 };
 
 
+export type FollowUpTranscriptionResponse = {
+  text: string;
+};
+
+
 /* =========================================================
  * 공통 함수
  * ========================================================= */
@@ -439,6 +444,75 @@ export async function getInterviewReport(
 /* =========================================================
  * 꼬리질문
  * ========================================================= */
+
+
+/**
+ * 기본 질문/꼬리질문에 대한 답변 음성 Blob을
+ * Spring STT 프록시로 전송한다.
+ *
+ * POST /api/followup/transcribe
+ *
+ * Spring -> FastAPI -> Whisper 순서로 처리되고
+ * FE에는 변환된 텍스트만 반환된다.
+ */
+export async function transcribeFollowUpAnswer(
+  file: Blob,
+): Promise<FollowUpTranscriptionResponse> {
+
+  const formData =
+    new FormData();
+
+
+  formData.append(
+    "file",
+    file,
+    "answer.webm",
+  );
+
+
+  const response =
+    await authFetch(
+      `${API_BASE_URL}/api/followup/transcribe`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+
+
+  if (!response.ok) {
+
+    const errorMessage =
+      await readErrorMessage(
+        response,
+      );
+
+
+    throw new Error(
+      `답변 STT 실패 (${response.status}): ${errorMessage}`,
+    );
+  }
+
+
+  const result =
+    (await response.json()) as
+      FollowUpTranscriptionResponse;
+
+
+  if (
+    !result.text ||
+    !result.text.trim()
+  ) {
+    throw new Error(
+      "답변 음성을 텍스트로 변환하지 못했습니다.",
+    );
+  }
+
+
+  return {
+    text: result.text.trim(),
+  };
+}
 
 
 /**

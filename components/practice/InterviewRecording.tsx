@@ -7,10 +7,12 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 
 import { useInterviewStore } from "@/store/useInterviewStore";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
+import { transcribeFollowUpAnswer } from "@/lib/api";
 
 import JobSelectionModal from "./JobSelectionModal";
 import AnalysisProgress from "./AnalysisProgress";
@@ -70,6 +72,13 @@ export default function InterviewRecording({
     currentQuestionIdx,
     setCurrentQuestionIdx,
 
+    questionMode,
+    followUpQuestion,
+    isFetchingFollowUp,
+    followUpError,
+    requestFollowUp,
+    resetFollowUp,
+
     jobRoles,
 
     selectedCategory,
@@ -92,6 +101,15 @@ export default function InterviewRecording({
 
     reset,
   } = useInterviewStore();
+
+
+  /**
+   * 답변 음성 STT + 꼬리질문 생성 처리 중 여부.
+   *
+   * 연속 클릭으로 동일 답변이 여러 번 전송되는 것을 막는다.
+   */
+  const [isProcessingAnswer, setIsProcessingAnswer] =
+    useState(false);
 
 
   /**
@@ -203,20 +221,28 @@ export default function InterviewRecording({
 
 
   /**
-   * 현재 화면에 표시할 기본 질문.
+   * 현재 기본 질문.
    *
-   * followup 연결 시에는 나중에:
-   *
-   * questionMode === "followup"
-   *   ? followUpQuestion
-   *   : currentQuestion
-   *
-   * 형태로 변경한다.
+   * 일반 질문 생성/조회는 다른 팀원의 담당이므로
+   * 현재 하드코딩 질문 구조를 그대로 유지한다.
    */
   const currentQuestion =
     currentQuestions[
       currentQuestionIdx
     ] ?? "";
+
+
+  /**
+   * 실제 화면에 표시할 질문.
+   *
+   * base     -> 현재 기본 질문
+   * followup -> Gemini가 방금 생성한 꼬리질문
+   */
+  const displayedQuestion =
+    questionMode === "followup"
+      ? followUpQuestion ??
+        "꼬리질문을 불러오는 중입니다..."
+      : currentQuestion;
 
 
   /**
@@ -234,6 +260,20 @@ export default function InterviewRecording({
     fetchJobRoles,
     reset,
   ]);
+
+
+  /**
+   * store에서 발생한 꼬리질문 API 오류는
+   * 개발 중 확인할 수 있도록 콘솔에 남긴다.
+   */
+  useEffect(() => {
+    if (followUpError) {
+      console.error(
+        "[FollowUp]",
+        followUpError,
+      );
+    }
+  }, [followUpError]);
 
 
   /**
@@ -341,51 +381,208 @@ export default function InterviewRecording({
 
 
   /**
-   * 현재는:
+   * 첫 번째 기본 질문 녹화가 시작되면
+   * 꼬리질문용 답변 오디오도 동시에 시작한다.
    *
-   * 기본 질문 1
-   * → 기본 질문 2
-   * → 기본 질문 3
+   * 전체 영상 MediaRecorder와 별개의 녹음이므로
+   * 눈/자세 분석용 전체 영상은 끊기지 않는다.
+   */
+  useEffect(() => {
+    if (
+      step === "recording"
+    ) {
+      camera.startAnswerRecording();
+    }
+  }, [
+    step,
+    camera.startAnswerRecording,
+  ]);
+
+
+  /**
+   * =====================================================
+   * 답변 완료 처리
+   * =====================================================
    *
-   * 흐름.
+   * base 질문에서 답변 완료:
    *
-   * followup 연결 완료 후에는:
+   * 답변 오디오 종료
+   * -> Spring /api/followup/transcribe
+   * -> FastAPI Whisper STT
+   * -> 실제 답변 텍스트
+   * -> Spring /api/followup/create
+   * -> 꼬리질문 1개 생성
+   * -> questionMode = followup
+   * -> 꼬리질문 답변 녹음 시작
    *
-   * 기본 질문 1
-   * → 꼬리질문 1
-   * → 기본 질문 2
-   * → 꼬리질문 2
-   * → 기본 질문 3
-   * → 꼬리질문 3
+   * followup 질문에서 답변 완료:
    *
-   * 로 변경해야 한다.
+   * 현재 단계에서는 답변 오디오만 종료하고
+   * 다음 기본 질문으로 이동한다.
+   *
+   * 꼬리질문 답변 STT + DB 저장은 다음 단계에서 연결한다.
    */
   const handleNextQuestion =
-    () => {
+    async () => {
       if (
-        currentQuestionIdx <
-        currentQuestions.length -
-          1
+        isProcessingAnswer ||
+        step !== "recording"
       ) {
-        questionTimestampsRef.current.push(
-          time,
-        );
-
-        setCurrentQuestionIdx(
-          (prev) =>
-            prev + 1,
-        );
-
         return;
       }
 
-      /**
-       * 마지막 기본 질문까지 끝났으면
-       * 전체 분석 화면으로 이동.
-       */
-      setStep(
-        "analyzing",
-      );
+
+      setIsProcessingAnswer(true);
+
+
+      try {
+        /**
+         * -----------------------------------------------
+         * 기본 질문 답변 완료
+         * -----------------------------------------------
+         */
+        if (
+          questionMode === "base"
+        ) {
+          const answerBlob =
+            await camera.stopAnswerRecording();
+
+
+          console.log(
+            "[FollowUp] 기본 질문 답변 음성 녹음 완료:",
+            answerBlob.size,
+            "bytes",
+          );
+
+
+          const transcription =
+            await transcribeFollowUpAnswer(
+              answerBlob,
+            );
+
+
+          console.log(
+            "[FollowUp] STT 결과:",
+            transcription.text,
+          );
+
+
+          const created =
+            await requestFollowUp({
+              originalQuestion:
+                currentQuestion,
+
+              answer:
+                transcription.text,
+            });
+
+
+          if (!created) {
+            throw new Error(
+              "꼬리질문 생성에 실패했습니다.",
+            );
+          }
+
+
+          /**
+           * store의 questionMode가 followup으로 바뀌었으므로
+           * 화면에는 생성된 꼬리질문이 표시된다.
+           *
+           * 동시에 꼬리질문 답변용 새 오디오 녹음을 시작한다.
+           */
+          const started =
+            camera.startAnswerRecording();
+
+
+          if (!started) {
+            console.warn(
+              "[FollowUp] 꼬리질문 답변 오디오 녹음을 시작하지 못했습니다.",
+            );
+          }
+
+
+          return;
+        }
+
+
+        /**
+         * -----------------------------------------------
+         * 꼬리질문 답변 완료
+         * -----------------------------------------------
+         *
+         * 현재 단계에서는 별도 오디오 구간을 정상 종료만 한다.
+         * 다음 단계에서 이 Blob을 STT하고 DB에 저장한다.
+         */
+        await camera.stopAnswerRecording();
+
+
+        resetFollowUp();
+
+
+        if (
+          currentQuestionIdx <
+          currentQuestions.length - 1
+        ) {
+          /**
+           * 기본 질문 하나 + 꼬리질문 하나가 끝난 시점.
+           * 전체 영상 분석의 질문 구간 경계로 유지한다.
+           */
+          questionTimestampsRef.current.push(
+            time,
+          );
+
+
+          setCurrentQuestionIdx(
+            (prev) =>
+              prev + 1,
+          );
+
+
+          /**
+           * 다음 기본 질문 답변용 오디오 녹음 시작.
+           */
+          camera.startAnswerRecording();
+
+
+          return;
+        }
+
+
+        /**
+         * Q3의 꼬리질문까지 답변했을 때만
+         * 기존 전체 영상 분석으로 넘어간다.
+         */
+        setStep(
+          "analyzing",
+        );
+
+      } catch (error) {
+        console.error(
+          "[FollowUp] 답변 처리 실패:",
+          error,
+        );
+
+
+        /**
+         * 기본 질문 처리 중 실패했다면
+         * 같은 질문에 다시 답할 수 있도록 오디오 녹음을 재시작한다.
+         */
+        if (
+          questionMode === "base"
+        ) {
+          camera.startAnswerRecording();
+        }
+
+
+        alert(
+          error instanceof Error
+            ? error.message
+            : "답변 처리 중 오류가 발생했습니다.",
+        );
+
+      } finally {
+        setIsProcessingAnswer(false);
+      }
     };
 
 
@@ -461,7 +658,7 @@ export default function InterviewRecording({
           selectedJobData?.name
         }
         currentQuestionText={
-          currentQuestion
+          displayedQuestion
         }
         onCancelStop={() =>
           setStep(
@@ -568,6 +765,13 @@ export default function InterviewRecording({
               }
               totalQuestions={
                 currentQuestions.length
+              }
+              questionMode={
+                questionMode
+              }
+              isProcessingAnswer={
+                isProcessingAnswer ||
+                isFetchingFollowUp
               }
               onStartCountdown={() =>
                 setStep(
