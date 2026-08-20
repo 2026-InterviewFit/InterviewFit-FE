@@ -478,19 +478,19 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
 
         {/* 우측 사이드 패널 */}
         <div className="w-full lg:w-[380px] h-[400px] lg:h-full flex flex-col shrink-0 border-t lg:border-t-0 lg:border-l border-line/50 dark:border-white/5 bg-surface/50 dark:bg-[#111827]/40 backdrop-blur-xl">
-          <div className="p-6 pb-5 border-b border-line/50 dark:border-white/5 shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <span className="text-xs font-bold text-navy dark:text-white uppercase tracking-widest">Interview Tip</span>
+          <div className="flex items-start gap-3 border-b border-line/50 px-5 py-3 dark:border-white/5 shrink-0">
+            <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-navy dark:text-white">Tip</span>
             </div>
-            <div className="h-12 flex items-center">
+            <div className="flex min-h-10 flex-1 items-center">
               <AnimatePresence mode="wait">
                 <motion.p
                   key={tipIndex}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="text-sm font-medium leading-relaxed text-ink dark:text-gray-300 break-keep"
+                  className="break-keep text-[13px] font-medium leading-5 text-ink dark:text-gray-300"
                 >
                   {INTERVIEW_TIPS[tipIndex]}
                 </motion.p>

@@ -7,17 +7,19 @@ import type { AnswerReport } from "@/types";
 
 interface VisualAnalysisCardProps {
   answerData?: AnswerReport;
+  showGaze?: boolean;
 }
 
-export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardProps) {
+export default function VisualAnalysisCard({ answerData, showGaze = false }: VisualAnalysisCardProps) {
   const eye = answerData?.eye;
+  const gaze = answerData?.gaze;
   const pose = answerData?.pose;
   
   // 아코디언 상태 관리
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // 데이터가 없을 경우 빈 상태(Empty State) 반환
-  if (!eye && !pose) {
+  if (!eye && !(showGaze && gaze) && !pose) {
     return (
       <div className="flex flex-col gap-6 w-full">
         <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-10 border border-black/[0.04] dark:border-white/[0.04] shadow-sm flex flex-col items-center justify-center text-center gap-3 min-h-[200px]">
@@ -59,6 +61,31 @@ export default function VisualAnalysisCard({ answerData }: VisualAnalysisCardPro
           </div>
           <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
             {eye.feedback || "시선 처리가 전반적으로 안정적입니다."}
+          </p>
+        </div>
+      )}
+
+      {/* --- 시선 방향 분석 카드 --- */}
+      {showGaze && gaze && (
+        <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-cyan-50 p-2 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-300">
+                <ScanFace className="h-4 w-4" />
+              </div>
+              <h4 className="text-base font-bold text-navy dark:text-white">시선 방향 분석</h4>
+            </div>
+            <span className="text-2xl font-bold text-cyan-600">
+              {gaze.score}<span className="text-sm text-muted">점</span>
+            </span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <StatBox label="정면 응시 비율" value={`${(gaze.centerRatio * 100).toFixed(1)}%`} />
+            <StatBox label="시선 이탈 비율" value={`${(gaze.gazeAwayRatio * 100).toFixed(1)}%`} isWarning={gaze.gazeAwayRatio > 0.3} />
+            <StatBox label="시선 이탈 횟수" value={`${gaze.gazeAwayCount}회`} />
+          </div>
+          <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
+            {gaze.feedback || gaze.evaluation || "시선 방향에 대한 상세 피드백이 없습니다."}
           </p>
         </div>
       )}
