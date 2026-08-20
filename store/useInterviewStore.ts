@@ -74,6 +74,14 @@ interface InterviewState {
     | null;
 
   /**
+   * 생성된 꼬리질문의 DB ID.
+   * 다음 단계에서 꼬리질문 답변 저장 시 사용한다.
+   */
+  followUpQuestionId:
+    | number
+    | null;
+
+  /**
    * 꼬리질문 생성 상태.
    */
   isFetchingFollowUp: boolean;
@@ -195,15 +203,16 @@ interface InterviewActions {
     () => Promise<void>;
 
   /**
-   * 기본 질문 답변을 기반으로
-   * 꼬리질문을 1개 생성한다.
-   *
-   * 현재 실제 STT 연결 전이므로 answer는 placeholder다.
+   * 기본 질문 + Whisper STT 답변을 기반으로
+   * 꼬리질문을 정확히 1개 생성한다.
    */
   requestFollowUp:
     (
       params: {
         originalQuestion:
+          string;
+
+        answer:
           string;
       },
     ) => Promise<boolean>;
@@ -237,6 +246,9 @@ const initialState: InterviewState = {
     "base",
 
   followUpQuestion:
+    null,
+
+  followUpQuestionId:
     null,
 
   isFetchingFollowUp:
@@ -657,6 +669,9 @@ export const useInterviewStore =
               followUpQuestion:
                 null,
 
+              followUpQuestionId:
+                null,
+
               isFetchingFollowUp:
                 false,
 
@@ -689,6 +704,7 @@ export const useInterviewStore =
       requestFollowUp:
         async ({
           originalQuestion,
+          answer,
         }) => {
           const {
             jobRoleId,
@@ -738,13 +754,7 @@ export const useInterviewStore =
 
                 originalQuestion,
 
-                /**
-                 * TODO:
-                 * STT 연결 시
-                 * 실제 기본 질문 답변 텍스트로 교체.
-                 */
-                answer:
-                  "답변을 마쳤습니다.",
+                answer,
 
                 interviewStyle:
                   "normal",
@@ -792,12 +802,34 @@ export const useInterviewStore =
             }
 
 
+            const followUpId =
+              (
+                result.followUpQuestionId as
+                  | number
+                  | undefined
+              ) ??
+              (
+                result.follow_up_question_id as
+                  | number
+                  | undefined
+              ) ??
+              (
+                result.id as
+                  | number
+                  | undefined
+              ) ??
+              null;
+
+
             set({
               isFetchingFollowUp:
                 false,
 
               followUpQuestion:
                 followUpText,
+
+              followUpQuestionId:
+                followUpId,
 
               questionMode:
                 "followup",
@@ -845,6 +877,9 @@ export const useInterviewStore =
               "base",
 
             followUpQuestion:
+              null,
+
+            followUpQuestionId:
               null,
 
             isFetchingFollowUp:
