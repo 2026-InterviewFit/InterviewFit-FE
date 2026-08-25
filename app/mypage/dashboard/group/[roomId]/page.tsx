@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clock3, FileVideo, RefreshCw, UserRound } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import GroupComparisonView from "@/components/dashboard/group/GroupComparisonView";
 import SpeechAnalysisCard from "@/components/dashboard/report/SpeechAnalysisCard";
 import VisualAnalysisCard from "@/components/dashboard/report/VisualAnalysisCard";
 import {
@@ -38,6 +39,7 @@ export default function GroupInterviewDashboardDetailPage() {
   const [analysisLoadingId, setAnalysisLoadingId] = useState<number | null>(null);
   const [analysisError, setAnalysisError] = useState("");
   const [retryingAnswerIds, setRetryingAnswerIds] = useState<number[]>([]);
+  const [dashboardView, setDashboardView] = useState<"personal" | "comparison">("personal");
 
   const handleError = (cause: unknown, fallback: string) => {
     if (cause instanceof GroupInterviewApiError && cause.status === 401) {
@@ -205,7 +207,28 @@ export default function GroupInterviewDashboardDetailPage() {
               </p>
             </header>
 
-            {answers.length === 0 ? (
+            <div className="mt-6 flex w-fit rounded-2xl border border-line bg-white p-1 shadow-sm dark:border-white/10 dark:bg-[#1e293b]">
+              <button
+                type="button"
+                onClick={() => setDashboardView("personal")}
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${
+                  dashboardView === "personal" ? "bg-navy text-white" : "text-muted hover:text-ink dark:hover:text-white"
+                }`}
+              >
+                내 분석
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardView("comparison")}
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${
+                  dashboardView === "comparison" ? "bg-navy text-white" : "text-muted hover:text-ink dark:hover:text-white"
+                }`}
+              >
+                참가자 비교
+              </button>
+            </div>
+
+            {dashboardView === "personal" ? (answers.length === 0 ? (
               <div className="mt-6 rounded-[24px] border border-line bg-white p-12 text-center text-sm font-bold text-muted dark:border-white/10 dark:bg-[#1e293b]">저장된 답변 기록이 없습니다.</div>
             ) : (
               <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -258,6 +281,8 @@ export default function GroupInterviewDashboardDetailPage() {
                   </div>
                 </section>
               </div>
+            )) : (
+              <GroupComparisonView roomId={roomId} />
             )}
           </>
         )}

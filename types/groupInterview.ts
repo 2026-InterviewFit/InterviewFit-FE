@@ -133,3 +133,24 @@ export interface GroupInterviewAnswerAnalysis {
   analysisCompletedAt: string | null;
   errorMessage: string | null;
 }
+
+export type GroupInterviewComparisonStatus = "DONE" | "PARTIAL";
+
+export type GroupInterviewComparisonScope = "QUESTION" | "OVERALL";
+
+export interface GroupInterviewComparison {
+  participantUserId: number;
+  scope: GroupInterviewComparisonScope;
+  questionIndex: number | null;
+  contentScore: number | null;
+  speechScore: number | null;
+  gazeScore: number | null;
+  poseScore: number | null;
+  blinkScore: number | null;
+  totalScore: number | null;
+  rank: number | null;
+  participantCount: number;
+  strengthSummary: string | null;
+  improvementSummary: string | null;
+  status: GroupInterviewComparisonStatus;
+}
