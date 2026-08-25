@@ -43,7 +43,9 @@ export default function GroupInterviewLobbyPage() {
   }, [loadRooms]);
 
   const filtered = rooms.filter((r) => {
-    const catOk = activeCategory === "전체" || r.category === activeCategory;
+    const catOk = activeCategory === "전체"
+      || r.category === activeCategory
+      || r.role === activeCategory;
     const recruitOk =
       !onlyRecruiting || r.status === "recruiting" || r.status === "almostFull";
     return catOk && recruitOk;

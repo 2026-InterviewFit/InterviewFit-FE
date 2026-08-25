@@ -1,4 +1,4 @@
-import { authFetch, readErrorMessage } from "@/lib/api";
+import { authFetch, getJobRoles, readErrorMessage } from "@/lib/api";
 import type {
   CreateRoomPayload,
   GroupInterviewAnswerAnalysis,
@@ -10,6 +10,7 @@ import type {
   LiveKitCredentials,
   RoomStatus,
 } from "@/types/groupInterview";
+import type { JobRole } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 const GROUP_API = `${API_BASE_URL}/api/group-interviews`;
@@ -54,20 +55,22 @@ function roomStatus(raw: JsonObject, current: number, max: number): RoomStatus {
   return "finished";
 }
 
-function normalizeRoom(value: unknown): GroupRoom {
+function normalizeRoom(value: unknown, jobRolesById?: ReadonlyMap<number, JobRole>): GroupRoom {
   const raw = (value ?? {}) as JsonObject;
   const jobRole = (raw.jobRole ?? {}) as JsonObject;
   const host = (raw.host ?? raw.hostUser ?? {}) as JsonObject;
   const id = number(raw.id ?? raw.roomId);
+  const jobRoleId = number(raw.jobRoleId ?? jobRole.id);
+  const matchedJobRole = jobRolesById?.get(jobRoleId);
   const current = number(raw.currentParticipants ?? raw.participantCount ?? raw.currentParticipantCount);
   const max = number(raw.maxParticipants, 4);
   return {
     id,
     roomId: String(raw.id ?? raw.roomId ?? ""),
     title: text(raw.title),
-    category: text(raw.category ?? jobRole.category, "기타"),
-    role: text(raw.role ?? raw.jobRoleName ?? jobRole.name),
-    jobRoleId: number(raw.jobRoleId ?? jobRole.id) || undefined,
+    category: text(raw.category ?? jobRole.category ?? matchedJobRole?.category, "기타"),
+    role: text(raw.role ?? raw.jobRoleName ?? jobRole.name ?? matchedJobRole?.name),
+    jobRoleId: jobRoleId || undefined,
     currentParticipants: current,
     maxParticipants: max,
     status: roomStatus(raw, current, max),
@@ -92,10 +95,14 @@ function normalizeParticipant(value: unknown): GroupParticipant {
 }
 
 export async function getGroupRooms(): Promise<GroupRoom[]> {
-  const data = await unwrap(await fetch(GROUP_API));
+  const [data, jobRoles] = await Promise.all([
+    fetch(GROUP_API).then(unwrap),
+    getJobRoles(),
+  ]);
+  const jobRolesById = new Map(jobRoles.map((jobRole) => [jobRole.id, jobRole]));
   const list = Array.isArray(data) ? data : ((data as JsonObject)?.content ?? []);
   return (Array.isArray(list) ? list : [])
-    .map(normalizeRoom)
+    .map((room) => normalizeRoom(room, jobRolesById))
     .sort((first, second) => {
       const firstCreatedAt = first.createdAt ? Date.parse(first.createdAt) : Number.NaN;
       const secondCreatedAt = second.createdAt ? Date.parse(second.createdAt) : Number.NaN;
