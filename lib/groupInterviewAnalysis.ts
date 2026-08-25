@@ -9,6 +9,12 @@ import type { GroupInterviewAnswerAnalysis } from "@/types/groupInterview";
 
 type JsonObject = Record<string, unknown>;
 
+interface PoseSample {
+  timestamp: number;
+  shoulderStatus: string;
+  faceStatus: string;
+}
+
 const isObject = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -20,6 +26,21 @@ function parseObject(value: string | null): JsonObject | null {
     if (typeof parsed === "string") parsed = JSON.parse(parsed);
     if (!isObject(parsed)) return null;
     const nested = parsed.result ?? parsed.data;
+    return isObject(nested) ? { ...parsed, ...nested } : parsed;
+  } catch {
+    return null;
+  }
+}
+
+function parsePoseResult(value: string | null): JsonObject | unknown[] | null {
+  if (!value) return null;
+  try {
+    let parsed: unknown = JSON.parse(value);
+    if (typeof parsed === "string") parsed = JSON.parse(parsed);
+    if (Array.isArray(parsed)) return parsed;
+    if (!isObject(parsed)) return null;
+    const nested = parsed.result ?? parsed.data;
+    if (Array.isArray(nested)) return nested;
     return isObject(nested) ? { ...parsed, ...nested } : parsed;
   } catch {
     return null;
@@ -129,8 +150,96 @@ function toGazeReport(analysisId: number, value: JsonObject | null): GazeReport 
   };
 }
 
-function toPoseReport(analysisId: number, value: JsonObject | null): PoseReport | null {
+function poseGrade(score: number): string {
+  if (score >= 85) return "EXCELLENT";
+  if (score >= 75) return "GOOD";
+  if (score >= 65) return "AVERAGE";
+  if (score >= 50) return "NEEDS_IMPROVEMENT";
+  return "POOR";
+}
+
+function summarizePoseSamples(analysisId: number, values: unknown[]): PoseReport | null {
+  const samplesByTimestamp = new Map<number, PoseSample>();
+  values.forEach((value) => {
+    if (!isObject(value)) return;
+    const timestamp = numberValue(pick(value, "timestamp"));
+    const shoulderStatus = stringValue(pick(value, "shoulder_status", "shoulderStatus")).toUpperCase();
+    const faceStatus = stringValue(pick(value, "face_status", "faceStatus")).toUpperCase();
+    if (!Number.isFinite(timestamp) || (!shoulderStatus && !faceStatus)) return;
+    samplesByTimestamp.set(timestamp, { timestamp, shoulderStatus, faceStatus });
+  });
+
+  const samples = [...samplesByTimestamp.values()].sort((first, second) => first.timestamp - second.timestamp);
+  if (samples.length === 0) return null;
+
+  const positiveIntervals = samples.slice(1)
+    .map((sample, index) => sample.timestamp - samples[index].timestamp)
+    .filter((interval) => interval > 0)
+    .sort((first, second) => first - second);
+  const sampleInterval = positiveIntervals.length > 0
+    ? positiveIntervals[Math.floor(positiveIntervals.length / 2)]
+    : 1;
+  const durations = samples.map((sample, index) => (
+    index < samples.length - 1
+      ? Math.max(0, samples[index + 1].timestamp - sample.timestamp)
+      : sampleInterval
+  ));
+
+  let badCount = 0;
+  let shoulderBadCount = 0;
+  let faceBadCount = 0;
+  let badDuration = 0;
+  let shoulderBadDuration = 0;
+  let faceBadDuration = 0;
+  let notDetectedDuration = 0;
+
+  samples.forEach((sample, index) => {
+    const duration = durations[index];
+    const shoulderBad = sample.shoulderStatus === "BAD";
+    const faceBad = sample.faceStatus === "BAD";
+    const notDetected = sample.shoulderStatus === "NOT_DETECTED" || sample.faceStatus === "NOT_DETECTED";
+    if (shoulderBad || faceBad) {
+      badCount += 1;
+      badDuration += duration;
+    }
+    if (shoulderBad) {
+      shoulderBadCount += 1;
+      shoulderBadDuration += duration;
+    }
+    if (faceBad) {
+      faceBadCount += 1;
+      faceBadDuration += duration;
+    }
+    if (notDetected) notDetectedDuration += duration;
+  });
+
+  const totalDuration = durations.reduce((sum, duration) => sum + duration, 0);
+  const badRatio = totalDuration > 0 ? Math.min(1, badDuration / totalDuration) : 0;
+  let score = totalDuration > 0 ? Math.max(0, 100 - Math.trunc(badRatio * 100)) : 0;
+  const notDetectedRatio = totalDuration > 0 ? notDetectedDuration / totalDuration : 0;
+  if (notDetectedRatio >= 0.3) {
+    const penalty = Math.trunc(((notDetectedRatio - 0.3) / 0.7) * 100);
+    score = Math.max(0, score - penalty);
+  }
+
+  return {
+    reportId: analysisId,
+    totalDuration,
+    badCount,
+    badDuration,
+    shoulderBadCount,
+    faceBadCount,
+    shoulderBadDuration,
+    faceBadDuration,
+    badRatio,
+    score,
+    grade: poseGrade(score),
+  };
+}
+
+function toPoseReport(analysisId: number, value: JsonObject | unknown[] | null): PoseReport | null {
   if (!value) return null;
+  if (Array.isArray(value)) return summarizePoseSamples(analysisId, value);
   return {
     reportId: analysisId,
     totalDuration: numberValue(pick(value, "totalDuration", "total_duration", "durationSeconds", "duration_seconds")),
@@ -151,7 +260,7 @@ export function toGroupAnswerReport(analysis: GroupInterviewAnswerAnalysis): Ans
   const ai = parseObject(analysis.aiEvaluationJson);
   const blinking = parseObject(analysis.eyeBlinkingResultJson);
   const gaze = parseObject(analysis.eyeGazeResultJson);
-  const pose = parseObject(analysis.poseResultJson);
+  const pose = parsePoseResult(analysis.poseResultJson);
 
   return {
     answerId: analysis.answerId,

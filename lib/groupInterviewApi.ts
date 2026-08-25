@@ -69,6 +69,7 @@ function normalizeRoom(value: unknown): GroupRoom {
     maxParticipants: max,
     status: roomStatus(raw, current, max),
     startAt: text(raw.scheduledStartTime ?? raw.startAt),
+    createdAt: text(raw.createdAt ?? raw.created_at) || undefined,
     hostName: text(raw.hostName ?? host.name, "방장"),
   };
 }
@@ -90,7 +91,16 @@ function normalizeParticipant(value: unknown): GroupParticipant {
 export async function getGroupRooms(): Promise<GroupRoom[]> {
   const data = await unwrap(await fetch(GROUP_API));
   const list = Array.isArray(data) ? data : ((data as JsonObject)?.content ?? []);
-  return (Array.isArray(list) ? list : []).map(normalizeRoom);
+  return (Array.isArray(list) ? list : [])
+    .map(normalizeRoom)
+    .sort((first, second) => {
+      const firstCreatedAt = first.createdAt ? Date.parse(first.createdAt) : Number.NaN;
+      const secondCreatedAt = second.createdAt ? Date.parse(second.createdAt) : Number.NaN;
+      if (Number.isFinite(firstCreatedAt) && Number.isFinite(secondCreatedAt)) {
+        return secondCreatedAt - firstCreatedAt;
+      }
+      return second.id - first.id;
+    });
 }
 
 export async function getGroupRoom(roomId: string): Promise<GroupRoom> {
