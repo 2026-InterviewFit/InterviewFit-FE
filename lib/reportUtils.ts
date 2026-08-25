@@ -55,8 +55,41 @@ export const getVideoPlaybackUrl = (objectKey?: string) => {
 };
 
 export const getSortedReports = (report?: InterviewReportResponse) => [...(report?.answers ?? [])].sort((a, b) => a.answerOrder - b.answerOrder);
-export const getAverageEyeScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.eye?.score));
-export const getAveragePoseScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.pose?.score));
+export const getAverageEyeScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.eye?.score;
+
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
+
+  // 과거 답변별 eye 구조와의 호환을 위한 fallback
+  return average(
+    getSortedReports(report).map(
+      (answer) => answer.eye?.score,
+    ),
+  );
+};
+
+export const getAveragePoseScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.pose?.score;
+
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
+
+  // 과거 답변별 pose 구조와의 호환을 위한 fallback
+  return average(
+    getSortedReports(report).map(
+      (answer) => answer.pose?.score,
+    ),
+  );
+};
 export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
 
 // 🔑 신규: STAR 평가 점수를 0~100 척도로 환산해서 평균

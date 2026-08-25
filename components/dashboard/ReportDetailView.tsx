@@ -109,7 +109,11 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
             <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
           </div>
           
-          <VisualAnalysisCard answerData={selectedAnswerData} />
+          <VisualAnalysisCard
+            answerData={selectedAnswerData}
+            eyeReport={report?.eye}
+            poseReport={report?.pose}
+          />
           <SpeechAnalysisCard answerData={selectedAnswerData} />
         </div>
 
