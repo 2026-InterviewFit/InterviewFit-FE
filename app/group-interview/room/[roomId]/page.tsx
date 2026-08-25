@@ -173,6 +173,9 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     rememberAnswerContext,
     stopRecording,
     stopRecordingForAnswer,
+    retryRecording,
+    isCheckingAudio,
+    canRetryRecording,
     uploadStatuses,
     recordingError,
     retryUpload,
@@ -252,7 +255,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
       // Blob 생성까지만 기다린다. duration 보정과 영상 업로드는 별도로 계속 진행된다.
       const stoppedContext = await stopRecordingForAnswer(answerId);
       if (!stoppedContext || stoppedContext.answerId !== answerId) {
-        setAnswerError("현재 답변 녹화가 시작되지 않아 답변을 완료할 수 없습니다.");
+        setAnswerError("현재 답변 녹화 또는 마이크 입력을 확인할 수 없습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
         return;
       }
       if (stoppedContext && wasAnswerTimedOut(stoppedContext.answerId)) return;
@@ -390,14 +393,23 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
               disabled={!isMyTurn
                 || (!isQuestionView && !isAnswering)
                 || pendingAnswerAction !== null
+                || isCheckingAudio
                 || requestedActionKey === answerActionKey}
-              onClick={() => void (isQuestionView ? handleStartAnswer() : handleCompleteAnswer())}
+              onClick={() => void (isQuestionView
+                ? handleStartAnswer()
+                : canRetryRecording
+                  ? retryRecording()
+                  : handleCompleteAnswer())}
               className="flex items-center gap-1.5 rounded-full bg-navy px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-white shadow-md transition-transform enabled:hover:scale-105 enabled:hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-40"
             >
               {pendingAnswerAction
                 ? "처리 중..."
+                : isCheckingAudio
+                  ? "마이크 확인 중..."
                 : isQuestionView
                   ? "답변 시작"
+                  : canRetryRecording
+                    ? "녹화 다시 시도"
                   : "답변 완료"} <ChevronRight className="h-4 w-4" />
             </button>
           </div>

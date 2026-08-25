@@ -49,26 +49,54 @@ function toSpeechReport(
 ): SpeechReport | null {
   if (!analysis.speechText && !speech && !ai) return null;
 
-  const aiWithoutModelAnswer = ai
-    ? Object.fromEntries(Object.entries(ai).filter(([key]) => !["modelAnswer", "model_answer"].includes(key)))
+  const speechPace = pick(speech, "speech_pace_analysis", "speechPaceAnalysis");
+  const silence = pick(speech, "silence_analysis", "silenceAnalysis");
+  const fillerWords = pick(speech, "filler_word_analysis", "fillerWordAnalysis");
+  const speechAi = pick(speech, "ai_evaluation", "aiEvaluation");
+  const speechPaceObject = isObject(speechPace) ? speechPace : null;
+  const silenceObject = isObject(silence) ? silence : null;
+  const fillerWordsObject = isObject(fillerWords) ? fillerWords : null;
+  const speechAiObject = isObject(speechAi) ? speechAi : null;
+  // Spring의 별도 aiEvaluationJson을 우선하고, 없는 필드만 speechResultJson의 ai_evaluation으로 보완한다.
+  const effectiveAi = speechAiObject || ai ? { ...speechAiObject, ...ai } : null;
+  const aiWithoutModelAnswer = effectiveAi
+    ? Object.fromEntries(Object.entries(effectiveAi).filter(([key]) => !["modelAnswer", "model_answer"].includes(key)))
     : null;
+  const storedSpeechText = analysis.speechText?.trim();
 
   return {
     reportId: analysis.analysisId,
-    textScript: analysis.speechText ?? stringValue(pick(speech, "textScript", "text_script", "transcript")),
-    totalFillerCount: numberValue(pick(speech, "totalFillerCount", "total_filler_count", "fillerCount", "filler_count")),
+    textScript: storedSpeechText
+      ? analysis.speechText as string
+      : stringValue(pick(speech, "textScript", "text_script", "transcript")),
+    totalFillerCount: numberValue(
+      pick(fillerWordsObject, "total_count", "totalCount")
+        ?? pick(speech, "totalFillerCount", "total_filler_count", "fillerCount", "filler_count"),
+    ),
     fillerDetailsJson: JSON.stringify(pick(speech, "fillerDetails", "filler_details") ?? []),
     repeatedExpressionsJson: JSON.stringify(pick(speech, "repeatedExpressions", "repeated_expressions") ?? []),
     paceEvaluation: stringValue(pick(speech, "paceEvaluation", "pace_evaluation")),
     paceFeedback: stringValue(pick(speech, "paceFeedback", "pace_feedback", "feedback")),
-    charactersPerSecond: numberValue(pick(speech, "charactersPerSecond", "characters_per_second", "cps")),
-    totalSilenceSeconds: numberValue(pick(speech, "totalSilenceSeconds", "total_silence_seconds", "silenceSeconds", "silence_seconds")),
-    pauseRatePercent: numberValue(pick(speech, "pauseRatePercent", "pause_rate_percent")),
-    criticalSilenceCount: numberValue(pick(speech, "criticalSilenceCount", "critical_silence_count")),
+    charactersPerSecond: numberValue(
+      pick(speechPaceObject, "characters_per_second", "charactersPerSecond")
+        ?? pick(speech, "charactersPerSecond", "characters_per_second", "cps"),
+    ),
+    totalSilenceSeconds: numberValue(
+      pick(silenceObject, "total_silence_seconds", "totalSilenceSeconds")
+        ?? pick(speech, "totalSilenceSeconds", "total_silence_seconds", "silenceSeconds", "silence_seconds"),
+    ),
+    pauseRatePercent: numberValue(
+      pick(silenceObject, "pause_rate_percent", "pauseRatePercent")
+        ?? pick(speech, "pauseRatePercent", "pause_rate_percent"),
+    ),
+    criticalSilenceCount: numberValue(
+      pick(silenceObject, "critical_silence_count", "criticalSilenceCount")
+        ?? pick(speech, "criticalSilenceCount", "critical_silence_count"),
+    ),
     volumeDbMean: numberValue(pick(speech, "volumeDbMean", "volume_db_mean"), Number.NaN),
     volumeDbStd: numberValue(pick(speech, "volumeDbStd", "volume_db_std"), Number.NaN),
     aiEvaluationJson: aiWithoutModelAnswer ? JSON.stringify(aiWithoutModelAnswer) : undefined,
-    modelAnswer: stringValue(pick(ai, "modelAnswer", "model_answer")),
+    modelAnswer: stringValue(pick(effectiveAi, "modelAnswer", "model_answer")),
   };
 }
 
