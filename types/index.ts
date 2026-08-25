@@ -95,57 +95,71 @@ export type GazeReport = {
   resultJson?: GazeResultJson;
 };
 
+export type EyeReport = {
+  reportId: number;
+  blinkCount: number;
+  blinkRate: number;
+  durationSeconds?: number;
+  notDetectedCount?: number;
+  notDetectedRatio?: number;
+  score: number;
+  grade?: string | null;
+  feedback: string;
+  blinkLogs?: {
+    logId?: number;
+    timestamp: number;
+    eventType?: string;
+  }[];
+};
+
+export type PoseReport = {
+  reportId: number;
+  totalDuration: number;
+  badCount: number;
+  badDuration: number;
+  shoulderBadCount: number;
+  faceBadCount: number;
+  shoulderBadDuration: number;
+  faceBadDuration: number;
+  badRatio: number;
+  score: number;
+  grade: string | null;
+};
+
+export type SpeechReport = {
+  reportId: number;
+  textScript: string;
+  totalFillerCount: number;
+  fillerDetailsJson: string;
+  repeatedExpressionsJson: string;
+  paceEvaluation: string;
+  paceFeedback: string;
+  charactersPerSecond: number;
+  totalSilenceSeconds: number;
+  pauseRatePercent: number;
+  criticalSilenceCount: number;
+  volumeDbMean?: number;
+  volumeDbStd?: number;
+  aiEvaluationJson?: string;
+  modelAnswer?: string;
+};
+
 export type AnswerReport = {
   answerId: number;
   questionId: number | null;
   questionText: string | null;
-  videoObjectKey: string;
+  videoObjectKey?: string;
+  answerText?: string | null;
   answerOrder: number;
+  startTime?: number | null;
+  endTime?: number | null;
   analysisStatus: string;
   errorMessage: string | null;
 
-  eye: {
-    reportId: number;
-    blinkCount: number;
-    blinkRate: number;
-    durationSeconds?: number;
-    score: number;
-    feedback: string;
-  } | null;
-
-  gaze?: GazeReport | null;
-
-  pose: {
-    reportId: number;
-    totalDuration: number;
-    badCount: number;
-    badDuration: number;
-    shoulderBadCount: number;
-    faceBadCount: number;
-    shoulderBadDuration: number;
-    faceBadDuration: number;
-    badRatio: number;
-    score: number;
-    grade: string;
-  } | null;
-
-  speech: {
-    reportId: number;
-    textScript: string;
-    totalFillerCount: number;
-    fillerDetailsJson: string;
-    repeatedExpressionsJson: string;
-    paceEvaluation: string;
-    paceFeedback: string;
-    charactersPerSecond: number;
-    totalSilenceSeconds: number;
-    pauseRatePercent: number;
-    criticalSilenceCount: number;
-    volumeDbMean: number;
-    volumeDbStd: number;
-    aiEvaluationJson: string;
-    modelAnswer: string;
-  } | null;
+  eye: EyeReport | null;
+  gaze: GazeReport | null;
+  pose: PoseReport | null;
+  speech: SpeechReport | null;
 };
 
 export type InterviewReportResponse = {
@@ -157,6 +171,11 @@ export type InterviewReportResponse = {
   createdAt: string;
   analysisStatus: string;
   completed: boolean;
+
+  eye?: EyeReport | null;
+  gaze?: GazeReport | null;
+  pose?: PoseReport | null;
+
   answers: AnswerReport[];
 };
 
@@ -166,13 +185,9 @@ export type InterviewHistoryItem = {
   userId?: number;
   jobRoleId?: number;
   jobName?: string;
-  answers?: {
-    answerId: number;
-    answerOrder?: number;
-    analysisStatus?: string;
-  }[];
-  questionTexts?: string[];
-  questionTimestamps?: number[];
+  answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
+  questionTexts?: string[];      // 🔑 질문 목록 (문항별 순서대로)
+  questionTimestamps?: number[]; // 🔑 각 질문이 영상에서 시작된 시각(초 단위)
   savedAt?: string;
 };
 
