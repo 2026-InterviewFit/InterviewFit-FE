@@ -1,146 +1,409 @@
+// components/shared/Navbar.tsx
+
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { User, Menu, X } from "lucide-react";
+
+import {
+  AnimatePresence,
+  motion,
+} from "framer-motion";
+
+import {
+  Menu,
+  User,
+  X,
+} from "lucide-react";
+
+import {
+  getAuthUser,
+  isAuthenticated,
+  logout,
+  subscribeToAuthChanges,
+} from "@/lib/auth";
+
 
 const LANDING_MENUS = [
-  { label: "기능 소개", href: "/features" },
-  { label: "커뮤니티", href: "/community" },
-  { label: "사용법", href: "/how-to" },
-  { label: "소개", href: "/about" },
+  {
+    label: "기능 소개",
+    href: "/features",
+  },
+  {
+    label: "커뮤니티",
+    href: "/community",
+  },
+  {
+    label: "그룹 면접",
+    href: "/group-interview",
+  },
+  {
+    label: "PT 면접",
+    href: "/pt-interview",
+  },
+  {
+    label: "사용법",
+    href: "/how-to",
+  },
 ];
 
-export default function Navbar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const userName = "김은재"; 
 
+export default function Navbar() {
+  const [
+    isLoggedIn,
+    setIsLoggedIn,
+  ] = useState(false);
+
+  const [
+    userName,
+    setUserName,
+  ] = useState("사용자");
+
+  const [
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+  ] = useState(false);
+
+  const [
+    scrolled,
+    setScrolled,
+  ] = useState(false);
+
+
+  /**
+   * 로그인 상태 및 사용자 정보 동기화
+   */
   useEffect(() => {
-    const session = sessionStorage.getItem("mockSession");
-    if (session === "true") {
-      setIsLoggedIn(true);
-    }
+    const syncAuthState = () => {
+      const authenticated =
+        isAuthenticated();
+
+      const user =
+        getAuthUser();
+
+      setIsLoggedIn(
+        authenticated,
+      );
+
+      setUserName(
+        user?.name?.trim() ||
+          "사용자",
+      );
+    };
+
+
+    /**
+     * 최초 Navbar 렌더링 시
+     * 현재 인증 상태 확인
+     */
+    syncAuthState();
+
+
+    /**
+     * AuthBootstrap에서
+     * /api/users/me 호출 후 사용자 정보가 복구되거나
+     * 로그인/로그아웃 상태가 변경되면 반영
+     */
+    const unsubscribe =
+      subscribeToAuthChanges(
+        () => {
+          syncAuthState();
+        },
+      );
+
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("mockSession");
-    setIsLoggedIn(false);
-  };
+
+  /**
+   * 스크롤 시 Navbar 배경 처리
+   */
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(
+        window.scrollY > 20,
+      );
+    };
+
+
+    handleScroll();
+
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+    );
+
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+      );
+    };
+  }, []);
+
+
+  /**
+   * 로그아웃
+   *
+   * POST /api/users/logout
+   *
+   * Spring에서
+   *
+   * interviewfit_access_token
+   * interviewfit_refresh_token
+   *
+   * 두 HttpOnly Cookie를 제거한다.
+   */
+  const handleLogout =
+    async () => {
+      await logout();
+
+      setIsLoggedIn(false);
+
+      setUserName(
+        "사용자",
+      );
+
+      setIsMobileMenuOpen(
+        false,
+      );
+    };
+
 
   return (
-    <motion.nav
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="absolute top-0 left-0 z-50 w-full bg-transparent"
-    >
-      <div className="relative mx-auto flex h-20 max-w-[1280px] items-center justify-between px-6 md:px-8">
-        
-        {/* 좌측 로고 */}
-        <div className="flex w-auto md:w-1/3 justify-start z-50">
-          <Link href="/" className="font-serif text-xl md:text-2xl font-bold tracking-tight text-ink">
-            InterviewFit
-          </Link>
-        </div>
+    <>
+      <motion.nav
+        initial={{
+          opacity: 0,
+          y: -12,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.6,
+        }}
+        className={`fixed top-0 left-0 z-50 w-full transition-all duration-300 ${
+          scrolled
+            ? "border-b border-line bg-white/70 shadow-sm backdrop-blur-md dark:bg-[#0f1729]/70"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="relative mx-auto flex h-16 max-w-[1280px] items-center justify-between px-6 md:h-20 md:px-8">
 
-        {/* 데스크톱 중앙 고정 메뉴 (모바일에서는 숨김) */}
-        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-chip px-2 py-2">
-          {LANDING_MENUS.map((item) => (
+          {/* 좌측 로고 */}
+          <div className="z-50 flex w-auto justify-start md:w-1/3">
             <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-ink/80 transition-colors hover:bg-white hover:text-ink"
+              href="/"
+              className="font-serif text-xl font-bold tracking-tight text-ink transition-opacity hover:opacity-80 md:text-2xl"
             >
-              {item.label}
+              InterviewFit
             </Link>
-          ))}
-        </div>
+          </div>
 
-        {/* 우측 로그인 & 모바일 메뉴 토글 영역 */}
-        <div className="flex w-auto md:w-1/3 justify-end items-center gap-3 z-50">
-          {isLoggedIn ? (
-            <div className="flex items-center gap-2 md:gap-4">
-              <Link 
-                href="/mypage/dashboard"
-                className="flex items-center gap-2 md:gap-2.5 rounded-full md:pl-1.5 pr-2 md:pr-4 py-1.5 transition-colors hover:bg-gray-100"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <User className="h-4 w-4" strokeWidth={2.5} />
-                </div>
-                <span className="hidden sm:block text-sm font-medium text-ink">
-                  <strong className="font-bold">{userName}</strong>님
-                </span>
-              </Link>
 
-              <button
-                onClick={handleLogout}
-                className="hidden sm:block rounded-full border border-line bg-white px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-ink"
-              >
-                로그아웃
-              </button>
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="hidden sm:flex h-10 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-medium text-white transition-transform hover:scale-[1.03]"
-            >
-              시작하기
-              <span aria-hidden>→</span>
-            </Link>
-          )}
+          {/* 데스크톱 중앙 메뉴 */}
+          <div className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-line/50 bg-chip/50 px-2 py-1.5 backdrop-blur-sm md:flex">
 
-          {/* 모바일 햄버거 메뉴 버튼 */}
-          <button 
-            className="md:hidden flex items-center justify-center p-2 text-ink"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </div>
+            {LANDING_MENUS.map(
+              (item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
 
-      {/* 모바일 드롭다운 메뉴 (햄버거 버튼 클릭 시 등장) */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute top-20 left-0 w-full bg-white/95 backdrop-blur-xl border-b border-line shadow-lg md:hidden flex flex-col px-6 py-6 gap-4 z-40"
-          >
-            {LANDING_MENUS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-lg font-medium text-ink transition-colors hover:text-blue-600"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {!isLoggedIn ? (
+          </div>
+
+
+          {/* 우측 액션 영역 */}
+          <div className="z-50 flex w-auto items-center justify-end gap-3 md:w-1/3">
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-2 md:gap-4">
+
+                <Link
+                  href="/mypage/dashboard"
+                  className="flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors hover:bg-chip"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft/20 text-navy">
+                    <User
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.5}
+                    />
+                  </div>
+
+                  <span className="hidden text-sm font-medium text-ink sm:block">
+                    <strong className="font-bold">
+                      {userName}
+                    </strong>
+                    님
+                  </span>
+                </Link>
+
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleLogout();
+                  }}
+                  className="hidden rounded-full border border-line bg-surface px-4 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-chip hover:text-ink sm:block"
+                >
+                  로그아웃
+                </button>
+
+              </div>
+            ) : (
               <Link
                 href="/login"
-                className="mt-4 flex w-full h-12 items-center justify-center rounded-xl bg-navy text-base font-bold text-white"
+                className="hidden h-9 items-center gap-1.5 rounded-full bg-navy px-5 text-sm font-bold text-white shadow-sm transition-transform hover:scale-[1.03] hover:shadow-md sm:flex"
               >
-                지금 시작하기
+                시작하기
+
+                <span aria-hidden>
+                  →
+                </span>
               </Link>
-            ) : (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="mt-4 flex w-full h-12 items-center justify-center rounded-xl bg-gray-100 text-base font-bold text-ink"
-              >
-                로그아웃
-              </button>
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.nav>
+
+
+            {/* 모바일 햄버거 */}
+            <button
+              type="button"
+              aria-label={
+                isMobileMenuOpen
+                  ? "메뉴 닫기"
+                  : "메뉴 열기"
+              }
+              className="flex items-center justify-center p-2 text-ink md:hidden"
+              onClick={() =>
+                setIsMobileMenuOpen(
+                  (prev) =>
+                    !prev,
+                )
+              }
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+
+          </div>
+        </div>
+
+
+        {/* 모바일 메뉴 */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: -10,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              exit={{
+                opacity: 0,
+                y: -10,
+              }}
+              className="absolute top-16 left-0 z-40 flex w-full flex-col gap-2 border-b border-line bg-surface-glass px-6 py-6 shadow-lg backdrop-blur-xl md:hidden"
+            >
+
+              {LANDING_MENUS.map(
+                (item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-xl p-3 text-base font-bold text-ink transition-colors hover:bg-chip hover:text-navy"
+                    onClick={() =>
+                      setIsMobileMenuOpen(
+                        false,
+                      )
+                    }
+                  >
+                    {item.label}
+                  </Link>
+                ),
+              )}
+
+
+              <div className="my-2 h-px bg-line" />
+
+
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/mypage/dashboard"
+                    onClick={() =>
+                      setIsMobileMenuOpen(
+                        false,
+                      )
+                    }
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-chip text-sm font-bold text-ink"
+                  >
+                    <User
+                      className="h-4 w-4"
+                      strokeWidth={2.5}
+                    />
+
+                    <strong className="font-bold">
+                      {userName}
+                    </strong>
+
+                    님
+                  </Link>
+
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleLogout();
+                    }}
+                    className="mt-2 flex h-12 w-full items-center justify-center rounded-xl bg-chip text-sm font-bold text-ink"
+                  >
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() =>
+                    setIsMobileMenuOpen(
+                      false,
+                    )
+                  }
+                  className="mt-2 flex h-12 w-full items-center justify-center rounded-xl bg-navy text-sm font-bold text-white"
+                >
+                  지금 시작하기
+                </Link>
+              )}
+
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      </motion.nav>
+
+
+      <div className="h-16 md:h-20" />
+    </>
   );
 }
