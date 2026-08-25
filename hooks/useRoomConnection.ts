@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import { useLocalParticipant, useParticipants } from "@livekit/components-react";
 import SockJS from "sockjs-client";
@@ -36,24 +36,33 @@ export function useRoomConnection(roomId: string) {
   const [lastEvent, setLastEvent] = useState<GroupInterviewEvent | null>(null);
   const [connectionError, setConnectionError] = useState("");
   const [isReadyUpdating, setIsReadyUpdating] = useState(false);
+  const mountedRef = useRef(false);
+  const progressRevisionRef = useRef(0);
 
   const loadParticipants = useCallback(async () => {
     const value = await getGroupParticipants(roomId);
-    setApiParticipants(value);
+    if (mountedRef.current) setApiParticipants(value);
   }, [roomId]);
 
   const loadProgress = useCallback(async () => {
-    setProgress(await getGroupSession(roomId));
+    const requestRevision = ++progressRevisionRef.current;
+    const value = await getGroupSession(roomId);
+    if (!mountedRef.current || requestRevision !== progressRevisionRef.current) return;
+    setProgress(value);
   }, [roomId]);
 
   useEffect(() => {
     let cancelled = false;
+    mountedRef.current = true;
+    const initialProgressRevision = ++progressRevisionRef.current;
 
     void Promise.all([getGroupParticipants(roomId), getGroupSession(roomId)])
       .then(([participantValue, progressValue]) => {
         if (cancelled) return;
         setApiParticipants(participantValue);
-        setProgress(progressValue);
+        if (initialProgressRevision === progressRevisionRef.current) {
+          setProgress(progressValue);
+        }
       })
       .catch((cause) => {
         if (!cancelled) {
@@ -65,15 +74,20 @@ export function useRoomConnection(roomId: string) {
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws-interview`),
       reconnectDelay: 3000,
       onConnect: () => {
+        if (cancelled) return;
         setConnectionError("");
         // 재연결 사이에 놓친 broadcast가 있어도 서버의 현재 세션으로 복구한다.
         void loadProgress();
         client.subscribe(`/topic/room/${roomId}`, (frame) => {
+          if (cancelled) return;
           try {
             const event = JSON.parse(frame.body) as GroupInterviewEvent;
             setLastEvent(event);
             // 진행 상태는 이벤트명을 해석해 계산하지 않고 서버 payload를 그대로 쓴다.
-            if (event.progress) setProgress(event.progress);
+            if (event.progress) {
+              progressRevisionRef.current += 1;
+              setProgress(event.progress);
+            }
             if (PARTICIPANT_EVENTS.has(event.type)) void loadParticipants();
           } catch {
             setConnectionError("면접방 실시간 이벤트를 해석하지 못했습니다.");
@@ -81,9 +95,11 @@ export function useRoomConnection(roomId: string) {
         });
       },
       onStompError: (frame) => {
+        if (cancelled) return;
         setConnectionError(frame.headers.message || "면접방 실시간 연결에 실패했습니다.");
       },
       onWebSocketError: () => {
+        if (cancelled) return;
         setConnectionError("면접방 실시간 연결이 끊겼습니다. 재연결 중입니다.");
       },
     });
@@ -91,6 +107,8 @@ export function useRoomConnection(roomId: string) {
     client.activate();
     return () => {
       cancelled = true;
+      mountedRef.current = false;
+      progressRevisionRef.current += 1;
       void client.deactivate();
     };
   }, [loadParticipants, loadProgress, roomId]);
