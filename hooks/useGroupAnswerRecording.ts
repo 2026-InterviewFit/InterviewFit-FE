@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LocalParticipant } from "livekit-client";
+import type { LocalParticipant, LocalTrackPublication } from "livekit-client";
 import { Track } from "livekit-client";
 import { uploadGroupAnswerVideo } from "@/lib/groupInterviewApi";
 import { fixWebmBlobDuration, getSupportedWebmMimeType } from "@/lib/mediaRecorder";
@@ -26,12 +26,60 @@ interface AnswerRecordingContext {
   participantUserId: string;
   serverStartedAt: string | null;
   startedAtMs: number;
+  audioTrack: MediaStreamTrack;
+  microphonePublication: LocalTrackPublication;
 }
 
 interface AnswerContextInput {
   answerId: number | null | undefined;
   participantUserId: number | string | null | undefined;
   serverStartedAt: string | null | undefined;
+}
+
+const AUDIO_LEVEL_CHECK_MS = 1500;
+// 약 -66dBFS. 조용한 환경의 작은 입력도 허용하되 사실상 무음인 트랙은 거른다.
+const MIN_AUDIO_RMS = 0.0005;
+
+function checkAudioInputLevel(track: MediaStreamTrack): Promise<boolean> {
+  return new Promise((resolve) => {
+    const AudioContextClass = window.AudioContext;
+    const audioContext = new AudioContextClass();
+    const source = audioContext.createMediaStreamSource(new MediaStream([track]));
+    const analyser = audioContext.createAnalyser();
+    const samples = new Float32Array(analyser.fftSize);
+    let settled = false;
+    let animationFrame = 0;
+    let timer = 0;
+
+    const finish = (detected: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timer);
+      source.disconnect();
+      analyser.disconnect();
+      void audioContext.close();
+      resolve(detected);
+    };
+
+    const sample = () => {
+      if (!track.enabled || track.muted || track.readyState !== "live") {
+        finish(false);
+        return;
+      }
+      analyser.getFloatTimeDomainData(samples);
+      const sumSquares = samples.reduce((sum, value) => sum + value * value, 0);
+      if (Math.sqrt(sumSquares / samples.length) >= MIN_AUDIO_RMS) {
+        finish(true);
+        return;
+      }
+      animationFrame = window.requestAnimationFrame(sample);
+    };
+
+    source.connect(analyser);
+    timer = window.setTimeout(() => finish(false), AUDIO_LEVEL_CHECK_MS);
+    void audioContext.resume().then(sample).catch(() => finish(false));
+  });
 }
 
 export function useGroupAnswerRecording({
@@ -42,6 +90,7 @@ export function useGroupAnswerRecording({
   lastEvent,
 }: UseGroupAnswerRecordingOptions) {
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const isStartingRef = useRef(false);
   const currentAnswerContextRef = useRef<AnswerContextInput | null>(null);
   const recordingContextRef = useRef<AnswerRecordingContext | null>(null);
   const isStoppingRef = useRef(false);
@@ -51,9 +100,12 @@ export function useGroupAnswerRecording({
   const uploadedAnswerIdsRef = useRef(new Set<number>());
   const uploadingAnswerIdsRef = useRef(new Set<number>());
   const pendingUploadBlobsRef = useRef(new Map<number, Blob>());
+  const recordingStartAttemptRef = useRef(0);
   const mountedRef = useRef(true);
   const [uploadStatuses, setUploadStatuses] = useState<GroupVideoUploadStatus[]>([]);
   const [recordingError, setRecordingError] = useState("");
+  const [isCheckingAudio, setIsCheckingAudio] = useState(false);
+  const [canRetryRecording, setCanRetryRecording] = useState(false);
 
   const setUploadStatus = useCallback((next: GroupVideoUploadStatus | null, answerId: number) => {
     if (!mountedRef.current) return;
@@ -111,27 +163,74 @@ export function useGroupAnswerRecording({
     return stopPromiseRef.current;
   }, []);
 
-  const startRecording = useCallback((input: AnswerContextInput) => {
-    if (recorderRef.current || isStoppingRef.current) return;
+  const startRecording = useCallback(async (input: AnswerContextInput) => {
+    if (recorderRef.current || isStartingRef.current || isStoppingRef.current) return;
     if (typeof input.answerId !== "number") return;
+    isStartingRef.current = true;
+    const startAttempt = ++recordingStartAttemptRef.current;
+    setIsCheckingAudio(true);
+    setCanRetryRecording(false);
+
+    const microphonePublication = localParticipant.getTrackPublication(Track.Source.Microphone);
+    const localMicrophoneTrack = microphonePublication?.track;
+    const microphoneTrack = localMicrophoneTrack?.mediaStreamTrack;
+    const microphoneUnavailable = !microphonePublication
+      || !localMicrophoneTrack
+      || microphonePublication.isMuted
+      || localMicrophoneTrack.isMuted
+      || !microphoneTrack
+      || microphoneTrack.kind !== "audio"
+      || !microphoneTrack.enabled
+      || microphoneTrack.muted
+      || microphoneTrack.readyState === "ended";
+    if (microphoneUnavailable) {
+      isStartingRef.current = false;
+      setIsCheckingAudio(false);
+      setCanRetryRecording(true);
+      setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
+      return;
+    }
+
+    const hasAudioInput = await checkAudioInputLevel(microphoneTrack).catch(() => false);
+    if (!mountedRef.current || startAttempt !== recordingStartAttemptRef.current) return;
+    if (!hasAudioInput) {
+      isStartingRef.current = false;
+      setIsCheckingAudio(false);
+      setCanRetryRecording(true);
+      setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
+      return;
+    }
+
+    const cameraTrack = localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
+    const stream = new MediaStream(
+      [cameraTrack?.readyState === "live" ? cameraTrack : null, microphoneTrack]
+        .filter((track): track is MediaStreamTrack => Boolean(track)),
+    );
+    const streamAudioTrack = stream.getAudioTracks()[0];
+    if (
+      stream.getAudioTracks().length === 0
+      || streamAudioTrack !== microphoneTrack
+      || microphonePublication.isMuted
+      || localMicrophoneTrack.isMuted
+      || !streamAudioTrack.enabled
+      || streamAudioTrack.muted
+      || streamAudioTrack.readyState !== "live"
+    ) {
+      isStartingRef.current = false;
+      setIsCheckingAudio(false);
+      setCanRetryRecording(true);
+      setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
+      return;
+    }
 
     const recordingContext: AnswerRecordingContext = {
       answerId: input.answerId,
       participantUserId: String(input.participantUserId ?? ""),
       serverStartedAt: input.serverStartedAt ?? null,
       startedAtMs: Date.now(),
+      audioTrack: microphoneTrack,
+      microphonePublication,
     };
-
-    const cameraTrack = localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
-    const microphoneTrack = localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack;
-    if (!cameraTrack && !microphoneTrack) {
-      setRecordingError("녹화할 카메라 또는 마이크 트랙이 없습니다.");
-      return;
-    }
-
-    const stream = new MediaStream(
-      [cameraTrack, microphoneTrack].filter((track): track is MediaStreamTrack => Boolean(track)),
-    );
     const chunks: Blob[] = [];
 
     try {
@@ -179,13 +278,16 @@ export function useGroupAnswerRecording({
       recorderRef.current = recorder;
       setRecordingError("");
       recorder.start(1000);
+      isStartingRef.current = false;
+      setIsCheckingAudio(false);
+      setCanRetryRecording(false);
     } catch (cause) {
       recorderRef.current = null;
       recordingContextRef.current = null;
-      if (currentAnswerContextRef.current?.answerId === input.answerId) {
-        currentAnswerContextRef.current = null;
-      }
+      isStartingRef.current = false;
       isStoppingRef.current = false;
+      setIsCheckingAudio(false);
+      setCanRetryRecording(true);
       console.error("그룹 답변 녹화 시작 실패", cause);
       setRecordingError("답변 녹화를 시작하지 못했습니다.");
     }
@@ -200,14 +302,29 @@ export function useGroupAnswerRecording({
       || recorder.state !== "recording"
       || !context
       || context.answerId !== answerId
+      || context.microphonePublication.isMuted
+      || context.audioTrack.kind !== "audio"
+      || !context.audioTrack.enabled
+      || context.audioTrack.muted
+      || context.audioTrack.readyState !== "live"
+      || !recorder.stream.getAudioTracks().includes(context.audioTrack)
     ) {
       if (mountedRef.current) {
-        setRecordingError("현재 답변 녹화가 시작되지 않아 답변을 완료할 수 없습니다.");
+        setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
       }
       return Promise.resolve(null);
     }
     return stopRecording();
   }, [stopRecording]);
+
+  const retryRecording = useCallback(() => {
+    const context = currentAnswerContextRef.current;
+    if (!context || typeof context.answerId !== "number") {
+      setRecordingError("현재 답변 정보를 확인할 수 없어 녹화를 다시 시작할 수 없습니다.");
+      return;
+    }
+    void startRecording(context);
+  }, [startRecording]);
 
   useEffect(() => {
     const eventAnswerId = lastEvent?.progress?.answerId ?? lastEvent?.answerId;
@@ -234,10 +351,14 @@ export function useGroupAnswerRecording({
         serverStartedAt: progress?.answerStartedAt,
       };
       rememberAnswerContext(context);
-      startRecording(context);
+      void startRecording(context);
       return;
     }
 
+    recordingStartAttemptRef.current += 1;
+    isStartingRef.current = false;
+    setIsCheckingAudio(false);
+    setCanRetryRecording(false);
     if (recorderRef.current?.state === "recording") void stopRecording();
     else if (!isStoppingRef.current) currentAnswerContextRef.current = null;
   }, [myUserId, progress, rememberAnswerContext, startRecording, stopRecording]);
@@ -271,6 +392,8 @@ export function useGroupAnswerRecording({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      recordingStartAttemptRef.current += 1;
+      isStartingRef.current = false;
       const recorder = recorderRef.current;
       if (recorder?.state === "recording" && !isStoppingRef.current) {
         isStoppingRef.current = true;
@@ -293,6 +416,9 @@ export function useGroupAnswerRecording({
     rememberAnswerContext,
     stopRecording,
     stopRecordingForAnswer,
+    retryRecording,
+    isCheckingAudio,
+    canRetryRecording,
     uploadStatuses,
     recordingError,
     retryUpload,
