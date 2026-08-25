@@ -92,11 +92,14 @@ function CoachingSection({ comparison }: { comparison: GroupInterviewComparison 
 function ComparisonCard({
   comparison,
   isMe,
+  showCoaching,
 }: {
   comparison: GroupInterviewComparison;
   isMe: boolean;
+  showCoaching: boolean;
 }) {
   const showRank = comparison.status === "DONE" && comparison.rank !== null;
+  const participantLabel = comparison.participantName ?? `참가자 #${comparison.participantUserId}`;
   return (
     <article className={`rounded-[24px] border bg-white p-6 shadow-sm dark:bg-[#1e293b] ${
       isMe ? "border-navy ring-2 ring-navy/10" : "border-line dark:border-white/10"
@@ -106,7 +109,7 @@ function ComparisonCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="flex items-center gap-2 text-base font-bold text-ink dark:text-white">
               <UserRound className="h-5 w-5 text-navy dark:text-sky-300" />
-              참가자 #{comparison.participantUserId}
+              {participantLabel}
             </h3>
             {isMe && <span className="rounded-full bg-navy px-2.5 py-1 text-[10px] font-bold text-white">나</span>}
             {comparison.status === "PARTIAL" && (
@@ -131,12 +134,14 @@ function ComparisonCard({
         ))}
       </div>
 
-      <div className="mt-6">
-        <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink dark:text-white">
-          <Award className="h-4 w-4 text-indigo-500" /> AI 상대 비교 코칭
-        </h4>
-        <CoachingSection comparison={comparison} />
-      </div>
+      {showCoaching && (
+        <div className="mt-6">
+          <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink dark:text-white">
+            <Award className="h-4 w-4 text-indigo-500" /> AI 상대 비교 코칭
+          </h4>
+          <CoachingSection comparison={comparison} />
+        </div>
+      )}
     </article>
   );
 }
@@ -263,6 +268,7 @@ export default function GroupComparisonView({ roomId }: { roomId: string }) {
                 key={`${comparison.scope}-${comparison.questionIndex ?? "overall"}-${comparison.participantUserId}`}
                 comparison={comparison}
                 isMe={currentUserId === comparison.participantUserId}
+                showCoaching={selection === "OVERALL"}
               />
             ))}
           </div>

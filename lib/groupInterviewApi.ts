@@ -111,6 +111,7 @@ function normalizeComparison(value: unknown): GroupInterviewComparison {
   const scope = text(raw.scope).toUpperCase() === "QUESTION" ? "QUESTION" : "OVERALL";
   return {
     participantUserId: number(raw.participantUserId),
+    participantName: nullableText(raw.participantName),
     scope,
     questionIndex: nullableNumber(raw.questionIndex),
     contentScore: nullableNumber(raw.contentScore),

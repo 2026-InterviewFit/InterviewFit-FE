@@ -140,6 +140,7 @@ export type GroupInterviewComparisonScope = "QUESTION" | "OVERALL";
 
 export interface GroupInterviewComparison {
   participantUserId: number;
+  participantName: string | null;
   scope: GroupInterviewComparisonScope;
   questionIndex: number | null;
   contentScore: number | null;
