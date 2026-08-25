@@ -470,6 +470,39 @@ export async function uploadPtAnswer(params: {
   return response.json();
 }
 
+/**
+ * PT 발표 전체 영상 업로드.
+ *
+ * 발표 화면에서 녹화한 영상을 BE로 전송한다.
+ * BE에서 영상 저장 후 STT/스피치 분석을 수행한다.
+ */
+export async function uploadPtPresentation(params: {
+  ptInterviewId: number;
+  file: Blob;
+}): Promise<number> {
+  const formData = new FormData();
+  formData.append(
+    "file",
+    params.file,
+    `pt-presentation-${params.ptInterviewId}.webm`,
+  );
+
+  const response = await authFetch(
+    `${API_BASE_URL}/api/pt-interviews/${params.ptInterviewId}/presentation`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const errorMessage = await readErrorMessage(response);
+    throw new Error(`PT 발표 영상 업로드 실패 (${response.status}): ${errorMessage}`);
+  }
+
+  return response.json();
+}
+
 export async function generatePtReport(
   ptInterviewId: number,
 ): Promise<PtReportResponse> {

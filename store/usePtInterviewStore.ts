@@ -316,6 +316,11 @@ export const usePtInterviewStore = create<PtState & PtActions>(
 
         const slides: Slide[] = response.slides.map((slide) => ({
           slideNumber: slide.slideNumber,
+
+          thumbnailUrl: slide.imageObjectKey
+            ? `http://localhost:8080/api/pt-interviews/${ptInterviewId}/slides/${slide.slideNumber}/image`
+            : undefined,
+
           title: slide.title ?? "",
           body: slide.extractedText ?? "",
           aiSummary: slide.summary ?? "",
