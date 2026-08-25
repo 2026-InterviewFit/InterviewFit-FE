@@ -22,8 +22,7 @@ export default function ResumePromptModal({ onYes, onNo }: ResumePromptModalProp
         </div>
         
         <h2 className="text-xl font-bold text-navy leading-tight mb-2">
-          {/* 💡 PNG를 지우고 PDF만 남겼습니다! */}
-          자기소개서(PDF)를<br />기입하시겠습니까?
+          자기소개서(PDF, PNG)를<br />기입하시겠습니까?
         </h2>
         <p className="text-xs text-muted mb-8 break-keep">
           파일을 첨부하시면 AI가 내용을 분석하여<br />더욱 날카로운 맞춤형 꼬리 질문을 제공합니다.
