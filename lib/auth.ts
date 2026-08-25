@@ -23,18 +23,9 @@ const API_BASE_URL =
 
 const AUTH_CHANGED_EVENT = "auth-changed";
 
-/**
- * 과거 localStorage/sessionStorage 인증 데이터.
- *
- * 이제 JWT와 사용자 정보는 localStorage에 저장하지 않는다.
- * 기존 브라우저에 남아 있는 값만 정리하기 위해 키 이름을 유지한다.
- */
 const LEGACY_LOCAL_STORAGE_KEYS = [
-  "interviewfit_access_token",
   "interviewfit_user",
   "interviewfit_user_id",
-  "accessToken",
-  "token",
   "user",
   "mockSession",
 ];
@@ -90,11 +81,6 @@ function validateUser(
   }
 }
 
-/**
- * 서버에서 받은 사용자 정보를 프론트 메모리에 반영한다.
- *
- * JWT/사용자 정보는 localStorage에 저장하지 않는다.
- */
 export function setAuthUser(
   user: InterviewFitUser,
 ): void {
@@ -107,20 +93,16 @@ export function setAuthUser(
   emitAuthChanged();
 }
 
-/**
- * 과거 callback 코드 호환용.
- * token 인자는 더 이상 브라우저에 저장하지 않는다.
- */
 export function saveAuth(
-  _token: string,
+  token: string,
   user: InterviewFitUser,
 ): void {
+  if (isBrowser() && token) {
+    localStorage.setItem("interviewfit_access_token", token);
+  }
   setAuthUser(user);
 }
 
-/**
- * 과거 saveLogin(response) 코드 호환용.
- */
 export function saveLogin(
   response: LoginResponse,
 ): void {
@@ -130,19 +112,24 @@ export function saveLogin(
     );
   }
 
+  const token = response.token ?? response.accessToken ?? response.jwt;
+  if (isBrowser() && token) {
+    localStorage.setItem("interviewfit_access_token", token);
+  }
+
   setAuthUser(response.user);
 }
 
 /**
- * HttpOnly Cookie 방식에서는 JavaScript가 JWT를 읽지 않는다.
- * 기존 import 호환을 위해 함수만 남기고 항상 null을 반환한다.
+ * 🔑 핵심 수정: localStorage에서 Access Token을 명시적으로 가져옴
  */
-export function getAuthToken(): null {
-  return null;
+export function getAuthToken(): string | null {
+  if (!isBrowser()) return null;
+  return localStorage.getItem("interviewfit_access_token");
 }
 
-export function getAccessToken(): null {
-  return null;
+export function getAccessToken(): string | null {
+  return getAuthToken();
 }
 
 export function getAuthUser(): InterviewFitUser | null {
@@ -187,10 +174,6 @@ export function getProfileInitial(): string {
   );
 }
 
-/**
- * Access Token 재발급.
- * Refresh Token은 HttpOnly Cookie이므로 브라우저가 자동 전송한다.
- */
 export async function refreshAuthSession(): Promise<boolean> {
   if (!isBrowser()) {
     return false;
@@ -213,6 +196,9 @@ export async function refreshAuthSession(): Promise<boolean> {
       if (!response.ok) {
         currentUser = null;
         authInitialized = true;
+        if (isBrowser()) {
+          localStorage.removeItem("interviewfit_access_token");
+        }
         clearLegacyBrowserAuth();
         emitAuthChanged();
         return false;
@@ -227,6 +213,9 @@ export async function refreshAuthSession(): Promise<boolean> {
 
       currentUser = null;
       authInitialized = true;
+      if (isBrowser()) {
+        localStorage.removeItem("interviewfit_access_token");
+      }
       clearLegacyBrowserAuth();
       emitAuthChanged();
       return false;
@@ -238,22 +227,23 @@ export async function refreshAuthSession(): Promise<boolean> {
   return refreshPromise;
 }
 
-/**
- * HttpOnly Cookie 인증 API 공통 fetch.
- *
- * 1. 쿠키 포함 요청
- * 2. 401이면 Refresh Cookie로 Access Token 재발급
- * 3. 성공하면 원 요청 1회 재시도
- */
 export async function authenticatedFetch(
   input: string,
   init: RequestInit = {},
   retryOnUnauthorized = true,
 ): Promise<Response> {
+  const token = getAuthToken();
+  const headers = new Headers(init.headers);
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const response = await fetch(
     input,
     {
       ...init,
+      headers,
       credentials: "include",
     },
   );
@@ -272,21 +262,22 @@ export async function authenticatedFetch(
     return response;
   }
 
+  const retryToken = getAuthToken();
+  const retryHeaders = new Headers(init.headers);
+  if (retryToken && !retryHeaders.has("Authorization")) {
+    retryHeaders.set("Authorization", `Bearer ${retryToken}`);
+  }
+
   return fetch(
     input,
     {
       ...init,
+      headers: retryHeaders,
       credentials: "include",
     },
   );
 }
 
-/**
- * 현재 로그인 사용자 정보를 Spring /api/users/me에서 복구한다.
- *
- * 새로고침 후 currentUser 메모리가 비어 있어도
- * HttpOnly Cookie가 살아 있으면 여기서 다시 로그인 상태가 복구된다.
- */
 export async function initializeAuth(
   force = false,
 ): Promise<InterviewFitUser | null> {
@@ -352,22 +343,17 @@ export async function initializeAuth(
   return initializePromise;
 }
 
-/**
- * 프론트 메모리 인증 상태만 제거한다.
- * 실제 로그아웃은 logout()을 사용한다.
- */
 export function clearAuth(): void {
   currentUser = null;
   authInitialized = true;
 
+  if (isBrowser()) {
+    localStorage.removeItem("interviewfit_access_token");
+  }
   clearLegacyBrowserAuth();
   emitAuthChanged();
 }
 
-/**
- * Spring에서 Access/Refresh HttpOnly Cookie를 삭제하고
- * 프론트 사용자 상태도 제거한다.
- */
 export async function logout(): Promise<void> {
   try {
     await fetch(

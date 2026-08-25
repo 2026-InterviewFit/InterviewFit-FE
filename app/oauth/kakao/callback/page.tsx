@@ -30,12 +30,6 @@ function KakaoCallbackContent() {
   const searchParams =
     useSearchParams();
 
-  /**
-   * React Strict Mode에서
-   * useEffect가 두 번 실행되면서
-   * 동일한 카카오 인가 코드를
-   * 두 번 백엔드로 보내는 것을 방지한다.
-   */
   const requestedRef =
     useRef(false);
 
@@ -53,10 +47,6 @@ function KakaoCallbackContent() {
 
 
   useEffect(() => {
-    /**
-     * 이미 로그인 요청을 실행했다면
-     * 중복 요청하지 않는다.
-     */
     if (
       requestedRef.current
     ) {
@@ -67,15 +57,6 @@ function KakaoCallbackContent() {
       true;
 
 
-    /**
-     * 카카오 callback query parameter
-     *
-     * 성공:
-     * ?code=...
-     *
-     * 실패:
-     * ?error=...
-     */
     const code =
       searchParams.get(
         "code",
@@ -92,10 +73,6 @@ function KakaoCallbackContent() {
       );
 
 
-    /**
-     * 카카오 로그인 단계에서
-     * 오류가 발생한 경우
-     */
     if (error) {
       setErrorMessage(
         `카카오 로그인 실패: ${
@@ -108,9 +85,6 @@ function KakaoCallbackContent() {
     }
 
 
-    /**
-     * 인가 코드가 없는 경우
-     */
     if (!code) {
       setErrorMessage(
         "카카오 인가 코드가 없습니다.",
@@ -131,19 +105,6 @@ function KakaoCallbackContent() {
             "[Kakao] 인가 코드 수신 완료",
           );
 
-
-          /**
-           * lib/api.ts의 kakaoLogin() 사용
-           *
-           * POST /api/users/kakao-login
-           *
-           * Spring에서 로그인 성공 시:
-           *
-           * interviewfit_access_token
-           * interviewfit_refresh_token
-           *
-           * 두 개의 HttpOnly Cookie를 내려준다.
-           */
           const response =
             await kakaoLogin(
               code,
@@ -155,15 +116,16 @@ function KakaoCallbackContent() {
             response,
           );
 
+          // 🔑 핵심 수정: 백엔드에서 받은 토큰을 localStorage에 저장하여 인증 헤더에서 사용하도록 함
+          if (response?.token) {
+            localStorage.setItem("interviewfit_access_token", response.token);
+          } else if ((response as any)?.accessToken) {
+            localStorage.setItem("interviewfit_access_token", (response as any).accessToken);
+          } else if ((response as any)?.jwt) {
+            localStorage.setItem("interviewfit_access_token", (response as any).jwt);
+          }
 
-          /**
-           * 이제 JWT는 HttpOnly Cookie에 저장되므로
-           * 프론트에서 response.token을 검사하거나
-           * localStorage에 저장하지 않는다.
-           *
-           * 화면에 사용자 이름 등을 표시하기 위한
-           * 사용자 정보만 프론트 메모리에 저장한다.
-           */
+
           if (
             !response?.user ||
             response.user.id ==
@@ -191,9 +153,6 @@ function KakaoCallbackContent() {
           );
 
 
-          /**
-           * 로그인 성공 후 메인 페이지 이동
-           */
           router.replace(
             "/",
           );
