@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { isAuthenticated, subscribeToAuthChanges } from "@/lib/auth";
 
 const FEATURES = [
   {
@@ -13,6 +12,7 @@ const FEATURES = [
     alt: "컴퓨터 3D 아이콘",
     badge: "기능소개",
     title: "인터뷰핏의\n기능을 소개합니다",
+    // 💡 다크 모드일 때는 그라데이션을 없애고 다크 네이비 카드로 변신!
     bgClass: "bg-gradient-to-br from-[#fef08a]/25 via-[#fef9c3]/10 to-white/50 dark:from-[#1e293b] dark:to-[#1e293b]",
     href: "/features",
   },
@@ -34,11 +34,11 @@ const FEATURES = [
   },
   {
     icon: "/3d-tool.png",
-    alt: "도구3D 아이콘",
-    badge: "그룹 면접",
-    title: "인터뷰핏의\n그룹 면접 시스템",
-    bgClass:  "bg-gradient-to-br from-[#fef08a]/25 via-[#fef9c3]/10 to-white/50 dark:from-[#1e293b] dark:to-[#1e293b]",
-    href: "/group-interview",
+    alt: "도구 3D 아이콘",
+    badge: "인터뷰핏 소개",
+    title: "인터뷰핏과\n개발자들",
+    bgClass: "bg-gradient-to-br from-[#fef08a]/25 via-[#fef9c3]/10 to-white/50 dark:from-[#1e293b] dark:to-[#1e293b]",
+    href: "/about",
   },
 ];
 
@@ -46,12 +46,14 @@ export default function IntroSection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const syncAuthState = () => setIsLoggedIn(isAuthenticated());
-    syncAuthState();
-    return subscribeToAuthChanges(syncAuthState);
+    const session = sessionStorage.getItem("mockSession");
+    if (session === "true") {
+      setIsLoggedIn(true);
+    }
   }, []);
 
   return (
+    // 💡 bg-white를 bg-bg로 변경!
     <section className="w-full bg-bg py-32 transition-colors duration-300">
       <div className="mx-auto w-full max-w-[1280px] px-8">
         <div className="grid grid-cols-1 gap-16 lg:grid-cols-12 lg:gap-8">
@@ -110,7 +112,6 @@ export default function IntroSection() {
                       src={feature.icon}
                       alt={feature.alt}
                       fill
-                      sizes="56px"
                       className="object-contain"
                     />
                   </div>

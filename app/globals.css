@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
+/* 💡 Tailwind v4에서 다크모드를 수동 스위치(.dark 클래스)로 작동하게 만드는 필수 설정! */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* :root와 .dark에서 정의한 색상을 Tailwind가 가져다 씁니다 */
   --color-bg: var(--theme-bg);
   --color-ink: var(--theme-ink);
   --color-navy: var(--theme-navy);
@@ -10,51 +12,31 @@
   --color-muted: var(--theme-muted);
   --color-chip: var(--theme-chip);
   --color-line: var(--theme-line);
-
-  --color-brand-soft: var(--theme-brand-soft);
-  --color-brand-accent: var(--theme-brand-accent);
-
-  --color-surface: var(--theme-surface);
-  --color-surface-glass: var(--theme-surface-glass);
-  --color-border-glass: var(--theme-border-glass);
-
+  
   --font-sans: var(--font-satoshi), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
 }
 
+/* 🌞 기본 (라이트 모드) 색상 */
 :root {
-  /* 🎨 Color Palette (04) 기준 색상 */
-  /* #FFFDF5 Базовый белый = 기본 배경(가짜 흰색). 검정 글씨 + 크림 배경이 디폴트 */
-  --theme-bg: #FFFDF5;
-  --theme-ink: #171717;          /* 기본 검정 글씨 */
-  --theme-navy: #364C84;         /* Темный синий = 메인 포인트 */
-  --theme-navy-dark: #273761;    /* navy hover용 딥톤 */
-  --theme-brand-soft: #95B1EE;   /* Светлый голубой = 서브 포인트 */
-  --theme-brand-accent: #E7F1A8; /* Светлый зеленый = 강조(하이라이트) */
-  --theme-muted: #64748B;
-  --theme-chip: #E2E8F0;
-  --theme-line: #CBD5E1;
-
-  /* 카드/표면은 순백색으로 두어 크림빛 배경 위로 살짝 떠 보이게 함 */
-  --theme-surface: #FFFFFF;
-  --theme-surface-glass: rgba(255, 255, 255, 0.7);
-  --theme-border-glass: rgba(0, 0, 0, 0.04);
+  --theme-bg: #f5f5f3;
+  --theme-ink: #171717;
+  --theme-navy: #1f2c46;
+  --theme-navy-dark: #0f1729;
+  --theme-muted: #737373;
+  --theme-chip: #eceff3;
+  --theme-line: #e5e5e3;
 }
 
+/* 🌙 심야 (다크 모드) 색상 */
 .dark {
-  --theme-bg: #0f1729;
-  --theme-ink: #f8fafc;
-  --theme-navy: #95B1EE;
-  --theme-navy-dark: #b8cff8;
-  --theme-brand-soft: #364C84;
-  --theme-brand-accent: #2e3b1c;
-  --theme-muted: #94a3b8;
-  --theme-chip: #1e293b;
-  --theme-line: #334155;
-
-  --theme-surface: #1e293b;
-  --theme-surface-glass: rgba(30, 41, 59, 0.7);
-  --theme-border-glass: rgba(255, 255, 255, 0.05);
+  --theme-bg: #0f1729;         /* 짙은 네이비 배경 */
+  --theme-ink: #f8fafc;        /* 밝은 텍스트 */
+  --theme-navy: #60a5fa;       /* 포인트 컬러는 밝은 블루로 반전 */
+  --theme-navy-dark: #93c5fd;  
+  --theme-muted: #94a3b8;      /* 회색 텍스트 */
+  --theme-chip: #1e293b;       /* 칩/버튼 배경 */
+  --theme-line: #334155;       /* 테두리 색상 */
 }
 
 html {
@@ -67,5 +49,6 @@ body {
   background-color: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  /* 💡 배경색과 글자색이 바뀔 때 뚝 끊기지 않고 스르륵~ 부드럽게 변하도록 전환 효과 추가 */
+  transition: background-color 0.3s ease, color 0.3s ease; 
 }
