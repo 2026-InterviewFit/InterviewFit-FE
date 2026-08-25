@@ -122,8 +122,8 @@ export interface PtSlideResponse {
   title: string | null;
   extractedText: string | null;
   summary: string | null;
-  imageObjectKey: string | null;
-  analysisJson: string | null;
+  imageObjectKey?: string | null;
+  analysisJson?: string | null;
 }
 
 export interface PtDocumentDetailResponse {

@@ -12,9 +12,7 @@ interface SlideStageProps {
   onNext: () => void;
   onSelect?: (index: number) => void;
   compact?: boolean;
-  /** true면 부모의 남는 "높이"에 맞춰 슬라이드를 축소한다 (풀스크린 발표용) */
   fitHeight?: boolean;
-  /** 선택된 썸네일 테두리 색 (밝은 배경=navy, 어두운 배경=white) */
   activeColor?: "navy" | "white";
 }
 
@@ -29,9 +27,15 @@ export default function SlideStage({
   activeColor = "navy",
 }: SlideStageProps) {
   const slide = slides[currentIdx];
-  if (!slide) return null;
 
-  const activeBorder = activeColor === "white" ? "border-white" : "border-navy";
+  if (!slide) {
+    return null;
+  }
+
+  const activeBorder =
+    activeColor === "white"
+      ? "border-white"
+      : "border-navy";
 
   return (
     <div
@@ -39,7 +43,7 @@ export default function SlideStage({
         fitHeight ? "h-full min-h-0" : ""
       }`}
     >
-      {/* 메인 슬라이드 래퍼: fitHeight면 남는 높이를 먹고 그 안에서 16:9 유지 */}
+      {/* 메인 슬라이드 */}
       <div
         className={
           fitHeight
@@ -48,27 +52,44 @@ export default function SlideStage({
         }
       >
         <div
-          className={`relative flex items-center justify-center overflow-hidden rounded-2xl ${
+          className={`relative flex items-center justify-center overflow-hidden rounded-2xl border border-black/10 bg-white ${
             fitHeight
               ? "aspect-video h-full max-h-full w-auto max-w-full"
               : "aspect-video w-full"
           }`}
-          style={{
-            background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
-          }}
         >
-          <span className="font-serif text-[clamp(60px,12vw,120px)] font-bold text-white/15">
-            {slide.slideNumber}
-          </span>
-          <div className="absolute inset-0 flex flex-col justify-end p-6">
-            <span className="mb-1 w-fit rounded-md bg-black/40 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
+          {slide.thumbnailUrl ? (
+            <img
+              key={slide.thumbnailUrl}
+              src={slide.thumbnailUrl}
+              alt={`Slide ${slide.slideNumber}`}
+              className="h-full w-full object-contain bg-white"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
+              }}
+            >
+              <span className="font-serif text-[clamp(60px,12vw,120px)] font-bold text-white/15">
+                {slide.slideNumber}
+              </span>
+            </div>
+          )}
+
+          {/* 슬라이드 번호 */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col justify-end p-6">
+            <span className="mb-1 w-fit rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
               Slide {slide.slideNumber} / {slides.length}
             </span>
-            {!compact && (
+
+            {!compact && !slide.thumbnailUrl && (
               <>
                 <h3 className="text-xl font-bold text-white drop-shadow">
                   {slide.title}
                 </h3>
+
                 <p className="mt-1 max-w-lg text-sm font-medium text-white/80">
                   {slide.body}
                 </p>
@@ -76,40 +97,66 @@ export default function SlideStage({
             )}
           </div>
 
-          {/* 좌우 네비 */}
+          {/* 이전 */}
           <button
+            type="button"
             onClick={onPrev}
             disabled={currentIdx === 0}
-            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-opacity hover:bg-black/60 disabled:opacity-30"
+            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white backdrop-blur-sm transition-all hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="이전 슬라이드"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
+
+          {/* 다음 */}
           <button
+            type="button"
             onClick={onNext}
             disabled={currentIdx === slides.length - 1}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-opacity hover:bg-black/60 disabled:opacity-30"
+            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white backdrop-blur-sm transition-all hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="다음 슬라이드"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* 썸네일 레일 (항상 보이도록 shrink-0) */}
+      {/* 하단 썸네일 */}
       <div className="flex shrink-0 justify-center gap-2 overflow-x-auto pb-1">
-        {slides.map((s, i) => (
+        {slides.map((item, index) => (
           <button
-            key={s.slideNumber}
-            onClick={() => onSelect?.(i)}
-            className={`relative flex aspect-video h-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 transition-all ${
-              i === currentIdx
+            type="button"
+            key={item.slideNumber}
+            onClick={() => onSelect?.(index)}
+            className={`relative flex aspect-video h-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-white transition-all ${
+              index === currentIdx
                 ? activeBorder
-                : "border-transparent opacity-50 hover:opacity-100"
+                : "border-transparent opacity-60 hover:opacity-100"
             }`}
-            style={{
-              background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
-            }}
+            aria-label={`${item.slideNumber}번 슬라이드`}
           >
-            <span className="text-sm font-bold text-white/50">{s.slideNumber}</span>
+            {item.thumbnailUrl ? (
+              <img
+                src={item.thumbnailUrl}
+                alt={`Slide ${item.slideNumber}`}
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
+                }}
+              >
+                <span className="text-sm font-bold text-white/60">
+                  {item.slideNumber}
+                </span>
+              </div>
+            )}
+
+            <span className="absolute bottom-0.5 right-1 rounded bg-black/55 px-1 text-[8px] font-bold text-white">
+              {item.slideNumber}
+            </span>
           </button>
         ))}
       </div>

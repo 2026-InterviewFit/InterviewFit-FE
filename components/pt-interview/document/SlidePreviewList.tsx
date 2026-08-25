@@ -2,7 +2,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ImageOff } from "lucide-react";
 import type { Slide } from "@/types/ptInterview";
 import { PALETTE } from "@/lib/communityData";
 
@@ -10,51 +10,192 @@ interface SlidePreviewListProps {
   slides: Slide[];
 }
 
-export default function SlidePreviewList({ slides }: SlidePreviewListProps) {
+export default function SlidePreviewList({
+  slides,
+}: SlidePreviewListProps) {
   return (
     <div className="space-y-4">
       <h3 className="px-1 text-sm font-bold text-ink">
-        슬라이드 미리보기 <span className="text-muted">({slides.length}장)</span>
+        슬라이드 미리보기{" "}
+        <span className="text-muted">
+          ({slides.length}장)
+        </span>
       </h3>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         {slides.map((slide, i) => (
           <motion.article
             key={slide.slideNumber}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface p-5 shadow-sm sm:flex-row"
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: i * 0.05,
+            }}
+            className="
+              flex
+              flex-col
+              gap-5
+              rounded-[20px]
+              border
+              border-line
+              bg-surface
+              p-5
+              shadow-sm
+              lg:flex-row
+            "
           >
-            {/* 썸네일 (mock: 그라데이션 + 번호) */}
+            {/* 실제 PDF / PPT 슬라이드 이미지 */}
             <div
-              className="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden rounded-xl sm:w-48"
-              style={{
-                background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.sky} 100%)`,
-              }}
+              className="
+                relative
+                aspect-video
+                w-full
+                shrink-0
+                overflow-hidden
+                rounded-xl
+                border
+                border-line
+                bg-white
+                lg:w-[320px]
+              "
             >
-              <span className="font-serif text-5xl font-bold text-white/25">
-                {slide.slideNumber}
-              </span>
-              <span className="absolute bottom-2 left-2 rounded-md bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+              {slide.thumbnailUrl ? (
+                <img
+                  src={slide.thumbnailUrl}
+                  alt={`Slide ${slide.slideNumber}`}
+                  className="
+                    h-full
+                    w-full
+                    object-contain
+                    bg-white
+                  "
+                />
+              ) : (
+                <div
+                  className="
+                    flex
+                    h-full
+                    w-full
+                    flex-col
+                    items-center
+                    justify-center
+                    gap-2
+                    bg-slate-50
+                    text-muted
+                  "
+                >
+                  <ImageOff className="h-7 w-7" />
+
+                  <span className="text-xs font-semibold">
+                    슬라이드 이미지 없음
+                  </span>
+                </div>
+              )}
+
+              <span
+                className="
+                  absolute
+                  bottom-2
+                  left-2
+                  rounded-md
+                  bg-black/60
+                  px-2
+                  py-1
+                  text-[10px]
+                  font-bold
+                  text-white
+                  backdrop-blur-sm
+                "
+              >
                 Slide {slide.slideNumber}
               </span>
             </div>
 
-            {/* 본문 */}
+            {/* 분석 결과 */}
             <div className="min-w-0 flex-1">
-              <h4 className="text-base font-bold text-ink">{slide.title}</h4>
-              <p className="mt-1.5 text-sm font-medium leading-relaxed text-muted">
-                {slide.body}
-              </p>
+              <div className="flex items-start gap-2">
+                <span
+                  className="
+                    mt-0.5
+                    rounded-md
+                    bg-slate-100
+                    px-2
+                    py-1
+                    text-xs
+                    font-bold
+                    text-muted
+                  "
+                >
+                  {slide.slideNumber}
+                </span>
+
+                <h4 className="text-lg font-bold leading-snug text-ink">
+                  {slide.title?.trim() ||
+                    `슬라이드 ${slide.slideNumber}`}
+                </h4>
+              </div>
+
               <div
-                className="mt-3 flex items-start gap-2 rounded-xl p-3"
-                style={{ backgroundColor: "rgba(231,241,168,0.3)" }}
+                className="
+                  mt-4
+                  flex
+                  items-start
+                  gap-3
+                  rounded-xl
+                  p-4
+                "
+                style={{
+                  backgroundColor:
+                    "rgba(231,241,168,0.3)",
+                }}
               >
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.limeInk }} />
-                <p className="text-xs font-semibold leading-relaxed" style={{ color: PALETTE.limeInk }}>
-                  {slide.aiSummary}
-                </p>
+                <Sparkles
+                  className="
+                    mt-0.5
+                    h-4
+                    w-4
+                    shrink-0
+                  "
+                  style={{
+                    color: PALETTE.limeInk,
+                  }}
+                />
+
+                <div className="min-w-0">
+                  <p
+                    className="
+                      mb-1
+                      text-xs
+                      font-bold
+                    "
+                    style={{
+                      color: PALETTE.limeInk,
+                    }}
+                  >
+                    AI 핵심 분석
+                  </p>
+
+                  <p
+                    className="
+                      whitespace-pre-line
+                      text-sm
+                      font-medium
+                      leading-7
+                    "
+                    style={{
+                      color: PALETTE.limeInk,
+                    }}
+                  >
+                    {slide.aiSummary?.trim() ||
+                      "분석 결과가 없습니다."}
+                  </p>
+                </div>
               </div>
             </div>
           </motion.article>
