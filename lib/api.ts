@@ -605,6 +605,74 @@ export async function createFollowUpQuestion(
   return response.json();
 }
 
+/**
+ * 꼬리질문 답변 저장 응답.
+ */
+export type FollowUpAnswerCreateResponse = {
+  message?: string;
+  followUpAnswerId?: number;
+  interviewId?: number;
+  followUpQuestionId?: number;
+  answerText?: string;
+  startTime?: number;
+  endTime?: number;
+  analysisStatus?: string;
+  [key: string]: unknown;
+};
+
+
+/**
+ * 꼬리질문에 대한 답변을 저장한다.
+ *
+ * Spring:
+ * POST /api/followup/answers
+ *
+ * 흐름:
+ *   1. createFollowUpQuestion으로 꼬리질문 생성 후 followUpId 획득
+ *   2. 사용자가 꼬리질문에 답변
+ *   3. 답변 완료 시 이 API로 답변 저장 (텍스트 + timestamp)
+ *
+ * answerText:
+ *   Whisper STT로 변환된 실제 꼬리질문 답변 텍스트
+ */
+export async function createFollowUpAnswer(
+  params: {
+    interviewId?: number;
+    followUpQuestionId: number;
+    answerText: string;
+    startTime?: number;
+    endTime?: number;
+  },
+): Promise<FollowUpAnswerCreateResponse> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/followup/answers`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        interviewId: params.interviewId,
+        followUpQuestionId: params.followUpQuestionId,
+        answerText: params.answerText,
+        startTime: params.startTime,
+        endTime: params.endTime,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorMessage = await readErrorMessage(response);
+
+    throw new Error(
+      `꼬리질문 답변 저장 실패 (${response.status}): ${errorMessage}`,
+    );
+  }
+
+  return response.json();
+}
 
 /* =========================================================
  * 영상 저장

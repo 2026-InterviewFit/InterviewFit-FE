@@ -3,17 +3,26 @@
 import { useState } from "react";
 import { Eye, UserSquare2, ChevronDown, User, ScanFace } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { AnswerReport } from "@/types";
+import type { AnswerReport, EyeReport, PoseReport } from "@/types";
 
 interface VisualAnalysisCardProps {
   answerData?: AnswerReport;
+  eyeReport?: EyeReport | null;
+  poseReport?: PoseReport | null;
   showGaze?: boolean;
 }
 
-export default function VisualAnalysisCard({ answerData, showGaze = false }: VisualAnalysisCardProps) {
-  const eye = answerData?.eye;
+export default function VisualAnalysisCard({
+  answerData,
+  eyeReport,
+  poseReport,
+  showGaze = false,
+}: VisualAnalysisCardProps) {
+  // 현재 BE는 eye / pose를 InterviewReportResponse 최상위에 내려준다.
+  // answerData의 eye / pose는 과거 구조 호환용 fallback으로 유지한다.
+  const eye = eyeReport ?? answerData?.eye;
   const gaze = answerData?.gaze;
-  const pose = answerData?.pose;
+  const pose = poseReport ?? answerData?.pose;
   
   // 아코디언 상태 관리
   const [isDetailOpen, setIsDetailOpen] = useState(false);
