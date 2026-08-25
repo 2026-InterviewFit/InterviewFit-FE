@@ -18,6 +18,7 @@ export interface GroupRoom {
   maxParticipants: number; // 2 ~ 4 (최대 4명)
   status: RoomStatus;
   startAt: string; //
+  createdAt?: string;
   hostName: string;
   jobRoleId?: number;
 }

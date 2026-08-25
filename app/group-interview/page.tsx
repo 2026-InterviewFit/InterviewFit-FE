@@ -43,7 +43,9 @@ export default function GroupInterviewLobbyPage() {
   }, [loadRooms]);
 
   const filtered = rooms.filter((r) => {
-    const catOk = activeCategory === "전체" || r.category === activeCategory;
+    const catOk = activeCategory === "전체"
+      || r.category === activeCategory
+      || r.role === activeCategory;
     const recruitOk =
       !onlyRecruiting || r.status === "recruiting" || r.status === "almostFull";
     return catOk && recruitOk;
@@ -100,13 +102,8 @@ export default function GroupInterviewLobbyPage() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-[196px] animate-pulse rounded-[20px] border border-line bg-surface"
-              />
-            ))}
+          <div className="flex min-h-[196px] items-center justify-center rounded-2xl border border-line bg-surface">
+            <p className="text-sm font-bold text-muted">면접방 목록을 불러오는 중입니다.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-20 text-center shadow-sm">
