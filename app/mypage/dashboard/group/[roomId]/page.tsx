@@ -216,7 +216,7 @@ export default function GroupInterviewDashboardDetailPage() {
                       <article key={answer.answerId} className={`rounded-[22px] border bg-white p-5 shadow-sm transition-colors dark:bg-[#1e293b] ${selectedAnswerId === answer.answerId ? "border-navy" : "border-line dark:border-white/10"}`}>
                         <button type="button" onClick={() => handleSelectAnswer(answer)} className="w-full text-left">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-bold text-indigo-500">라운드 {answer.round} · 질문 {answer.questionIndex}</span>
+                            <span className="text-xs font-bold text-indigo-500">라운드 {answer.round} · 질문 {answer.questionIndex + 1}</span>
                             <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${getGroupAnalysisStatusClassName(answer.analysisStatus)}`}>{GROUP_ANALYSIS_STATUS_LABEL[answer.analysisStatus]}</span>
                           </div>
                           <h2 className="mt-3 text-sm font-bold leading-relaxed text-ink dark:text-white">{answer.questionText ?? "질문 내용이 없습니다."}</h2>
@@ -247,7 +247,7 @@ export default function GroupInterviewDashboardDetailPage() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-2 text-emerald-600"><CheckCircle2 className="h-5 w-5" /><h3 className="text-lg font-bold">질문별 AI 분석 완료</h3></div>
                           <div className="flex flex-wrap gap-2 text-[11px] font-bold text-muted">
-                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-600">라운드 {analysis.round} · 질문 {analysis.questionIndex}</span>
+                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-600">라운드 {analysis.round} · 질문 {analysis.questionIndex + 1}</span>
                             <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800"><UserRound className="h-3.5 w-3.5" />참가자 #{analysis.participantUserId}</span>
                           </div>
                         </div>

@@ -172,6 +172,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const {
     rememberAnswerContext,
     stopRecording,
+    stopRecordingForAnswer,
     uploadStatuses,
     recordingError,
     retryUpload,
@@ -241,12 +242,21 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     if (!isMyTurn || !isAnswering || pendingAnswerAction || requestedActionKey === answerActionKey) return;
 
     try {
-      setRequestedActionKey(answerActionKey);
       setPendingAnswerAction("complete");
       setAnswerError("");
+      const answerId = progress?.answerId;
+      if (typeof answerId !== "number" || !Number.isFinite(answerId)) {
+        setAnswerError("현재 답변 정보를 확인할 수 없어 답변을 완료할 수 없습니다.");
+        return;
+      }
       // Blob 생성까지만 기다린다. duration 보정과 영상 업로드는 별도로 계속 진행된다.
-      const stoppedContext = await stopRecording();
+      const stoppedContext = await stopRecordingForAnswer(answerId);
+      if (!stoppedContext || stoppedContext.answerId !== answerId) {
+        setAnswerError("현재 답변 녹화가 시작되지 않아 답변을 완료할 수 없습니다.");
+        return;
+      }
       if (stoppedContext && wasAnswerTimedOut(stoppedContext.answerId)) return;
+      setRequestedActionKey(answerActionKey);
       await completeGroupAnswer(roomId);
     } catch (cause) {
       setRequestedActionKey("");
@@ -300,7 +310,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
             </span>
             <span className="text-xs md:text-sm font-bold text-navy dark:text-white">실시간 다대일 면접 진행 중</span>
             <span className="hidden sm:inline text-[11px] font-bold text-muted">
-              {currentQuestionIndex ? `질문 ${currentQuestionIndex}` : "질문 확인 중"} · 라운드 {progress?.currentRound ?? "-"}
+              {currentQuestionIndex != null ? `질문 ${currentQuestionIndex + 1}` : "질문 확인 중"} · 라운드 {progress?.currentRound ?? "-"}
             </span>
             {isAnswering && progress?.answerDeadlineAt && (
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${remainingSeconds <= 10 ? "bg-red-100 text-red-600" : "bg-chip text-navy"}`}>

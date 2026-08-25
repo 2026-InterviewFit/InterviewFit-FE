@@ -180,10 +180,34 @@ export function useGroupAnswerRecording({
       setRecordingError("");
       recorder.start(1000);
     } catch (cause) {
+      recorderRef.current = null;
+      recordingContextRef.current = null;
+      if (currentAnswerContextRef.current?.answerId === input.answerId) {
+        currentAnswerContextRef.current = null;
+      }
+      isStoppingRef.current = false;
       console.error("그룹 답변 녹화 시작 실패", cause);
       setRecordingError("답변 녹화를 시작하지 못했습니다.");
     }
   }, [localParticipant, uploadVideo]);
+
+  const stopRecordingForAnswer = useCallback((answerId: number) => {
+    const recorder = recorderRef.current;
+    const context = recordingContextRef.current;
+    if (
+      !Number.isFinite(answerId)
+      || !recorder
+      || recorder.state !== "recording"
+      || !context
+      || context.answerId !== answerId
+    ) {
+      if (mountedRef.current) {
+        setRecordingError("현재 답변 녹화가 시작되지 않아 답변을 완료할 수 없습니다.");
+      }
+      return Promise.resolve(null);
+    }
+    return stopRecording();
+  }, [stopRecording]);
 
   useEffect(() => {
     const eventAnswerId = lastEvent?.progress?.answerId ?? lastEvent?.answerId;
@@ -268,6 +292,7 @@ export function useGroupAnswerRecording({
   return {
     rememberAnswerContext,
     stopRecording,
+    stopRecordingForAnswer,
     uploadStatuses,
     recordingError,
     retryUpload,
