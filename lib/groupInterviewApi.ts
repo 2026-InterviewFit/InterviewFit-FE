@@ -2,6 +2,7 @@ import { authFetch, getJobRoles, readErrorMessage } from "@/lib/api";
 import type {
   CreateRoomPayload,
   GroupInterviewAnswerAnalysis,
+  GroupInterviewComparison,
   GroupInterviewHistory,
   GroupInterviewMyAnswer,
   GroupParticipant,
@@ -41,6 +42,16 @@ function text(value: unknown, fallback = ""): string {
 function number(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function nullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function nullableText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function roomStatus(raw: JsonObject, current: number, max: number): RoomStatus {
@@ -91,6 +102,28 @@ function normalizeParticipant(value: unknown): GroupParticipant {
     isReady: text(raw.status).toUpperCase() === "READY" || Boolean(raw.isReady ?? raw.ready),
     cameraOn: raw.cameraOn !== false,
     micOn: raw.micOn !== false,
+  };
+}
+
+function normalizeComparison(value: unknown): GroupInterviewComparison {
+  const raw = (value ?? {}) as JsonObject;
+  const status = text(raw.status).toUpperCase() === "PARTIAL" ? "PARTIAL" : "DONE";
+  const scope = text(raw.scope).toUpperCase() === "QUESTION" ? "QUESTION" : "OVERALL";
+  return {
+    participantUserId: number(raw.participantUserId),
+    scope,
+    questionIndex: nullableNumber(raw.questionIndex),
+    contentScore: nullableNumber(raw.contentScore),
+    speechScore: nullableNumber(raw.speechScore),
+    gazeScore: nullableNumber(raw.gazeScore),
+    poseScore: nullableNumber(raw.poseScore),
+    blinkScore: nullableNumber(raw.blinkScore),
+    totalScore: nullableNumber(raw.totalScore),
+    rank: nullableNumber(raw.rank),
+    participantCount: number(raw.participantCount),
+    strengthSummary: nullableText(raw.strengthSummary),
+    improvementSummary: nullableText(raw.improvementSummary),
+    status,
   };
 }
 
@@ -197,6 +230,25 @@ export async function getGroupAnswerAnalysis(
     answerId: number(value.answerId, answerId),
     status: text(value.status ?? value.analysisStatus) as GroupInterviewAnswerAnalysis["status"],
   } as GroupInterviewAnswerAnalysis;
+}
+
+export async function getGroupInterviewComparisons(
+  roomId: string,
+): Promise<GroupInterviewComparison[]> {
+  const data = await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/comparisons`,
+  ));
+  return Array.isArray(data) ? data.map(normalizeComparison) : [];
+}
+
+export async function getGroupInterviewQuestionComparisons(
+  roomId: string,
+  questionIndex: number,
+): Promise<GroupInterviewComparison[]> {
+  const data = await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/comparisons/questions/${questionIndex}`,
+  ));
+  return Array.isArray(data) ? data.map(normalizeComparison) : [];
 }
 
 export async function retryGroupAnswerAnalysis(roomId: string, answerId: number): Promise<void> {
