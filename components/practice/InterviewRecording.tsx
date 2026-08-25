@@ -1,791 +1,159 @@
-// components/practice/InterviewRecording.tsx
-
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useRef } from "react";
 
-import { useInterviewStore } from "@/store/useInterviewStore";
+// ── 분리한 Custom Hooks Import ──
+import { useInterviewFlow } from "@/hooks/useInterviewFlow";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
-import { transcribeFollowUpAnswer } from "@/lib/api";
 
+// ── 분리한 UI Components Import ──
 import JobSelectionModal from "./JobSelectionModal";
 import AnalysisProgress from "./AnalysisProgress";
 import RecordingControls from "./RecordingControls";
 import CameraViewport from "./CameraViewport";
+
+// 💡 새로 제작한 자소서 관련 모달 추가 Import
 import ResumePromptModal from "./ResumePromptModal";
 import ResumeUploadModal from "./ResumeUploadModal";
 
-
-/**
- * 현재 기본 질문.
- *
- * 이 부분은 다른 팀원이 서버 질문 생성 기능을 연결하면
- * 나중에 서버에서 받은 질문 배열로 교체하면 된다.
- *
- * followup 파트에서는 질문 생성 자체를 수정하지 않는다.
- */
 const QUESTIONS_BY_CATEGORY: Record<string, string[]> = {
   "IT/개발": [
     "Q1. 프로젝트 중 가장 해결하기 어려웠던 기술적 한계와 트러블슈팅 경험을 말씀해 주세요.",
     "Q2. 코드 리뷰나 협업 도구를 활용한 팀 개발 경험이 있으시면 구체적으로 설명해 주세요.",
     "Q3. 본인이 가장 자신 있는 기술 스택과 해당 기술을 선택한 이유를 말씀해 주세요.",
   ],
-
-  비즈니스: [
+  "비즈니스": [
     "Q1. 데이터를 기반으로 의사결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
     "Q2. 팀원 간 의견이 대립할 때 조율한 경험과 본인만의 소통 노하우는 무엇인가요?",
     "Q3. 본인이 주도적으로 기획하거나 실행한 프로젝트를 STAR 구조로 말씀해 주세요.",
   ],
-
-  디자인: [
+  "디자인": [
     "Q1. 사용자 중심의 디자인 결정을 내린 경험이 있으시면 구체적으로 설명해 주세요.",
     "Q2. 개발팀 혹은 기획팀과 협업 시 디자인 의도를 효과적으로 전달한 방법을 말씀해 주세요.",
     "Q3. 본인 포트폴리오 중 가장 애착이 가는 작업물과 그 이유를 설명해 주세요.",
   ],
 };
 
+export default function InterviewRecording({ onExit }: { onExit: () => void }) {
+  // 1. 상태 및 흐름 관리 Hook 호출
+  const flow = useInterviewFlow();
 
-interface InterviewRecordingProps {
-  onExit: () => void;
-}
+  // 🔑 질문이 전환될 때마다 "그 순간의 녹화 경과 시간(초)"을 쌓아두는 ref
+  // Q1은 항상 0초부터 시작하므로 초기값 [0]
+  const questionTimestampsRef = useRef<number[]>([0]);
 
+  const selectedJobData = flow.jobRoles.find((job) => job.id === flow.selectedJobId);
+  const uniqueCategories = Array.from(new Set(flow.jobRoles.map((job) => job.category)));
+  const filteredJobs = flow.jobRoles.filter((job) => job.category === flow.selectedCategory);
+  const currentQuestions = QUESTIONS_BY_CATEGORY[flow.selectedCategory ?? "IT/개발"] ?? QUESTIONS_BY_CATEGORY["IT/개발"];
 
-export default function InterviewRecording({
-  onExit,
-}: InterviewRecordingProps) {
-  const {
-    step,
-    setStep,
+  // 2. 카메라 및 녹화 제어 Hook 호출
+  const camera = useInterviewCamera({
+    step: flow.step,
+    interviewId: flow.interviewId,
+    startedUserId: flow.startedUserId,
+    jobRoleId: flow.jobRoleId,
+    jobName: selectedJobData?.name,
+    currentQuestions,
+    questionTimestamps: questionTimestampsRef.current, // 🔑 전달
+    onExit,
+  });
 
-    countdown,
-    setCountdown,
-
-    time,
-    setTime,
-
-    currentQuestionIdx,
-    setCurrentQuestionIdx,
-
-    questionMode,
-    followUpQuestion,
-    isFetchingFollowUp,
-    followUpError,
-    requestFollowUp,
-    resetFollowUp,
-
-    jobRoles,
-
-    selectedCategory,
-    setSelectedCategory,
-
-    selectedJobId,
-    setSelectedJobId,
-
-    recommendedJobId,
-
-    isUploadingResume,
-    uploadResume,
-
-    interviewId,
-    startedUserId,
-    jobRoleId,
-
-    fetchJobRoles,
-    startInterviewSession,
-
-    reset,
-  } = useInterviewStore();
-
-
-  /**
-   * 답변 음성 STT + 꼬리질문 생성 처리 중 여부.
-   *
-   * 연속 클릭으로 동일 답변이 여러 번 전송되는 것을 막는다.
-   */
-  const [isProcessingAnswer, setIsProcessingAnswer] =
-    useState(false);
-
-
-  /**
-   * 각 기본 질문이 시작된 시점.
-   *
-   * 현재 전체 영상 분석에서 사용하고 있다.
-   */
-  const questionTimestampsRef =
-    useRef<number[]>([0]);
-
-
-  /**
-   * 부모 컴포넌트가 다시 렌더링되더라도
-   * onExit 참조가 바뀌어서 카메라가 재실행되지 않도록 한다.
-   */
-  const onExitRef =
-    useRef(onExit);
-
-  useEffect(() => {
-    onExitRef.current =
-      onExit;
-  }, [onExit]);
-
-
-  /**
-   * useInterviewCamera에 전달할
-   * 안정화된 종료 함수.
-   */
-  const stableOnExit =
-    useCallback(() => {
-      onExitRef.current();
-    }, []);
-
-
-  /**
-   * 현재 선택된 직무.
-   */
-  const selectedJobData =
-    useMemo(
-      () =>
-        jobRoles.find(
-          (job) =>
-            job.id ===
-            selectedJobId,
-        ),
-      [
-        jobRoles,
-        selectedJobId,
-      ],
-    );
-
-
-  /**
-   * 중복 제거된 직무 카테고리 목록.
-   */
-  const uniqueCategories =
-    useMemo(
-      () =>
-        Array.from(
-          new Set(
-            jobRoles.map(
-              (job) =>
-                job.category,
-            ),
-          ),
-        ),
-      [jobRoles],
-    );
-
-
-  /**
-   * 선택한 카테고리에 해당하는 직무 목록.
-   */
-  const filteredJobs =
-    useMemo(
-      () =>
-        jobRoles.filter(
-          (job) =>
-            job.category ===
-            selectedCategory,
-        ),
-      [
-        jobRoles,
-        selectedCategory,
-      ],
-    );
-
-
-  /**
-   * 현재 카테고리의 기본 질문 목록.
-   *
-   * 다른 팀원이 질문 생성 기능을 연결하면
-   * 이 부분만 서버 질문 배열로 변경하면 된다.
-   */
-  const currentQuestions =
-    useMemo(
-      () =>
-        QUESTIONS_BY_CATEGORY[
-          selectedCategory ??
-            "IT/개발"
-        ] ??
-        QUESTIONS_BY_CATEGORY[
-          "IT/개발"
-        ],
-      [
-        selectedCategory,
-      ],
-    );
-
-
-  /**
-   * 현재 기본 질문.
-   *
-   * 일반 질문 생성/조회는 다른 팀원의 담당이므로
-   * 현재 하드코딩 질문 구조를 그대로 유지한다.
-   */
-  const currentQuestion =
-    currentQuestions[
-      currentQuestionIdx
-    ] ?? "";
-
-
-  /**
-   * 실제 화면에 표시할 질문.
-   *
-   * base     -> 현재 기본 질문
-   * followup -> Gemini가 방금 생성한 꼬리질문
-   */
-  const displayedQuestion =
-    questionMode === "followup"
-      ? followUpQuestion ??
-        "꼬리질문을 불러오는 중입니다..."
-      : currentQuestion;
-
-
-  /**
-   * 페이지 진입 시 직무 목록 조회.
-   *
-   * 컴포넌트 종료 시 면접 상태 초기화.
-   */
-  useEffect(() => {
-    void fetchJobRoles();
-
-    return () => {
-      reset();
-    };
-  }, [
-    fetchJobRoles,
-    reset,
-  ]);
-
-
-  /**
-   * store에서 발생한 꼬리질문 API 오류는
-   * 개발 중 확인할 수 있도록 콘솔에 남긴다.
-   */
-  useEffect(() => {
-    if (followUpError) {
-      console.error(
-        "[FollowUp]",
-        followUpError,
-      );
+  const handleNextQuestion = () => {
+    if (flow.currentQuestionIdx < currentQuestions.length - 1) {
+      questionTimestampsRef.current.push(flow.time); // 🔑 다음 질문 시작 시각 기록
+      flow.setCurrentQuestionIdx((prev) => prev + 1);
+    } else {
+      flow.setStep("analyzing");
     }
-  }, [followUpError]);
-
-
-  /**
-   * 카운트다운 / 녹화 시간 처리.
-   */
-  useEffect(() => {
-    let interval:
-      | NodeJS.Timeout
-      | null = null;
-
-    if (
-      step ===
-      "countdown"
-    ) {
-      interval =
-        setInterval(
-          () => {
-            setCountdown(
-              (prev) =>
-                prev - 1,
-            );
-          },
-          1000,
-        );
-    }
-
-    if (
-      step ===
-      "recording"
-    ) {
-      interval =
-        setInterval(
-          () => {
-            setTime(
-              (prev) =>
-                prev + 1,
-            );
-          },
-          1000,
-        );
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(
-          interval,
-        );
-      }
-    };
-  }, [
-    step,
-    setCountdown,
-    setTime,
-  ]);
-
-
-  /**
-   * 3 → 2 → 1 → 0 이후
-   * 실제 녹화 상태로 전환.
-   */
-  useEffect(() => {
-    if (
-      step ===
-        "countdown" &&
-      countdown === 0
-    ) {
-      setStep(
-        "recording",
-      );
-
-      setCountdown(3);
-    }
-  }, [
-    countdown,
-    step,
-    setStep,
-    setCountdown,
-  ]);
-
-
-  /**
-   * 실제 카메라 / 녹화 / 영상 업로드 / 분석 처리.
-   */
-  const camera =
-    useInterviewCamera({
-      step,
-
-      interviewId,
-
-      startedUserId,
-
-      jobRoleId,
-
-      jobName:
-        selectedJobData?.name,
-
-      currentQuestions,
-
-      questionTimestamps:
-        questionTimestampsRef.current,
-
-      onExit:
-        stableOnExit,
-    });
-
-
-  /**
-   * 첫 번째 기본 질문 녹화가 시작되면
-   * 꼬리질문용 답변 오디오도 동시에 시작한다.
-   *
-   * 전체 영상 MediaRecorder와 별개의 녹음이므로
-   * 눈/자세 분석용 전체 영상은 끊기지 않는다.
-   */
-  useEffect(() => {
-    if (
-      step === "recording"
-    ) {
-      camera.startAnswerRecording();
-    }
-  }, [
-    step,
-    camera.startAnswerRecording,
-  ]);
-
-
-  /**
-   * =====================================================
-   * 답변 완료 처리
-   * =====================================================
-   *
-   * base 질문에서 답변 완료:
-   *
-   * 답변 오디오 종료
-   * -> Spring /api/followup/transcribe
-   * -> FastAPI Whisper STT
-   * -> 실제 답변 텍스트
-   * -> Spring /api/followup/create
-   * -> 꼬리질문 1개 생성
-   * -> questionMode = followup
-   * -> 꼬리질문 답변 녹음 시작
-   *
-   * followup 질문에서 답변 완료:
-   *
-   * 현재 단계에서는 답변 오디오만 종료하고
-   * 다음 기본 질문으로 이동한다.
-   *
-   * 꼬리질문 답변 STT + DB 저장은 다음 단계에서 연결한다.
-   */
-  const handleNextQuestion =
-    async () => {
-      if (
-        isProcessingAnswer ||
-        step !== "recording"
-      ) {
-        return;
-      }
-
-
-      setIsProcessingAnswer(true);
-
-
-      try {
-        /**
-         * -----------------------------------------------
-         * 기본 질문 답변 완료
-         * -----------------------------------------------
-         */
-        if (
-          questionMode === "base"
-        ) {
-          const answerBlob =
-            await camera.stopAnswerRecording();
-
-
-          console.log(
-            "[FollowUp] 기본 질문 답변 음성 녹음 완료:",
-            answerBlob.size,
-            "bytes",
-          );
-
-
-          const transcription =
-            await transcribeFollowUpAnswer(
-              answerBlob,
-            );
-
-
-          console.log(
-            "[FollowUp] STT 결과:",
-            transcription.text,
-          );
-
-
-          const created =
-            await requestFollowUp({
-              originalQuestion:
-                currentQuestion,
-
-              answer:
-                transcription.text,
-            });
-
-
-          if (!created) {
-            throw new Error(
-              "꼬리질문 생성에 실패했습니다.",
-            );
-          }
-
-
-          /**
-           * store의 questionMode가 followup으로 바뀌었으므로
-           * 화면에는 생성된 꼬리질문이 표시된다.
-           *
-           * 동시에 꼬리질문 답변용 새 오디오 녹음을 시작한다.
-           */
-          const started =
-            camera.startAnswerRecording();
-
-
-          if (!started) {
-            console.warn(
-              "[FollowUp] 꼬리질문 답변 오디오 녹음을 시작하지 못했습니다.",
-            );
-          }
-
-
-          return;
-        }
-
-
-        /**
-         * -----------------------------------------------
-         * 꼬리질문 답변 완료
-         * -----------------------------------------------
-         *
-         * 현재 단계에서는 별도 오디오 구간을 정상 종료만 한다.
-         * 다음 단계에서 이 Blob을 STT하고 DB에 저장한다.
-         */
-        await camera.stopAnswerRecording();
-
-
-        resetFollowUp();
-
-
-        if (
-          currentQuestionIdx <
-          currentQuestions.length - 1
-        ) {
-          /**
-           * 기본 질문 하나 + 꼬리질문 하나가 끝난 시점.
-           * 전체 영상 분석의 질문 구간 경계로 유지한다.
-           */
-          questionTimestampsRef.current.push(
-            time,
-          );
-
-
-          setCurrentQuestionIdx(
-            (prev) =>
-              prev + 1,
-          );
-
-
-          /**
-           * 다음 기본 질문 답변용 오디오 녹음 시작.
-           */
-          camera.startAnswerRecording();
-
-
-          return;
-        }
-
-
-        /**
-         * Q3의 꼬리질문까지 답변했을 때만
-         * 기존 전체 영상 분석으로 넘어간다.
-         */
-        setStep(
-          "analyzing",
-        );
-
-      } catch (error) {
-        console.error(
-          "[FollowUp] 답변 처리 실패:",
-          error,
-        );
-
-
-        /**
-         * 기본 질문 처리 중 실패했다면
-         * 같은 질문에 다시 답할 수 있도록 오디오 녹음을 재시작한다.
-         */
-        if (
-          questionMode === "base"
-        ) {
-          camera.startAnswerRecording();
-        }
-
-
-        alert(
-          error instanceof Error
-            ? error.message
-            : "답변 처리 중 오류가 발생했습니다.",
-        );
-
-      } finally {
-        setIsProcessingAnswer(false);
-      }
-    };
-
-
-  /**
-   * 분석 화면 종료.
-   */
-  const handleFinalExit =
-    () => {
-      camera.stopCamera();
-
-      stableOnExit();
-    };
-
-
-  /**
-   * AI 분석 화면.
-   */
-  if (
-    step ===
-    "analyzing"
-  ) {
+  };
+
+  const handleFinalExit = () => {
+    camera.stopCamera();
+    onExit();
+  };
+
+  // ── 렌더링 ──
+  if (flow.step === "analyzing") {
     return (
       <AnalysisProgress
-        analysisProgress={
-          camera.analysisProgress
-        }
-        analysisResult={
-          camera.analysisResult
-        }
-        analysisError={
-          camera.analysisError
-        }
-        selectedJobData={
-          selectedJobData
-        }
-        onExit={
-          handleFinalExit
-        }
+        analysisProgress={camera.analysisProgress}
+        analysisResult={camera.analysisResult}
+        analysisError={camera.analysisError}
+        selectedJobData={selectedJobData}
+        onExit={handleFinalExit}
       />
     );
   }
 
-
-  /**
-   * 면접 시작 전 입력 단계인지 여부.
-   */
-  const isInputPhase =
-    [
-      "resumePrompt",
-      "resumeUpload",
-      "jobSelect",
-    ].includes(step);
-
+  // 💡 자소서 업로드 단계나 직무 대분류 탐색 시 하단 컨트롤러를 숨기기 위한 조건 설정
+  const isInputPhase = ["resumePrompt", "resumeUpload", "jobSelect"].includes(flow.step);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-black font-sans">
-
-      {/* 카메라 화면 */}
       <CameraViewport
-        videoRef={
-          camera.videoRef
-        }
-        step={
-          step
-        }
-        countdown={
-          countdown
-        }
-        selectedCategory={
-          selectedCategory
-        }
-        selectedJobName={
-          selectedJobData?.name
-        }
-        currentQuestionText={
-          displayedQuestion
-        }
-        onCancelStop={() =>
-          setStep(
-            "recording",
-          )
-        }
-        onConfirmStop={() =>
-          setStep(
-            "analyzing",
-          )
-        }
+        videoRef={camera.videoRef}
+        step={flow.step}
+        countdown={flow.countdown}
+        selectedCategory={flow.selectedCategory}
+        selectedJobName={selectedJobData?.name}
+        currentQuestionText={currentQuestions[flow.currentQuestionIdx]}
+        onCancelStop={() => flow.setStep("recording")}
+        onConfirmStop={() => flow.setStep("analyzing")}
       />
 
-
-      {/* 자소서 여부 선택 */}
-      {step ===
-        "resumePrompt" && (
+      {/* 💡 분기 1: 자기소개서 기입 의사 확인 모달 */}
+      {flow.step === "resumePrompt" && (
         <ResumePromptModal
-          onYes={() =>
-            setStep(
-              "resumeUpload",
-            )
-          }
-          onNo={() =>
-            setStep(
-              "jobSelect",
-            )
-          }
+          onYes={() => flow.setStep("resumeUpload")}
+          onNo={() => flow.setStep("jobSelect")}
         />
       )}
 
-
-      {/* 자소서 업로드 */}
-      {step ===
-        "resumeUpload" && (
+      {/* 💡 분기 2: 자기소개서 파일 업로드 드래그 앤 드롭 모달 */}
+      {flow.step === "resumeUpload" && (
         <ResumeUploadModal
-          isUploading={
-            isUploadingResume
-          }
-          onNext={(
-            file,
-          ) =>
-            uploadResume(
-              file,
-            )
-          }
-          onSkip={() =>
-            setStep(
-              "jobSelect",
-            )
-          }
+        isUploading={flow.isUploadingResume}
+        onNext={(file) => flow.handleResumeUpload(file)}
+        onSkip={() => flow.setStep("jobSelect")}
+      />
+      )}
+
+      {/* 💡 분기 3: 직무 선택 모달 */}
+      {flow.step === "resumeUpload" && (
+        <ResumeUploadModal
+          isUploading={flow.isUploadingResume} // 💡 스피너 상태 전달
+          onNext={(file) => flow.handleResumeUpload(file)} // 💡 여기서 바로 가상 분석 함수 호출!
+          onSkip={() => flow.setStep("jobSelect")}
         />
       )}
 
-
-      {/* 직무 선택 */}
-      {step ===
-        "jobSelect" && (
+      {flow.step === "jobSelect" && (
         <JobSelectionModal
-          jobRoles={
-            jobRoles
-          }
-          selectedCategory={
-            selectedCategory
-          }
-          setSelectedCategory={
-            setSelectedCategory
-          }
-          selectedJobId={
-            selectedJobId
-          }
-          setSelectedJobId={
-            setSelectedJobId
-          }
-          filteredJobs={
-            filteredJobs
-          }
-          uniqueCategories={
-            uniqueCategories
-          }
-          recommendedJobId={
-            recommendedJobId
-          }
-          onStartInterview={
-            startInterviewSession
-          }
+          jobRoles={flow.jobRoles}
+          selectedCategory={flow.selectedCategory}
+          setSelectedCategory={flow.setSelectedCategory}
+          selectedJobId={flow.selectedJobId}
+          setSelectedJobId={flow.setSelectedJobId}
+          filteredJobs={filteredJobs}
+          uniqueCategories={uniqueCategories}
+          recommendedJobId={flow.recommendedJobId} // 💡 추천 ID 전달
+          onStartInterview={flow.handleStartInterview}
         />
       )}
-
-
-      {/* 녹화 컨트롤 */}
+      
+      {/* 💡 설정 단계가 완료되어 실제 연습/카운트다운에 임할 때만 하단 바 출력 */}
       {!isInputPhase && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex h-32 w-full items-end justify-center pb-12">
+        <div className="absolute inset-x-0 bottom-0 z-20 flex h-32 w-full items-end justify-center pb-12 pointer-events-none">
           <div className="pointer-events-auto">
             <RecordingControls
-              step={
-                step
-              }
-              time={
-                time
-              }
-              currentQuestionIdx={
-                currentQuestionIdx
-              }
-              totalQuestions={
-                currentQuestions.length
-              }
-              questionMode={
-                questionMode
-              }
-              isProcessingAnswer={
-                isProcessingAnswer ||
-                isFetchingFollowUp
-              }
-              onStartCountdown={() =>
-                setStep(
-                  "countdown",
-                )
-              }
-              onStopRecording={() =>
-                setStep(
-                  "confirmStop",
-                )
-              }
-              onNextQuestion={
-                handleNextQuestion
-              }
+              step={flow.step}
+              time={flow.time}
+              currentQuestionIdx={flow.currentQuestionIdx}
+              totalQuestions={currentQuestions.length}
+              onStartCountdown={() => flow.setStep("countdown")}
+              onStopRecording={() => flow.setStep("confirmStop")}
+              onNextQuestion={handleNextQuestion}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Briefcase, CheckCircle2, ChevronRight, Sparkles } from "lucide-react";
+import { Briefcase, CheckCircle2, ChevronRight, Sparkles } from "lucide-react"; // Sparkles 추가
 import type { JobRole } from "@/types";
 
 interface JobSelectionModalProps {
@@ -12,7 +12,7 @@ interface JobSelectionModalProps {
   setSelectedJobId: (id: number | null) => void;
   filteredJobs: JobRole[];
   uniqueCategories: string[];
-  recommendedJobId?: number | null;
+  recommendedJobId?: number | null; // 💡 추가
   onStartInterview: () => void;
 }
 
@@ -24,7 +24,7 @@ export default function JobSelectionModal({
   setSelectedJobId,
   filteredJobs,
   uniqueCategories,
-  recommendedJobId,
+  recommendedJobId, // 💡 추가
   onStartInterview,
 }: JobSelectionModalProps) {
   const selectedJobData = jobRoles.find((job) => job.id === selectedJobId);
@@ -95,22 +95,20 @@ export default function JobSelectionModal({
                     className={`px-4 py-3.5 rounded-2xl transition-all border-2 flex items-center justify-between group ${
                       selectedJobId === job.id
                         ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : recommendedJobId === job.id
-                        ? "border-purple-200 bg-purple-50 text-navy" 
                         : "border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="flex flex-col items-start gap-1.5 w-full truncate pr-2">
+                    <div className="flex flex-col items-start gap-1 w-full truncate pr-2">
                       <span className="text-[13px] font-bold">{job.name}</span>
-                      
+                      {/* 💡 추천 직무일 경우 뱃지 추가 */}
                       {recommendedJobId === job.id && (
-                        <span className="text-[10px] font-extrabold text-purple-600 bg-purple-100/80 px-2 py-0.5 rounded-md border border-purple-200 shadow-sm">
+                        <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-md">
                           ✨ AI 추천
                         </span>
                       )}
                     </div>
                     {selectedJobId === job.id && (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-blue-500" />
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-500" />
                     )}
                   </button>
                 ))
