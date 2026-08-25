@@ -43,12 +43,15 @@ function number(value: unknown, fallback = 0): number {
 }
 
 function roomStatus(raw: JsonObject, current: number, max: number): RoomStatus {
-  const value = text(raw.status).toLowerCase();
-  if (["live", "in_progress", "ongoing"].includes(value)) return "live";
-  if (["finished", "completed", "closed"].includes(value)) return "finished";
-  if (["full"].includes(value) || current >= max) return "full";
-  if (current === max - 1) return "almostFull";
-  return "recruiting";
+  const value = text(raw.roomStatus ?? raw.status).toUpperCase();
+  if (["IN_PROGRESS", "LIVE", "ONGOING"].includes(value)) return "live";
+  if (["COMPLETED", "FINISHED", "CLOSED"].includes(value)) return "finished";
+  if (["WAITING", "RECRUITING", "ALMOSTFULL", "ALMOST_FULL", "FULL"].includes(value)) {
+    if (value === "FULL" || current >= max) return "full";
+    if (current === max - 1) return "almostFull";
+    return "recruiting";
+  }
+  return "finished";
 }
 
 function normalizeRoom(value: unknown): GroupRoom {
