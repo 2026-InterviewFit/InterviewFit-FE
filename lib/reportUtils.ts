@@ -8,6 +8,16 @@ export const formatKoreanDate = (value?: string) => {
   return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
 };
 
+export const formatKoreanDateTime = (value?: string | null) => {
+  if (!value) return "시간 정보 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "시간 정보 없음";
+  return `${formatKoreanDate(value)} ${date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
 export const average = (values: Array<number | undefined | null>) => {
   const validValues = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   if (validValues.length === 0) return undefined;
