@@ -14,6 +14,8 @@ interface JobSelectionModalProps {
   uniqueCategories: string[];
   recommendedJobId?: number | null;
   onStartInterview: () => void;
+  isFollowUpEnabled: boolean;
+  setIsFollowUpEnabled: (val: boolean) => void;
 }
 
 export default function JobSelectionModal({
@@ -26,6 +28,8 @@ export default function JobSelectionModal({
   uniqueCategories,
   recommendedJobId,
   onStartInterview,
+  isFollowUpEnabled,
+  setIsFollowUpEnabled,
 }: JobSelectionModalProps) {
   const selectedJobData = jobRoles.find((job) => job.id === selectedJobId);
 
@@ -77,7 +81,7 @@ export default function JobSelectionModal({
         </div>
 
         {/* 세부 직무 칩 영역 */}
-        <div className="mb-8 min-h-[140px]">
+        <div className="mb-6 min-h-[140px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedCategory}
@@ -123,11 +127,31 @@ export default function JobSelectionModal({
           </AnimatePresence>
         </div>
 
+        {/* 💡 신규 추가: 꼬리질문 심층면접 토글 */}
+        <div className="mb-6 flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+            <div>
+                <h3 className="text-sm font-bold text-navy">꼬리질문 심층 면접</h3>
+                <p className="text-[11px] text-muted mt-1">답변 내용을 분석하여 꼬리질문을 생성합니다.</p>
+            </div>
+            <button 
+                onClick={() => setIsFollowUpEnabled(!isFollowUpEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isFollowUpEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+            >
+                <span 
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isFollowUpEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} 
+                />
+            </button>
+        </div>
+
         {/* 시작 버튼 */}
         <button
           disabled={!selectedJobId}
           onClick={onStartInterview}
-          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4.5 text-sm font-bold transition-all duration-200 ${
+          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 ${
             selectedJobId
               ? "bg-navy text-white hover:bg-navy-dark shadow-lg shadow-navy/20 hover:-translate-y-0.5"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

@@ -10,7 +10,6 @@ import {
 
 import { useInterviewStore } from "@/store/useInterviewStore";
 import { useInterviewCamera } from "@/hooks/useInterviewCamera";
-import { transcribeFollowUpAnswer } from "@/lib/api";
 
 import JobSelectionModal from "./JobSelectionModal";
 import AnalysisProgress from "./AnalysisProgress";
@@ -52,11 +51,14 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     currentQuestionIdx,
     setCurrentQuestionIdx,
     questionMode,
-    followUpQuestion,
-    isFetchingFollowUp,
-    followUpError,
-    requestFollowUp,
-    resetFollowUp,
+    setQuestionMode,
+    
+    isFollowUpEnabled,
+    setIsFollowUpEnabled,
+    followUpList,
+    activeBackgroundTasks,
+    addFollowUpTask,
+
     jobRoles,
     selectedCategory,
     setSelectedCategory,
@@ -71,11 +73,12 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     fetchJobRoles,
     startInterviewSession,
     reset,
-    // 💡 팀원분이 추가하신 핵심: Store에 저장해둔 진짜 질문 데이터 가져오기
     generatedQuestions, 
   } = useInterviewStore();
 
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
+  const [isWaitingForQuestion, setIsWaitingForQuestion] = useState(false); 
+  
   const questionTimestampsRef = useRef<number[]>([0]);
   const onExitRef = useRef(onExit);
 
@@ -102,7 +105,6 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     [jobRoles, selectedCategory],
   );
 
-  // 🚀 두 기능의 융합 지점: AI 질문이 있으면 우선 적용, 없으면 카테고리별 폴백 사용
   const currentQuestions = useMemo(() => {
     if (generatedQuestions && generatedQuestions.length > 0) {
       return generatedQuestions.map((q: any) => q.question || q.questionText || q);
@@ -115,10 +117,20 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
 
   const currentQuestion = currentQuestions[currentQuestionIdx] ?? "";
 
-  // 현재 화면에 렌더링할 질문 결정
-  const displayedQuestion = questionMode === "followup"
-    ? followUpQuestion ?? "꼬리질문을 생성하고 있습니다..."
-    : currentQuestion;
+  const displayedQuestion = useMemo(() => {
+    if (questionMode === "base") return currentQuestion;
+    
+    if (followUpList[currentQuestionIdx]) {
+        return followUpList[currentQuestionIdx];
+    }
+    
+    if (activeBackgroundTasks > 0) {
+        return "답변을 분석하여 꼬리질문을 생성하고 있습니다...\n잠시만 기다려주세요.";
+    }
+    
+    return "면접이 종료되었습니다."; 
+  }, [questionMode, currentQuestion, followUpList, currentQuestionIdx, activeBackgroundTasks]);
+
 
   useEffect(() => {
     void fetchJobRoles();
@@ -126,12 +138,6 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
       reset();
     };
   }, [fetchJobRoles, reset]);
-
-  useEffect(() => {
-    if (followUpError) {
-      console.error("[FollowUp Error]", followUpError);
-    }
-  }, [followUpError]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -165,67 +171,80 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
   });
 
   useEffect(() => {
-    if (step === "recording") {
+    if (step === "recording" && questionMode === "base") {
       camera.startAnswerRecording();
     }
-  }, [step, camera]);
+  }, [step, questionMode, camera]);
 
-  // 다음 질문으로 넘어가기 로직 (다음 기본 질문 진행 공통화)
-  const proceedToNextBaseQuestion = useCallback(() => {
-    resetFollowUp();
-    if (currentQuestionIdx < currentQuestions.length - 1) {
-      questionTimestampsRef.current.push(time);
-      setCurrentQuestionIdx((prev) => prev + 1);
-      camera.startAnswerRecording();
+  useEffect(() => {
+    if (step === "recording" && questionMode === "followup" && isWaitingForQuestion) {
+        const hasQuestionReady = !!followUpList[currentQuestionIdx];
+        const isStillGenerating = activeBackgroundTasks > 0;
+
+        if (hasQuestionReady) {
+            setIsWaitingForQuestion(false);
+            camera.startAnswerRecording(); 
+        } else if (!hasQuestionReady && !isStillGenerating) {
+            setStep("analyzing");
+        }
+    }
+  }, [step, questionMode, isWaitingForQuestion, followUpList, currentQuestionIdx, activeBackgroundTasks, camera, setStep]);
+
+  
+  const proceedToNextQuestion = useCallback(() => {
+    if (questionMode === "base") {
+        if (currentQuestionIdx < currentQuestions.length - 1) {
+            questionTimestampsRef.current.push(time);
+            setCurrentQuestionIdx((prev) => prev + 1);
+            camera.startAnswerRecording();
+        } else {
+            if (isFollowUpEnabled) {
+                setQuestionMode("followup"); 
+                setCurrentQuestionIdx(0); 
+                setIsWaitingForQuestion(true); 
+            } else {
+                setStep("analyzing"); 
+            }
+        }
     } else {
-      setStep("analyzing");
+        if (currentQuestionIdx < followUpList.length - 1) {
+            questionTimestampsRef.current.push(time);
+            setCurrentQuestionIdx((prev) => prev + 1);
+            setIsWaitingForQuestion(true);
+        } else {
+            if (activeBackgroundTasks > 0) { 
+                setCurrentQuestionIdx((prev) => prev + 1);
+                setIsWaitingForQuestion(true);
+            } else {
+                setStep("analyzing");
+            }
+        }
     }
-  }, [currentQuestionIdx, currentQuestions.length, resetFollowUp, setCurrentQuestionIdx, setStep, time, camera]);
+  }, [questionMode, currentQuestionIdx, currentQuestions.length, isFollowUpEnabled, followUpList.length, activeBackgroundTasks, time, camera, setCurrentQuestionIdx, setQuestionMode, setStep]);
 
+  
   const handleNextQuestion = async () => {
     if (isProcessingAnswer || step !== "recording") return;
     setIsProcessingAnswer(true);
 
     try {
+      const answerBlob = await camera.stopAnswerRecording();
+
       if (questionMode === "base") {
-        const answerBlob = await camera.stopAnswerRecording();
-        let transcriptionText = "";
-
-        try {
-          const transcription = await transcribeFollowUpAnswer(answerBlob);
-          transcriptionText = transcription.text;
-        } catch (sttError) {
-          console.warn("[STT Error] 텍스트 변환 실패, 다음 질문으로 스킵합니다.", sttError);
-          alert("음성 인식에 실패하여 다음 질문으로 넘어갑니다.");
-          proceedToNextBaseQuestion();
-          return;
+        if (isFollowUpEnabled) {
+          // 🔥 현재 진행 중인 질문의 원본 객체를 찾아 ID를 추출합니다.
+          const currentQ = generatedQuestions[currentQuestionIdx];
+          const sourceId = currentQ?.id || currentQ?.questionId;
+          
+          void addFollowUpTask(answerBlob, currentQuestion, sourceId);
         }
-
-        const created = await requestFollowUp({
-          originalQuestion: currentQuestion,
-          answer: transcriptionText,
-        });
-
-        // 꼬리질문 생성 실패 시 무한 로딩 방지 -> 바로 다음 질문으로 넘김
-        if (!created) {
-          console.warn("[FollowUp] 꼬리질문 생성 실패. 다음 기본 질문으로 넘어갑니다.");
-          proceedToNextBaseQuestion();
-          return;
-        }
-
-        const started = camera.startAnswerRecording();
-        if (!started) console.warn("[FollowUp] 오디오 녹음 시작 실패.");
-        return;
       }
-
-      // 꼬리질문 답변 시
-      await camera.stopAnswerRecording();
-      proceedToNextBaseQuestion();
-
+      
+      proceedToNextQuestion(); 
     } catch (error) {
       console.error("[Interview Flow Error] 답변 처리 실패:", error);
-      alert(error instanceof Error ? error.message : "오류가 발생했습니다. 다음 질문으로 넘어갑니다.");
-      proceedToNextBaseQuestion();
+      alert("오류가 발생했습니다. 다음 질문으로 넘어갑니다.");
+      proceedToNextQuestion();
     } finally {
       setIsProcessingAnswer(false);
     }
@@ -289,6 +308,8 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
           uniqueCategories={uniqueCategories}
           recommendedJobId={recommendedJobId}
           onStartInterview={startInterviewSession}
+          isFollowUpEnabled={isFollowUpEnabled}
+          setIsFollowUpEnabled={setIsFollowUpEnabled}
         />
       )}
 
@@ -299,9 +320,9 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
               step={step}
               time={time}
               currentQuestionIdx={currentQuestionIdx}
-              totalQuestions={currentQuestions.length}
+              totalQuestions={questionMode === "base" ? currentQuestions.length : (followUpList.length + activeBackgroundTasks || 1)}
               questionMode={questionMode}
-              isProcessingAnswer={isProcessingAnswer || isFetchingFollowUp}
+              isProcessingAnswer={isProcessingAnswer || (questionMode === 'followup' && isWaitingForQuestion)}
               onStartCountdown={() => setStep("countdown")}
               onStopRecording={() => setStep("confirmStop")}
               onNextQuestion={handleNextQuestion}

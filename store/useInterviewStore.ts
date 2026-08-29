@@ -6,6 +6,7 @@ import {
   startInterview,
   analyzeCoverLetter,
   createQuestionsWithRetry,
+  transcribeFollowUpAnswer,
 } from "@/lib/api";
 
 import type { JobRole } from "@/types";
@@ -41,9 +42,11 @@ interface InterviewState {
   time: number;
   currentQuestionIdx: number;
   questionMode: QuestionMode;
-  followUpQuestion: string | null;
-  isFetchingFollowUp: boolean;
-  followUpError: string | null;
+  
+  isFollowUpEnabled: boolean; 
+  followUpList: string[]; 
+  activeBackgroundTasks: number; 
+
   jobRoles: JobRole[];
   selectedCategory: string | null;
   selectedJobId: number | null;
@@ -57,7 +60,6 @@ interface InterviewState {
   startedUserId: number | null;
   jobRoleId: number | null;
 
-  // 💡 추가된 부분: 생성된 질문 목록을 저장할 변수
   generatedQuestions: any[]; 
 }
 
@@ -72,8 +74,13 @@ interface InterviewActions {
   
   uploadResume: (file: File) => Promise<void>;
   startInterviewSession: () => Promise<void>;
-  requestFollowUp: (params: { originalQuestion: string }) => Promise<boolean>;
-  resetFollowUp: () => void;
+  
+  setIsFollowUpEnabled: (val: boolean) => void;
+  setQuestionMode: (mode: QuestionMode) => void;
+  
+  // 💡 sourceQuestionId 파라미터 추가
+  addFollowUpTask: (blob: Blob, originalQuestion: string, sourceQuestionId?: number) => Promise<void>;
+  
   reset: () => void;
 }
 
@@ -83,9 +90,11 @@ const initialState: Omit<InterviewState, "jobRoles"> = {
   time: 0,
   currentQuestionIdx: 0,
   questionMode: "base",
-  followUpQuestion: null,
-  isFetchingFollowUp: false,
-  followUpError: null,
+  
+  isFollowUpEnabled: true,
+  followUpList: [],
+  activeBackgroundTasks: 0,
+
   selectedCategory: "IT/개발",
   selectedJobId: null,
   recommendedJobId: null,
@@ -95,7 +104,7 @@ const initialState: Omit<InterviewState, "jobRoles"> = {
   interviewId: null,
   startedUserId: null,
   jobRoleId: null,
-  generatedQuestions: [], // 💡 초기화 추가
+  generatedQuestions: [], 
 };
 
 export const useInterviewStore = create<InterviewState & InterviewActions>((set, get) => ({
@@ -109,6 +118,9 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
   
   setSelectedCategory: (category) => set({ selectedCategory: category, selectedJobId: null }),
   setSelectedJobId: (id) => set({ selectedJobId: id }),
+  
+  setIsFollowUpEnabled: (val) => set({ isFollowUpEnabled: val }),
+  setQuestionMode: (mode) => set({ questionMode: mode }),
 
   fetchJobRoles: async () => {
     try {
@@ -198,11 +210,10 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
         jobRoleId: selectedJobId,
         currentQuestionIdx: 0,
         questionMode: "base",
-        followUpQuestion: null,
-        isFetchingFollowUp: false,
-        followUpError: null,
+        followUpList: [],
+        activeBackgroundTasks: 0,
         step: "prepare",
-        generatedQuestions: questionsResponse, // 💡 핵심: 받아온 진짜 데이터 저장!
+        generatedQuestions: questionsResponse,
       });
 
     } catch (error: any) {
@@ -211,41 +222,44 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
     }
   },
 
-  requestFollowUp: async ({ originalQuestion }) => {
-    const { jobRoleId, interviewId } = get();
-    if (!jobRoleId) {
-      set({ followUpError: "직무 정보가 없습니다." });
-      return false;
-    }
-
-    set({ isFetchingFollowUp: true, followUpError: null, followUpQuestion: null });
-
+  // 💡 DB 저장을 위해 sourceQuestionId 를 받아 넘겨주도록 수정
+  addFollowUpTask: async (blob, originalQuestion, sourceQuestionId) => {
+    set((state) => ({ activeBackgroundTasks: state.activeBackgroundTasks + 1 }));
     try {
+      const { jobRoleId, interviewId } = get();
+      if (!jobRoleId) return;
+      
+      const transcription = await transcribeFollowUpAnswer(blob);
+      
       const result = await createFollowUpQuestion({
         jobRoleId,
         interviewId: interviewId ?? undefined,
         originalQuestion,
-        answer: "답변을 마쳤습니다.",
+        answer: transcription.text,
         interviewStyle: "normal",
+        sourceQuestionId: sourceQuestionId, // 🔥 백엔드 DB 에러를 막기 위해 추가된 부분!
       });
-
-      const followUpText = (result.followUpQuestion as string | undefined) ?? (result.follow_up_question as string | undefined) ?? (result.question as string | undefined) ?? null;
-
-      if (!followUpText) {
-        set({ isFetchingFollowUp: false, followUpError: "꼬리질문을 받지 못했습니다." });
-        return false;
+      
+      console.log("🔥 [꼬리질문 API 응답 원본]:", result);
+      
+      const followUpText = 
+          result?.followUpQuestion || 
+          result?.follow_up_question || 
+          result?.question ||
+          result?.data?.followUpQuestion ||
+          result?.data?.question ||
+          result?.data?.follow_up_question;
+          
+      if (followUpText) {
+        set((state) => ({ followUpList: [...state.followUpList, followUpText] }));
+      } else {
+        console.warn("⚠️ 꼬리질문 텍스트를 찾을 수 없습니다. 응답 구조를 확인하세요.");
       }
-
-      set({ isFetchingFollowUp: false, followUpQuestion: followUpText, questionMode: "followup" });
-      return true;
     } catch (error) {
-      set({ isFetchingFollowUp: false, followUpError: error instanceof Error ? error.message : "꼬리질문 생성에 실패했습니다." });
-      return false;
+      console.warn("[Background FollowUp Error] 꼬리질문 비동기 생성 실패:", error);
+    } finally {
+      set((state) => ({ activeBackgroundTasks: state.activeBackgroundTasks - 1 }));
     }
-  },
-
-  resetFollowUp: () => {
-    set({ questionMode: "base", followUpQuestion: null, isFetchingFollowUp: false, followUpError: null });
   },
 
   reset: () => {
