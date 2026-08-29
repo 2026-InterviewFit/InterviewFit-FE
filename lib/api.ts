@@ -50,6 +50,15 @@ export type FollowUpTranscriptionResponse = {
   text: string;
 };
 
+export type FollowUpAnswerCreateResponse = {
+  message?: string;
+  followUpAnswerId?: number;
+  interviewId?: number | null;
+  followUpQuestionId?: number;
+  answerText?: string;
+  analysisStatus?: string;
+};
+
 /* =========================================================
  * 공통 함수
  * ========================================================= */
@@ -290,6 +299,35 @@ export async function createFollowUpQuestion(params: {
   if (!response.ok) {
     const errorMessage = await readErrorMessage(response);
     throw new Error(`꼬리질문 생성 실패 (${response.status}): ${errorMessage}`);
+  }
+
+  return response.json();
+}
+
+export async function saveFollowUpAnswer(params: {
+  interviewId: number;
+  followUpQuestionId: number;
+  answerText: string;
+  startTime?: number;
+  endTime?: number;
+}): Promise<FollowUpAnswerCreateResponse> {
+  const response = await authFetch(`${API_BASE_URL}/api/followup/answers`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      interviewId: params.interviewId,
+      followUpQuestionId: params.followUpQuestionId,
+      answerText: params.answerText,
+      startTime: params.startTime,
+      endTime: params.endTime,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorMessage = await readErrorMessage(response);
+    throw new Error(`꼬리질문 답변 저장 실패 (${response.status}): ${errorMessage}`);
   }
 
   return response.json();
@@ -598,12 +636,15 @@ export async function analyzeCoverLetter(
 }
 
 export async function createQuestions(params: {
+  interviewId?: number;
+  count?: number;
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}) {
+}): Promise<Array<{ id: number; question: string }>> {
   const payload = {
-    count: 3, 
+    interviewId: params.interviewId,
+    count: params.count ?? 3,
     jobRoleId: params.jobRoleId,
     jobName: params.jobName,
     coverLetterId: params.coverLetterId,
@@ -629,27 +670,27 @@ export async function createQuestions(params: {
     errorObj = { message: errorText, code: "UNKNOWN_ERROR" };
   }
 
-  // 커스텀 에러 객체 생성
   const err = new Error(errorObj.message || "질문 생성에 실패했습니다.") as Error & { status?: number; code?: string };
   err.status = response.status;
   err.code = errorObj.code;
-  
+
   throw err;
 }
 
 export async function createQuestionsWithRetry(params: {
+  interviewId?: number;
+  count?: number;
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}) {
-  const MAX_RETRIES = 2; 
-  const RETRY_DELAY = 1000; 
+}): Promise<Array<{ id: number; question: string }>> {
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY = 1000;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await createQuestions(params);
     } catch (err: unknown) {
-      // 💡 any 대신 커스텀 에러 타입으로 안전하게 단언
       const error = err as { status?: number; code?: string };
       const shouldRetry =
         error?.status === 409 &&
@@ -662,4 +703,6 @@ export async function createQuestionsWithRetry(params: {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
     }
   }
+
+  throw new Error("질문 생성 재시도에 실패했습니다.");
 }
