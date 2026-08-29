@@ -37,6 +37,7 @@ interface AnswerContextInput {
 }
 
 const AUDIO_LEVEL_CHECK_MS = 1500;
+const RECORDING_TAIL_BUFFER_MS = 250;
 // 약 -66dBFS. 조용한 환경의 작은 입력도 허용하되 사실상 무음인 트랙은 거른다.
 const MIN_AUDIO_RMS = 0.0005;
 
@@ -191,16 +192,6 @@ export function useGroupAnswerRecording({
       return;
     }
 
-    const hasAudioInput = await checkAudioInputLevel(microphoneTrack).catch(() => false);
-    if (!mountedRef.current || startAttempt !== recordingStartAttemptRef.current) return;
-    if (!hasAudioInput) {
-      isStartingRef.current = false;
-      setIsCheckingAudio(false);
-      setCanRetryRecording(true);
-      setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
-      return;
-    }
-
     const cameraTrack = localParticipant.getTrackPublication(Track.Source.Camera)?.track?.mediaStreamTrack;
     const stream = new MediaStream(
       [cameraTrack?.readyState === "live" ? cameraTrack : null, microphoneTrack]
@@ -221,6 +212,29 @@ export function useGroupAnswerRecording({
       setCanRetryRecording(true);
       setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
       return;
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        "[Group Recording] 녹화 시작 직전 audio tracks",
+        stream.getAudioTracks().map((track) => {
+          const settings = track.getSettings() as MediaTrackSettings & { voiceIsolation?: boolean };
+          return {
+            label: track.label,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState,
+            settings,
+            sampleRate: settings.sampleRate,
+            channelCount: settings.channelCount,
+            echoCancellation: settings.echoCancellation,
+            noiseSuppression: settings.noiseSuppression,
+            autoGainControl: settings.autoGainControl,
+            voiceIsolation: settings.voiceIsolation,
+          };
+        }),
+        { audioTrackCount: stream.getAudioTracks().length },
+      );
     }
 
     const recordingContext: AnswerRecordingContext = {
@@ -277,10 +291,22 @@ export function useGroupAnswerRecording({
       recordingContextRef.current = recordingContext;
       recorderRef.current = recorder;
       setRecordingError("");
-      recorder.start(1000);
+      // 답변 첫 음절을 놓치지 않도록 chunking 없이 즉시 녹화를 시작한다.
+      recorder.start();
       isStartingRef.current = false;
-      setIsCheckingAudio(false);
       setCanRetryRecording(false);
+
+      // 음량 확인은 녹화와 병렬로 수행하며, 낮은 음량만으로 녹화를 지연하거나 중단하지 않는다.
+      void checkAudioInputLevel(microphoneTrack)
+        .catch(() => false)
+        .then((hasAudioInput) => {
+          if (!mountedRef.current || startAttempt !== recordingStartAttemptRef.current) return;
+          setIsCheckingAudio(false);
+          if (!hasAudioInput && recorderRef.current === recorder && recorder.state === "recording") {
+            console.warn("[Group Recording] 녹화는 진행 중이지만 마이크 음량이 감지되지 않습니다.");
+            setRecordingError("녹화는 진행 중이지만 마이크 음량이 낮습니다. 마이크 입력 장치를 확인해주세요.");
+          }
+        });
     } catch (cause) {
       recorderRef.current = null;
       recordingContextRef.current = null;
@@ -314,7 +340,11 @@ export function useGroupAnswerRecording({
       }
       return Promise.resolve(null);
     }
-    return stopRecording();
+    return new Promise<AnswerRecordingContext | null>((resolve) => {
+      window.setTimeout(() => {
+        void stopRecording().then(resolve);
+      }, RECORDING_TAIL_BUFFER_MS);
+    });
   }, [stopRecording]);
 
   const retryRecording = useCallback(() => {
