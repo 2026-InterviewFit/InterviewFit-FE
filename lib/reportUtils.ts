@@ -95,8 +95,7 @@ export const getAverageSpeechPace = (report?: InterviewReportResponse) => averag
 // 🔑 신규: STAR 평가 점수를 0~100 척도로 환산해서 평균
 // 백엔드가 speech 전용 종합 점수를 아직 내려주지 않아서,
 // AI 평가(aiEvaluationJson) 안의 star_score(S/T/A/R)를 임시로 활용합니다.
-// ⚠️ star_score가 항목별 0~25점(4개 합 100점) 구조라고 가정한 근사치입니다.
-//    백엔드 척도가 다르다면 이 함수만 조정하면 됩니다.
+// 원본은 항목별 0~10점(합계 40점)이므로 합계에 2.5를 곱한다.
 export const getAverageSpeechContentScore = (report?: InterviewReportResponse) => {
   const scores = getSortedReports(report)
     .map((answer) => {
@@ -106,11 +105,19 @@ export const getAverageSpeechContentScore = (report?: InterviewReportResponse) =
         const star = parsed?.star_score;
         if (!star || typeof star !== "object") return undefined;
 
-        const values = Object.values(star).filter((v): v is number => typeof v === "number");
-        if (values.length === 0) return undefined;
+        const starScore = star as Record<string, unknown>;
+        const values = [
+          ["S", "s", "situation"],
+          ["T", "t", "task"],
+          ["A", "a", "action"],
+          ["R", "r", "result"],
+        ].map((keys) => keys.map((key) => starScore[key]).find((value) => (
+          typeof value === "number" && Number.isFinite(value)
+        )));
+        if (!values.every((value): value is number => typeof value === "number")) return undefined;
 
         const total = values.reduce((sum, v) => sum + v, 0);
-        return Math.max(0, Math.min(100, total));
+        return Math.max(0, Math.min(100, total * 2.5));
       } catch {
         return undefined;
       }
