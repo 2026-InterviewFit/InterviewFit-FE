@@ -1,10 +1,26 @@
 // components/community/views/FeedView.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Lock, Heart, TrendingUp, Clock, Trophy, ChevronDown, Sparkles } from "lucide-react";
-import { MOCK_BEST_ANSWERS, JOB_CATEGORIES, PALETTE, maskText } from "@/lib/communityData";
+import {
+  Search,
+  Lock,
+  Heart,
+  TrendingUp,
+  Clock,
+  Trophy,
+  ChevronDown,
+  Sparkles,
+  RefreshCw,
+} from "lucide-react";
+import { JOB_CATEGORIES, PALETTE, maskText } from "@/lib/communityData";
+import {
+  getCommunityBestAnswers,
+  likeCommunityBestAnswer,
+  unlikeCommunityBestAnswer,
+  type CommunityBestAnswer,
+} from "@/lib/communityApi";
 
 // 대분류 탭 (전체 + job_role 테이블의 category)
 const MAIN_TABS = ["전체", ...JOB_CATEGORIES.map((c) => c.category)];
@@ -24,15 +40,78 @@ const gradeOf = (score: number) => {
   return { label: "B", bg: PALETTE.sky, fg: PALETTE.navyDark };
 };
 
-const pseudoLikes = (id: number, score: number) => (score - 60) * 3 + (id * 7) % 23;
-
 export default function FeedView() {
+  const [answers, setAnswers] = useState<CommunityBestAnswer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [mainCat, setMainCat] = useState("전체");
   const [subRole, setSubRole] = useState<string | null>(null);
   const [sort, setSort] = useState("popular");
   const [search, setSearch] = useState("");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [updatingLikeIds, setUpdatingLikeIds] = useState<Set<number>>(new Set());
+
+  const loadAnswers = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const data = await getCommunityBestAnswers();
+      setAnswers(data);
+    } catch (error) {
+      console.error("커뮤니티 우수답변 조회 실패:", error);
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "우수 답변을 불러오지 못했습니다.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAnswers();
+  }, [loadAnswers]);
+
+  const handleToggleLike = async (answer: CommunityBestAnswer) => {
+    if (updatingLikeIds.has(answer.id)) {
+      return;
+    }
+
+    setUpdatingLikeIds((prev) => {
+      const next = new Set(prev);
+      next.add(answer.id);
+      return next;
+    });
+
+    try {
+      const updated = answer.likedByMe
+        ? await unlikeCommunityBestAnswer(answer.id)
+        : await likeCommunityBestAnswer(answer.id);
+
+      setAnswers((prev) =>
+        prev.map((item) =>
+          item.id === updated.id ? updated : item,
+        ),
+      );
+    } catch (error) {
+      console.error("우수답변 좋아요 변경 실패:", error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "좋아요 처리에 실패했습니다.",
+      );
+    } finally {
+      setUpdatingLikeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(answer.id);
+        return next;
+      });
+    }
+  };
 
   const subRoles = useMemo(() => {
     if (mainCat === "전체") return [];
@@ -48,7 +127,7 @@ export default function FeedView() {
   };
 
   const processed = useMemo(() => {
-    let list = [...MOCK_BEST_ANSWERS];
+    let list = [...answers];
 
     if (mainCat !== "전체") {
       const rolesInCat = JOB_CATEGORIES.find((c) => c.category === mainCat)?.roles ?? [];
@@ -63,18 +142,32 @@ export default function FeedView() {
         (a) =>
           maskText(a.script).toLowerCase().includes(q) ||
           a.company.toLowerCase().includes(q) ||
-          a.role.toLowerCase().includes(q)
+          a.role.toLowerCase().includes(q),
       );
     }
 
     list.sort((a, b) => {
-      if (sort === "score") return b.score - a.score;
-      if (sort === "recent") return b.id - a.id;
-      return pseudoLikes(b.id, b.score) - pseudoLikes(a.id, a.score);
+      if (sort === "score") {
+        return b.score - a.score || b.id - a.id;
+      }
+
+      if (sort === "recent") {
+        const bTime = b.publishedAt ? Date.parse(b.publishedAt) : b.id;
+        const aTime = a.publishedAt ? Date.parse(a.publishedAt) : a.id;
+        return bTime - aTime;
+      }
+
+      // 실제 좋아요 수 기준 인기순.
+      // 동률이면 점수와 최신순으로 안정적으로 정렬한다.
+      return (
+        b.likeCount - a.likeCount ||
+        b.score - a.score ||
+        b.id - a.id
+      );
     });
 
     return list;
-  }, [mainCat, subRole, sort, search]);
+  }, [answers, mainCat, subRole, sort, search]);
 
   const shown = processed.slice(0, visible);
   const hasMore = visible < processed.length;
@@ -85,7 +178,7 @@ export default function FeedView() {
       <div className="mb-5 px-1">
         <h2 className="text-lg font-bold tracking-tight text-ink">우수 답변 갤러리</h2>
         <p className="mt-0.5 text-xs font-medium text-muted">
-          AI 검증 80점 이상 · 개인정보 마스킹 완료 · 총 {processed.length}건
+          AI 검증 80점 이상 · 작성자 마스킹 · 총 {processed.length}건
         </p>
       </div>
 
@@ -138,7 +231,7 @@ export default function FeedView() {
         ))}
       </div>
 
-      {/* 2행: 세부 직무 (대분류 선택 시에만 등장) */}
+      {/* 2행: 세부 직무 */}
       <AnimatePresence initial={false}>
         {subRoles.length > 0 && (
           <motion.div
@@ -184,19 +277,36 @@ export default function FeedView() {
 
       {subRoles.length === 0 && <div className="mb-5" />}
 
-      {/* 결과 */}
-      {processed.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-surface py-20 text-center shadow-sm">
+          <RefreshCw className="h-6 w-6 animate-spin text-navy" />
+          <p className="text-sm font-bold text-ink">우수 답변을 불러오는 중이에요</p>
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-surface py-20 text-center shadow-sm">
+          <p className="text-sm font-bold text-ink">우수 답변을 불러오지 못했어요</p>
+          <p className="max-w-md text-xs text-muted">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void loadAnswers()}
+            className="mt-2 rounded-full bg-navy px-5 py-2.5 text-xs font-bold text-white"
+          >
+            다시 불러오기
+          </button>
+        </div>
+      ) : processed.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-20 text-center shadow-sm">
           <Sparkles className="h-8 w-8 text-line" />
           <p className="text-sm font-bold text-ink">조건에 맞는 답변이 없어요</p>
-          <p className="text-xs text-muted">필터나 검색어를 바꿔보세요.</p>
+          <p className="text-xs text-muted">
+            80점 이상 리포트에서 답변을 공개하면 여기에 표시돼요.
+          </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((ans, i) => {
               const grade = gradeOf(ans.score);
-              const likes = pseudoLikes(ans.id, ans.score);
               const masked = maskText(ans.script);
               const isExpanded = expandedId === ans.id;
               const isLong = masked.length > 90;
@@ -243,11 +353,31 @@ export default function FeedView() {
 
                   <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[11px] font-medium text-muted">
                     <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleLike(ans)}
+                        disabled={updatingLikeIds.has(ans.id)}
+                        aria-pressed={ans.likedByMe}
+                        aria-label={ans.likedByMe ? "좋아요 취소" : "좋아요"}
+                        className={`flex items-center gap-1 rounded-md px-1 py-0.5 transition-all ${
+                          updatingLikeIds.has(ans.id)
+                            ? "cursor-wait opacity-50"
+                            : "hover:bg-chip"
+                        }`}
+                      >
+                        <Heart
+                          className="h-3.5 w-3.5"
+                          fill={ans.likedByMe ? "currentColor" : "none"}
+                          style={{
+                            color: ans.likedByMe
+                              ? PALETTE.navy
+                              : PALETTE.sky,
+                          }}
+                        />
+                        <span>{ans.likeCount}</span>
+                      </button>
                       <span className="flex items-center gap-1">
-                        <Heart className="h-3 w-3" style={{ color: PALETTE.sky }} /> {likes}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Lock className="h-3 w-3" /> 마스킹
+                        <Lock className="h-3 w-3" /> 작성자 마스킹
                       </span>
                     </span>
                     <span className="font-bold" style={{ color: PALETTE.navy }}>
