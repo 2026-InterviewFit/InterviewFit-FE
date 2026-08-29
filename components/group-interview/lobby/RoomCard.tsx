@@ -11,9 +11,10 @@ interface RoomCardProps {
   room: GroupRoom;
   index: number;
   onJoin: (roomId: string) => void;
+  isJoining?: boolean;
 }
 
-export default function RoomCard({ room, index, onJoin }: RoomCardProps) {
+export default function RoomCard({ room, index, onJoin, isJoining = false }: RoomCardProps) {
   const meta = statusMeta(room.status);
   const isFull = room.currentParticipants >= room.maxParticipants;
   const joinable = room.status === "recruiting" || room.status === "almostFull";
@@ -65,7 +66,9 @@ export default function RoomCard({ room, index, onJoin }: RoomCardProps) {
       <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted">
         <Crown className="h-3 w-3" style={{ color: PALETTE.lime }} /> {room.hostName}
         <span className="text-line">·</span>
-        <Clock className="h-3 w-3" /> {formatStartTime(room.startAt)}
+        <Clock className="h-3 w-3" /> {room.status === "finished" && room.endedAt
+          ? `${formatStartTime(room.endedAt)} 종료`
+          : formatStartTime(room.startAt)}
       </div>
 
       {/* 인원 게이지 */}
@@ -86,18 +89,20 @@ export default function RoomCard({ room, index, onJoin }: RoomCardProps) {
         </div>
       </div>
 
-      <button
-        onClick={() => onJoin(room.roomId)}
-        disabled={!joinable}
-        className={`mt-auto flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-bold transition-all ${
-          joinable
-            ? "bg-navy text-white shadow-sm hover:bg-navy-dark hover:-translate-y-0.5"
-            : "cursor-not-allowed bg-chip text-muted"
-        }`}
-      >
-        {buttonLabel}
-        {joinable && <ChevronRight className="h-4 w-4" />}
-      </button>
+      {room.status !== "finished" && (
+        <button
+          onClick={() => onJoin(room.roomId)}
+          disabled={!joinable || isJoining}
+          className={`mt-auto flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-bold transition-all ${
+            joinable && !isJoining
+              ? "bg-navy text-white shadow-sm hover:bg-navy-dark hover:-translate-y-0.5"
+              : "cursor-not-allowed bg-chip text-muted"
+          }`}
+        >
+          {isJoining ? "입장하는 중..." : buttonLabel}
+          {joinable && !isJoining && <ChevronRight className="h-4 w-4" />}
+        </button>
+      )}
     </motion.article>
   );
 }

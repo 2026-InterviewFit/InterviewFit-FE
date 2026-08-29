@@ -19,6 +19,7 @@ export interface GroupRoom {
   status: RoomStatus;
   startAt: string; //
   createdAt?: string;
+  endedAt?: string;
   hostName: string;
   jobRoleId?: number;
 }

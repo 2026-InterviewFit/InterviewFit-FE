@@ -87,6 +87,7 @@ function normalizeRoom(value: unknown, jobRolesById?: ReadonlyMap<number, JobRol
     status: roomStatus(raw, current, max),
     startAt: text(raw.scheduledStartTime ?? raw.startAt),
     createdAt: text(raw.createdAt ?? raw.created_at) || undefined,
+    endedAt: text(raw.endedAt ?? raw.endAt ?? raw.completedAt) || undefined,
     hostName: text(raw.hostName ?? host.name, "방장"),
   };
 }
