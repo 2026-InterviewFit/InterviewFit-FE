@@ -90,7 +90,7 @@ export default function VisualAnalysisCard({
           </div>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <StatBox label="정면 응시 비율" value={formatRatio(gaze.centerRatio)} />
-            <StatBox label="시선 이탈 비율" value={formatRatio(gaze.gazeAwayRatio)} isWarning={Number.isFinite(gaze.gazeAwayRatio) && gaze.gazeAwayRatio > 0.3} />
+            <StatBox label="시선 이탈 비율" value={formatRatio(gaze.gazeAwayRatio)} isWarning={isRatioWarning(gaze.gazeAwayRatio)} />
             <StatBox label="시선 이탈 횟수" value={formatCount(gaze.gazeAwayCount)} />
           </div>
           <p className="text-xs text-muted bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-black/5 leading-relaxed text-center font-medium">
@@ -121,7 +121,7 @@ export default function VisualAnalysisCard({
 
           {/* 1. 최상단: 전체 요약 (비율, 총 횟수, 총 시간) */}
           <div className="flex flex-wrap justify-center gap-4 mb-6">
-            <StatBox label="전체 불안정 비율" value={formatRatio(pose.badRatio)} isWarning={Number.isFinite(pose.badRatio) && pose.badRatio > 0.3} />
+            <StatBox label="전체 불안정 비율" value={formatRatio(pose.badRatio)} isWarning={isRatioWarning(pose.badRatio)} />
             <StatBox label="총 불안정 감지 횟수" value={formatCount(pose.badCount)} />
             <StatBox label="총 불안정 지속 시간" value={formatDuration(pose.badDuration)} />
           </div>
@@ -190,7 +190,13 @@ function formatScore(value: number) {
 
 const formatCount = (value: number) => Number.isFinite(value) ? `${value}회` : "분석 데이터 없음";
 const formatDuration = (value: number) => Number.isFinite(value) ? `${value.toFixed(1)}초` : "분석 데이터 없음";
-const formatRatio = (value: number) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "분석 데이터 없음";
+
+// 분석 API별로 비율이 0~1 또는 0~100 단위로 내려올 수 있어 퍼센트로 통일한다.
+const toPercent = (value: number) => Math.abs(value) <= 1 ? value * 100 : value;
+const formatRatio = (value: number) => Number.isFinite(value)
+  ? `${toPercent(value).toFixed(1)}%`
+  : "분석 데이터 없음";
+const isRatioWarning = (value: number) => Number.isFinite(value) && toPercent(value) > 30;
 
 // 스탯 박스 헬퍼 컴포넌트
 function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {
