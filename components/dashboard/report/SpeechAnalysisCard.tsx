@@ -8,6 +8,23 @@ interface SpeechAnalysisCardProps {
   useActualMetrics?: boolean;
 }
 
+const STAR_RAW_ITEM_MAX_SCORE = 10;
+const STAR_TOTAL_MAX_SCORE = STAR_RAW_ITEM_MAX_SCORE * 4;
+const STAR_ITEMS = [
+  { label: "S (Situation)", keys: ["S", "s", "situation"] },
+  { label: "T (Task)", keys: ["T", "t", "task"] },
+  { label: "A (Action)", keys: ["A", "a", "action"] },
+  { label: "R (Result)", keys: ["R", "r", "result"] },
+] as const;
+
+function normalizeStarScore(rawScore: number) {
+  return Math.max(0, Math.min(STAR_RAW_ITEM_MAX_SCORE, rawScore));
+}
+
+function formatScore(score: number) {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
 export default function SpeechAnalysisCard({ answerData, useActualMetrics = false }: SpeechAnalysisCardProps) {
   const speech = answerData?.speech;
   
@@ -40,6 +57,16 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
 
   const pauseRate = Number.isFinite(speech.pauseRatePercent) ? speech.pauseRatePercent : undefined;
   const volumeDeviation = Number.isFinite(speech.volumeDbStd) ? speech.volumeDbStd : undefined;
+  const starScore = aiEvaluation.star_score as Record<string, unknown>;
+  const normalizedStarScores = STAR_ITEMS.map(({ keys }) => {
+    const rawScore = keys.map((key) => starScore?.[key]).find((value) => typeof value === "number");
+    return typeof rawScore === "number" && Number.isFinite(rawScore)
+      ? normalizeStarScore(rawScore)
+      : undefined;
+  });
+  const totalStarScore = normalizedStarScores.every((score): score is number => score !== undefined)
+    ? normalizedStarScores.reduce((sum, score) => sum + score, 0)
+    : undefined;
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -111,29 +138,34 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
 
       {/* 3. STAR 평가 */}
       <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm flex flex-col gap-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-900/30 p-2 text-amber-600 dark:text-amber-300">
-            <Star className="h-4 w-4" />
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-amber-50 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+              <Star className="h-4 w-4" />
+            </div>
+            <h4 className="text-base font-bold text-navy dark:text-white">STAR 구조 평가</h4>
           </div>
-          <h4 className="text-base font-bold text-navy dark:text-white">STAR 구조 평가</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              총점 {totalStarScore === undefined ? "분석 데이터 없음" : formatScore(totalStarScore)} / {STAR_TOTAL_MAX_SCORE}점
+            </span>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {["S (Situation)", "T (Task)", "A (Action)", "R (Result)"].map((label, idx) => {
-            const starScore = aiEvaluation.star_score as Record<string, unknown>;
-            const keys = [["S", "s", "situation"], ["T", "t", "task"], ["A", "a", "action"], ["R", "r", "result"]][idx];
-            const rawScore = keys.map((key) => starScore?.[key]).find((value) => typeof value === "number");
-            const score = typeof rawScore === "number" ? rawScore : "분석 데이터 없음";
-            
+          {STAR_ITEMS.map(({ label }, index) => {
+            const score = normalizedStarScores[index];
             return (
               <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 text-center flex flex-col gap-1 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-500">{label}</span>
-                <span className="text-lg font-bold text-amber-500">{typeof score === "number" ? `${score}점` : score}</span>
+                <span className="text-lg font-bold text-amber-500">
+                  {score === undefined ? "분석 데이터 없음" : `${formatScore(score)} / ${STAR_RAW_ITEM_MAX_SCORE}점`}
+                </span>
               </div>
             );
           })}
         </div>
-        <p className="text-xs text-muted bg-amber-50/50 dark:bg-amber-900/10 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 leading-relaxed text-center font-medium mt-2">
+        <p className="mt-2 rounded-xl border border-black/5 bg-gray-50/50 p-4 text-sm font-medium leading-relaxed text-navy break-keep dark:bg-slate-800/30 dark:text-slate-300">
           {aiEvaluation.feedback || "STAR 기법에 맞춰 경험을 구체적으로 설명해 보세요."}
         </p>
       </div>
