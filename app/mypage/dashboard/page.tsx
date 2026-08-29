@@ -294,7 +294,7 @@ export default function DashboardPage() {
                   <button onClick={() => setIsNewModalOpen(false)} className="rounded-full p-2 text-muted hover:bg-chip hover:text-ink"><X className="h-5 w-5" /></button>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <button onClick={() => router.push("/practice")} className="group flex items-center gap-5 rounded-2xl border border-line p-5 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/50 dark:border-white/10 dark:bg-[#0f1729]/50">
+                  <button onClick={() => router.push("/interview")} className="group flex items-center gap-5 rounded-2xl border border-line p-5 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/50 dark:border-white/10 dark:bg-[#0f1729]/50">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white"><UserCheck className="h-6 w-6" /></div>
                     <div><h4 className="text-base font-bold text-ink dark:text-white mb-1">1:1 AI 모의면접</h4><p className="text-sm font-medium text-muted">이력서와 직무를 분석한 맞춤형 꼬리 질문 대비</p></div>
                   </button>

@@ -3,7 +3,6 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AccountSettings from "@/components/settings/AccountSettings";
-import JobSettings from "@/components/settings/JobSettings";
 import DeviceSettings from "@/components/settings/DeviceSettings";
 import ThemeSettings from "@/components/settings/ThemeSettings";
 
@@ -20,7 +19,6 @@ export default function SettingsPage() {
 
           <div className="flex flex-col gap-6">
             <AccountSettings />
-            <JobSettings />
             <DeviceSettings />
             <ThemeSettings />
           </div>
