@@ -7,6 +7,7 @@ import {
   analyzeCoverLetter,
   createQuestionsWithRetry,
   transcribeFollowUpAnswer,
+  saveFollowUpAnswer,
 } from "@/lib/api";
 
 import type { JobRole } from "@/types";
@@ -36,31 +37,51 @@ export type Step =
 
 export type QuestionMode = "base" | "followup";
 
+export type FollowUpSlotStatus = "idle" | "loading" | "ready" | "failed";
+
+export type FollowUpSlot = {
+  status: FollowUpSlotStatus;
+  followUpQuestionId: number | null;
+  question: string | null;
+  sourceQuestionId?: number;
+  error?: string;
+};
+
 interface InterviewState {
   step: Step;
   countdown: number;
   time: number;
   currentQuestionIdx: number;
   questionMode: QuestionMode;
-  
-  isFollowUpEnabled: boolean; 
-  followUpList: string[]; 
-  activeBackgroundTasks: number; 
+
+  /**
+   * 사용자가 면접 시작 전 선택하는 꼬리질문 사용 여부.
+   * false이면 기본 질문 3개 종료 후 바로 분석 단계로 이동한다.
+   */
+  isFollowUpEnabled: boolean;
+
+  /**
+   * 기본 질문 index와 1:1로 대응하는 꼬리질문 슬롯.
+   * 비동기 생성 완료 순서가 뒤섞여도 Q1/Q2/Q3의 꼬리질문 순서를 유지한다.
+   */
+  followUpSlots: FollowUpSlot[];
+  activeFollowUpGenerationTasks: number;
+  activeFollowUpSaveTasks: number;
 
   jobRoles: JobRole[];
   selectedCategory: string | null;
   selectedJobId: number | null;
   recommendedJobId: number | null;
   resumeFile: File | null;
-  
-  coverLetterId: number | null; 
-  
+
+  coverLetterId: number | null;
+
   isUploadingResume: boolean;
   interviewId: number | null;
   startedUserId: number | null;
   jobRoleId: number | null;
 
-  generatedQuestions: any[]; 
+  generatedQuestions: Array<{ id: number; question: string }>;
 }
 
 interface InterviewActions {
@@ -71,16 +92,25 @@ interface InterviewActions {
   setSelectedCategory: (category: string | null) => void;
   setSelectedJobId: (id: number | null) => void;
   fetchJobRoles: () => Promise<void>;
-  
+
   uploadResume: (file: File) => Promise<void>;
   startInterviewSession: () => Promise<void>;
-  
+
   setIsFollowUpEnabled: (val: boolean) => void;
   setQuestionMode: (mode: QuestionMode) => void;
-  
-  // 💡 sourceQuestionId 파라미터 추가
-  addFollowUpTask: (blob: Blob, originalQuestion: string, sourceQuestionId?: number) => Promise<void>;
-  
+
+  addFollowUpTask: (
+    blob: Blob,
+    originalQuestion: string,
+    baseQuestionIndex: number,
+    sourceQuestionId?: number,
+  ) => Promise<void>;
+
+  saveFollowUpAnswerTask: (
+    blob: Blob,
+    followUpQuestionId: number,
+  ) => Promise<void>;
+
   reset: () => void;
 }
 
@@ -90,35 +120,68 @@ const initialState: Omit<InterviewState, "jobRoles"> = {
   time: 0,
   currentQuestionIdx: 0,
   questionMode: "base",
-  
+
   isFollowUpEnabled: true,
-  followUpList: [],
-  activeBackgroundTasks: 0,
+  followUpSlots: [],
+  activeFollowUpGenerationTasks: 0,
+  activeFollowUpSaveTasks: 0,
 
   selectedCategory: "IT/개발",
   selectedJobId: null,
   recommendedJobId: null,
   resumeFile: null,
-  coverLetterId: null, 
+  coverLetterId: null,
   isUploadingResume: false,
   interviewId: null,
   startedUserId: null,
   jobRoleId: null,
-  generatedQuestions: [], 
+  generatedQuestions: [],
 };
+
+function emptyFollowUpSlots(count: number): FollowUpSlot[] {
+  return Array.from({ length: count }, () => ({
+    status: "idle" as const,
+    followUpQuestionId: null,
+    question: null,
+  }));
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
 
 export const useInterviewStore = create<InterviewState & InterviewActions>((set, get) => ({
   ...initialState,
   jobRoles: FALLBACK_JOBS,
 
   setStep: (step) => set({ step }),
-  setCountdown: (val) => set((state) => ({ countdown: typeof val === "function" ? val(state.countdown) : val })),
-  setTime: (val) => set((state) => ({ time: typeof val === "function" ? val(state.time) : val })),
-  setCurrentQuestionIdx: (val) => set((state) => ({ currentQuestionIdx: typeof val === "function" ? val(state.currentQuestionIdx) : val })),
-  
-  setSelectedCategory: (category) => set({ selectedCategory: category, selectedJobId: null }),
+  setCountdown: (val) =>
+    set((state) => ({
+      countdown: typeof val === "function" ? val(state.countdown) : val,
+    })),
+  setTime: (val) =>
+    set((state) => ({
+      time: typeof val === "function" ? val(state.time) : val,
+    })),
+  setCurrentQuestionIdx: (val) =>
+    set((state) => ({
+      currentQuestionIdx:
+        typeof val === "function" ? val(state.currentQuestionIdx) : val,
+    })),
+
+  setSelectedCategory: (category) =>
+    set({ selectedCategory: category, selectedJobId: null }),
   setSelectedJobId: (id) => set({ selectedJobId: id }),
-  
+
   setIsFollowUpEnabled: (val) => set({ isFollowUpEnabled: val }),
   setQuestionMode: (mode) => set({ questionMode: mode }),
 
@@ -128,14 +191,25 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
       if (Array.isArray(data) && data.length > 0) {
         const categories = Array.from(new Set(data.map((job) => job.category)));
         const currentCategory = get().selectedCategory;
-        const selectedCategory = currentCategory && categories.includes(currentCategory) ? currentCategory : categories[0] ?? "IT/개발";
+        const selectedCategory =
+          currentCategory && categories.includes(currentCategory)
+            ? currentCategory
+            : categories[0] ?? "IT/개발";
+
         set({ jobRoles: data, selectedCategory });
         return;
       }
     } catch (error) {
-      console.warn("[Interview] 직무 목록 조회 실패. 기본 직무 목록을 사용합니다.", error);
+      console.warn(
+        "[Interview] 직무 목록 조회 실패. 기본 직무 목록을 사용합니다.",
+        error,
+      );
     }
-    set({ jobRoles: FALLBACK_JOBS, selectedCategory: "IT/개발" });
+
+    set({
+      jobRoles: FALLBACK_JOBS,
+      selectedCategory: "IT/개발",
+    });
   },
 
   uploadResume: async (file) => {
@@ -164,14 +238,13 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
       }
 
       set({
-        coverLetterId: result.coverLetterId, 
+        coverLetterId: result.coverLetterId,
         jobRoles: updatedJobRoles,
         recommendedJobId: aiRecommendedId,
         selectedJobId: aiRecommendedId,
         selectedCategory: targetCategory,
         step: "jobSelect",
       });
-
     } catch (error) {
       console.error("[Interview] 자소서 분석 실패:", error);
       alert("자소서 분석 중 오류가 발생했습니다. 직접 직무를 선택해주세요.");
@@ -189,20 +262,28 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
       return;
     }
 
-    const selectedJob = jobRoles.find((j) => j.id === selectedJobId);
-    if (!selectedJob) return;
+    const selectedJob = jobRoles.find((job) => job.id === selectedJobId);
+    if (!selectedJob) {
+      return;
+    }
 
     try {
+      /*
+       * 1) Interview를 먼저 생성한다.
+       * 2) 생성된 interviewId를 질문 생성 API에 함께 전달한다.
+       * 3) Spring이 questions.interview_id / question_order를 연결한다.
+       */
       const result = await startInterview({ jobRoleId: selectedJobId });
 
       const questionsResponse = await createQuestionsWithRetry({
+        interviewId: result.interviewId,
         count: 3,
         jobRoleId: selectedJobId,
         jobName: selectedJob.name,
         coverLetterId: coverLetterId ?? undefined,
       });
 
-      console.log("[Interview] 생성된 질문 목록 3개 도착! :", questionsResponse);
+      console.log("[Interview] 생성 및 연결된 질문 목록:", questionsResponse);
 
       set({
         interviewId: result.interviewId,
@@ -210,59 +291,153 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
         jobRoleId: selectedJobId,
         currentQuestionIdx: 0,
         questionMode: "base",
-        followUpList: [],
-        activeBackgroundTasks: 0,
+        followUpSlots: emptyFollowUpSlots(questionsResponse.length),
+        activeFollowUpGenerationTasks: 0,
+        activeFollowUpSaveTasks: 0,
         step: "prepare",
         generatedQuestions: questionsResponse,
       });
-
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Interview] 면접 시작 또는 질문 생성 API 실패:", error);
       alert(error instanceof Error ? error.message : "면접 준비에 실패했습니다.");
     }
   },
 
-  // 💡 DB 저장을 위해 sourceQuestionId 를 받아 넘겨주도록 수정
-  addFollowUpTask: async (blob, originalQuestion, sourceQuestionId) => {
-    set((state) => ({ activeBackgroundTasks: state.activeBackgroundTasks + 1 }));
+  addFollowUpTask: async (
+    blob,
+    originalQuestion,
+    baseQuestionIndex,
+    sourceQuestionId,
+  ) => {
+    set((state) => {
+      const nextSlots = [...state.followUpSlots];
+      nextSlots[baseQuestionIndex] = {
+        status: "loading",
+        followUpQuestionId: null,
+        question: null,
+        sourceQuestionId,
+      };
+
+      return {
+        followUpSlots: nextSlots,
+        activeFollowUpGenerationTasks:
+          state.activeFollowUpGenerationTasks + 1,
+      };
+    });
+
     try {
       const { jobRoleId, interviewId } = get();
-      if (!jobRoleId) return;
-      
+
+      if (!jobRoleId || !interviewId) {
+        throw new Error("면접 또는 직무 정보가 없습니다.");
+      }
+
       const transcription = await transcribeFollowUpAnswer(blob);
-      
+
       const result = await createFollowUpQuestion({
         jobRoleId,
-        interviewId: interviewId ?? undefined,
+        interviewId,
         originalQuestion,
         answer: transcription.text,
         interviewStyle: "normal",
-        sourceQuestionId: sourceQuestionId, // 🔥 백엔드 DB 에러를 막기 위해 추가된 부분!
+        sourceQuestionId,
       });
-      
-      console.log("🔥 [꼬리질문 API 응답 원본]:", result);
-      
-      const followUpText = 
-          result?.followUpQuestion || 
-          result?.follow_up_question || 
-          result?.question ||
-          result?.data?.followUpQuestion ||
-          result?.data?.question ||
-          result?.data?.follow_up_question;
-          
-      if (followUpText) {
-        set((state) => ({ followUpList: [...state.followUpList, followUpText] }));
-      } else {
-        console.warn("⚠️ 꼬리질문 텍스트를 찾을 수 없습니다. 응답 구조를 확인하세요.");
+
+      const followUpQuestion =
+        result?.followUpQuestion ??
+        result?.follow_up_question ??
+        result?.question ??
+        (result?.data as { followUpQuestion?: string; question?: string; follow_up_question?: string } | undefined)
+          ?.followUpQuestion ??
+        (result?.data as { question?: string } | undefined)?.question ??
+        (result?.data as { follow_up_question?: string } | undefined)?.follow_up_question;
+
+      const followUpQuestionId = toNumber(
+        result?.followUpQuestionId ??
+          result?.follow_up_question_id ??
+          result?.id,
+      );
+
+      if (!followUpQuestion || !followUpQuestionId) {
+        throw new Error("꼬리질문 ID 또는 질문 텍스트를 확인할 수 없습니다.");
       }
+
+      set((state) => {
+        const nextSlots = [...state.followUpSlots];
+        nextSlots[baseQuestionIndex] = {
+          status: "ready",
+          followUpQuestionId,
+          question: followUpQuestion,
+          sourceQuestionId,
+        };
+
+        return { followUpSlots: nextSlots };
+      });
     } catch (error) {
-      console.warn("[Background FollowUp Error] 꼬리질문 비동기 생성 실패:", error);
+      console.warn(
+        `[FollowUp] 기본 질문 ${baseQuestionIndex + 1}의 꼬리질문 생성 실패:`,
+        error,
+      );
+
+      set((state) => {
+        const nextSlots = [...state.followUpSlots];
+        nextSlots[baseQuestionIndex] = {
+          status: "failed",
+          followUpQuestionId: null,
+          question: null,
+          sourceQuestionId,
+          error: error instanceof Error ? error.message : "꼬리질문 생성 실패",
+        };
+
+        return { followUpSlots: nextSlots };
+      });
     } finally {
-      set((state) => ({ activeBackgroundTasks: state.activeBackgroundTasks - 1 }));
+      set((state) => ({
+        activeFollowUpGenerationTasks: Math.max(
+          0,
+          state.activeFollowUpGenerationTasks - 1,
+        ),
+      }));
+    }
+  },
+
+  saveFollowUpAnswerTask: async (blob, followUpQuestionId) => {
+    set((state) => ({
+      activeFollowUpSaveTasks: state.activeFollowUpSaveTasks + 1,
+    }));
+
+    try {
+      const { interviewId } = get();
+
+      if (!interviewId) {
+        throw new Error("면접 정보가 없습니다.");
+      }
+
+      const transcription = await transcribeFollowUpAnswer(blob);
+
+      await saveFollowUpAnswer({
+        interviewId,
+        followUpQuestionId,
+        answerText: transcription.text,
+      });
+
+      console.log(
+        `[FollowUp] 꼬리질문 ${followUpQuestionId} 답변 저장 완료`,
+      );
+    } catch (error) {
+      console.warn("[FollowUp] 꼬리질문 답변 저장 실패:", error);
+    } finally {
+      set((state) => ({
+        activeFollowUpSaveTasks: Math.max(0, state.activeFollowUpSaveTasks - 1),
+      }));
     }
   },
 
   reset: () => {
-    set({ ...initialState, coverLetterId: null, jobRoles: [...FALLBACK_JOBS] });
+    set({
+      ...initialState,
+      coverLetterId: null,
+      jobRoles: [...FALLBACK_JOBS],
+    });
   },
 }));
