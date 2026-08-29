@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Users } from "lucide-react";
+import { RefreshCw, Users } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import LobbyHeader from "@/components/group-interview/lobby/LobbyHeader";
@@ -14,41 +14,83 @@ import { getGroupRooms, createGroupRoom } from "@/lib/groupInterviewApi";
 import { initializeAuth } from "@/lib/auth";
 import type { GroupRoom, CreateRoomPayload } from "@/types/groupInterview";
 
+type RoomTab = "recruiting" | "active" | "finished";
+type SortOrder = "upcoming" | "newest" | "oldest";
+
+function parseRoomTime(value?: string) {
+  const parsed = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getRoomSortValue(room: GroupRoom, field: "createdAt" | "startAt" | "endedAt") {
+  return parseRoomTime(room[field]) ?? parseRoomTime(room.createdAt) ?? room.id;
+}
+
 export default function GroupInterviewLobbyPage() {
   const router = useRouter();
   const [rooms, setRooms] = useState<GroupRoom[]>([]);
   const [activeCategory, setActiveCategory] = useState("전체");
-  const [onlyRecruiting, setOnlyRecruiting] = useState(false);
+  const [activeTab, setActiveTab] = useState<RoomTab>("recruiting");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("upcoming");
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState("");
 
-  const loadRooms = useCallback(async () => {
-    setIsLoading(true);
+  const loadRooms = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsRefreshing(true);
     try {
       setRooms(await getGroupRooms());
       setError("");
     } catch (cause) {
-      setRooms([]);
       setError(cause instanceof Error ? cause.message : "면접방 목록을 불러오지 못했습니다.");
     } finally {
       setIsLoading(false);
+      if (showLoading) setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     // API 응답으로 초기 화면 상태를 동기화한다.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadRooms();
+    void loadRooms();
   }, [loadRooms]);
 
-  const filtered = rooms.filter((r) => {
+  useEffect(() => {
+    const timer = window.setInterval(() => void loadRooms(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [loadRooms]);
+
+  const roomsInActiveTab = rooms.filter((room) => {
+    if (activeTab === "finished") return room.status === "finished";
+    if (activeTab === "active") return room.status === "full" || room.status === "live";
+    return room.status === "recruiting" || room.status === "almostFull";
+  });
+
+  const categoryCounts = roomsInActiveTab.reduce<Record<string, number>>(
+    (counts, room) => {
+      counts["전체"] += 1;
+      if (room.category in counts) counts[room.category] += 1;
+      else if (room.role in counts) counts[room.role] += 1;
+      return counts;
+    },
+    { "전체": 0, "IT/개발": 0, "금융권": 0, "마케팅": 0, "디자인": 0 },
+  );
+
+  const filtered = roomsInActiveTab.filter((r) => {
     const catOk = activeCategory === "전체"
       || r.category === activeCategory
       || r.role === activeCategory;
-    const recruitOk =
-      !onlyRecruiting || r.status === "recruiting" || r.status === "almostFull";
-    return catOk && recruitOk;
+    return catOk;
+  }).sort((first, second) => {
+    const field = sortOrder === "upcoming"
+      ? "startAt"
+      : activeTab === "finished"
+        ? "endedAt"
+        : "createdAt";
+    const comparison = getRoomSortValue(first, field) - getRoomSortValue(second, field);
+    return sortOrder === "newest" ? -comparison : comparison;
   });
 
   const handleCreate = async (payload: CreateRoomPayload) => {
@@ -69,7 +111,14 @@ export default function GroupInterviewLobbyPage() {
   };
 
   const handleJoin = (roomId: string) => {
+    if (joiningRoomId) return;
+    setJoiningRoomId(roomId);
     router.push(`/group-interview/room/${roomId}`);
+  };
+
+  const handleTabChange = (tab: RoomTab) => {
+    setActiveTab(tab);
+    setSortOrder(tab === "recruiting" ? "upcoming" : "newest");
   };
 
   return (
@@ -87,18 +136,76 @@ export default function GroupInterviewLobbyPage() {
 
         {error && <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p>}
 
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
-          <button
-            onClick={() => setOnlyRecruiting((v) => !v)}
-            className={`shrink-0 self-start rounded-full border px-4 py-2 text-xs font-bold transition-all md:self-auto ${
-              onlyRecruiting
-                ? "border-navy bg-navy text-white"
-                : "border-line bg-surface text-muted hover:border-navy/40 hover:text-ink"
-            }`}
-          >
-            모집중만 보기
-          </button>
+        <div className="mb-5 flex flex-col gap-3 border-b border-line sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex gap-6" role="tablist" aria-label="면접방 상태">
+            {([
+              ["recruiting", "모집 중"],
+              ["active", "진행 중"],
+              ["finished", "종료"],
+            ] as const).map(([tab, label]) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => handleTabChange(tab)}
+                className={`relative pb-3 text-sm font-bold transition-colors ${
+                  activeTab === tab ? "text-navy" : "text-muted hover:text-ink"
+                }`}
+              >
+                {label}
+                {activeTab === tab && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-navy" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pb-3 text-xs font-bold">
+            {activeTab === "recruiting" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSortOrder("upcoming")}
+                  aria-pressed={sortOrder === "upcoming"}
+                  className={sortOrder === "upcoming" ? "text-navy" : "text-muted hover:text-ink"}
+                >
+                  시작 임박순
+                </button>
+                <span className="text-line">·</span>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setSortOrder("newest")}
+              aria-pressed={sortOrder === "newest"}
+              className={sortOrder === "newest" ? "text-navy" : "text-muted hover:text-ink"}
+            >
+              {activeTab === "finished" ? "최근 종료순" : "최근 등록순"}
+            </button>
+            <span className="text-line">·</span>
+            <button
+              type="button"
+              onClick={() => setSortOrder("oldest")}
+              aria-pressed={sortOrder === "oldest"}
+              className={sortOrder === "oldest" ? "text-navy" : "text-muted hover:text-ink"}
+            >
+              {activeTab === "finished" ? "오래된 종료순" : "오래된 등록순"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadRooms(true)}
+              disabled={isRefreshing}
+              aria-label="면접방 목록 새로고침"
+              className="ml-2 rounded-full border border-line bg-surface p-1.5 text-muted transition-colors hover:text-ink disabled:cursor-wait"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <CategoryFilter active={activeCategory} onChange={setActiveCategory} counts={categoryCounts} />
         </div>
 
         {isLoading ? (
@@ -108,13 +215,31 @@ export default function GroupInterviewLobbyPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-20 text-center shadow-sm">
             <Users className="h-8 w-8 text-line" />
-            <p className="text-sm font-bold text-ink">열려 있는 면접방이 없어요</p>
-            <p className="text-xs text-muted">직접 방을 만들어 다른 지원자들을 기다려보세요.</p>
+            <p className="text-sm font-bold text-ink">
+              {activeTab === "finished"
+                ? "종료된 면접방이 없어요"
+                : activeTab === "active"
+                  ? "진행 중인 면접방이 없어요"
+                  : "모집 중인 면접방이 없어요"}
+            </p>
+            <p className="text-xs text-muted">
+              {activeTab === "finished"
+                ? "종료된 면접방은 이곳에서 확인할 수 있어요."
+                : activeTab === "active"
+                  ? "모집이 완료되거나 면접이 시작된 방은 이곳에 표시돼요."
+                : "직접 방을 만들어 다른 지원자들을 기다려보세요."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {filtered.map((room, i) => (
-              <RoomCard key={room.roomId} room={room} index={i} onJoin={handleJoin} />
+              <RoomCard
+                key={room.roomId}
+                room={room}
+                index={i}
+                onJoin={handleJoin}
+                isJoining={joiningRoomId === room.roomId}
+              />
             ))}
           </div>
         )}
