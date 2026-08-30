@@ -90,27 +90,27 @@ export default function Navbar() {
           </div>
 
           {/* 데스크톱 중앙 메뉴 (이 곳에 대시보드가 추가됨) */}
-          <div className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-line/50 bg-chip/50 px-2 py-1.5 backdrop-blur-sm md:flex">
-            {LANDING_MENUS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <div className="absolute z-[60] top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-line/50 bg-chip/50 px-2 py-1.5 backdrop-blur-sm md:flex">
+  {LANDING_MENUS.map((item) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
+    >
+      {item.label}
+    </Link>
+  ))}
             
             {/* 로그인 상태일 때만 중앙 메뉴에 대시보드 표시 */}
-            {isLoggedIn && (
-              <Link
-                href="/mypage/dashboard"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
-              >
-                대시보드
-              </Link>
-            )}
-          </div>
+  {isLoggedIn && (
+    <Link
+      href="/mypage/dashboard"
+      className="rounded-full px-4 py-2 text-sm font-semibold text-ink/80 transition-all hover:bg-white hover:text-ink hover:shadow-sm dark:hover:bg-surface"
+    >
+      대시보드
+    </Link>
+  )}
+</div>
 
           {/* 우측 액션 영역 */}
           <div className="z-50 flex w-auto items-center justify-end gap-3 md:w-1/3">
