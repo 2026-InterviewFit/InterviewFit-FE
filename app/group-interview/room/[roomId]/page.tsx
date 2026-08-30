@@ -23,6 +23,10 @@ import GroupAnalyzing from "@/components/group-interview/room/GroupAnalyzing";
 import { LiveKitRoom, RoomAudioRenderer, useLocalParticipant } from "@livekit/components-react";
 import { getAuthUser, initializeAuth } from "@/lib/auth";
 import type { LiveKitCredentials } from "@/types/groupInterview";
+import {
+  GROUP_INTERVIEW_TOTAL_ROUNDS,
+  groupInterviewRoundLabel,
+} from "@/lib/groupInterviewData";
 
 const INTERVIEW_TIPS = [
   "모르는 질문이 나오면 '잠시 생각할 시간을 주시겠습니까?'라고 정중히 요청하세요.",
@@ -156,13 +160,17 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const isMyTurn = progress?.currentParticipantUserId != null
     && String(progress.currentParticipantUserId) === String(me?.id ?? "");
   const currentQuestionIndex = progress?.currentQuestionIndex;
+  const currentRound = progress?.currentRound;
+  const currentRoundLabel = groupInterviewRoundLabel(currentRound);
   const meParticipant = syncedParticipants.find((participant) => participant.isMe);
   const isHost = !!meParticipant?.isHost;
-  const serverStatus = progress?.status?.toUpperCase() ?? "WAITING";
+  const serverStatus = progress?.status ?? "WAITING";
   const isQuestionView = serverStatus === "QUESTION_VIEW";
   const isAnswering = serverStatus === "ANSWERING";
-  const isAnalyzing = ["FINISHED", "COMPLETED"].includes(serverStatus);
-  const isInterviewing = !["WAITING", "READY", "FINISHED", "COMPLETED"].includes(serverStatus);
+  // 면접 종료는 라운드 숫자가 아니라 백엔드 세션 상태로만 판단한다.
+  const isFinished = serverStatus === "FINISHED";
+  const isAnalyzing = isFinished;
+  const isInterviewing = !["WAITING", "READY", "FINISHED"].includes(serverStatus);
   const answerActionKey = [
     serverStatus,
     progress?.currentParticipantUserId ?? "",
@@ -312,8 +320,13 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
               <span className="h-1.5 w-1.5 md:h-2 md:w-2 animate-pulse rounded-full bg-red-500" /> REC
             </span>
             <span className="text-xs md:text-sm font-bold text-navy dark:text-white">실시간 다대일 면접 진행 중</span>
-            <span className="hidden sm:inline text-[11px] font-bold text-muted">
-              {currentQuestionIndex != null ? `질문 ${currentQuestionIndex + 1}` : "질문 확인 중"} · 라운드 {progress?.currentRound ?? "-"}
+            <span className="text-[10px] font-bold text-muted md:text-[11px]">
+              <span className="hidden sm:inline">
+                {currentQuestionIndex != null ? `질문 ${currentQuestionIndex + 1} · ` : ""}
+              </span>
+              {currentRound != null
+                ? `${currentRound}라운드 / ${GROUP_INTERVIEW_TOTAL_ROUNDS}라운드 · ${currentRoundLabel}`
+                : currentRoundLabel}
             </span>
             {isAnswering && progress?.answerDeadlineAt && (
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${remainingSeconds <= 10 ? "bg-red-100 text-red-600" : "bg-chip text-navy"}`}>

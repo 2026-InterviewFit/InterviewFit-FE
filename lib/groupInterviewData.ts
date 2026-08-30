@@ -5,13 +5,19 @@ import type { RoomStatus } from "@/types/groupInterview";
 // 그룹 면접 직군 카테고리 (설계서 기준: IT, 금융권, 마케팅 등)
 export const GROUP_CATEGORIES: string[] = ["IT/개발", "금융권", "마케팅", "디자인"];
 
-export const GROUP_INTERVIEW_QUESTIONS: string[] = [
-  "먼저 간단한 자기소개와 이 직무에 지원하신 동기를 말씀해 주세요.",
-  "본인의 가장 큰 강점과, 그것을 실제로 발휘했던 경험을 구체적으로 설명해 주세요.",
-  "팀 프로젝트에서 의견 충돌이 있었을 때 어떻게 조율했는지 말씀해 주세요.",
-  "지원하신 직무에서 가장 중요하다고 생각하는 역량은 무엇이며, 그 이유는 무엇인가요?",
-  "마지막으로 입사 후 이루고 싶은 목표 한 가지를 말씀해 주세요.",
-];
+export const GROUP_INTERVIEW_TOTAL_ROUNDS = 4;
+
+export const GROUP_INTERVIEW_ROUND_LABELS: Readonly<Record<number, string>> = {
+  1: "자기소개",
+  2: "공통 역량",
+  3: "압박 면접",
+  4: "직무 질문",
+};
+
+export const groupInterviewRoundLabel = (round: number | null | undefined): string => {
+  if (round == null) return "라운드 확인 중";
+  return GROUP_INTERVIEW_ROUND_LABELS[round] ?? `라운드 ${round}`;
+};
 
 // 상태 배지 메타 (커뮤니티 팔레트로 통일)
 export const statusMeta = (

@@ -11,13 +11,14 @@ import {
 import { initializeAuth } from "@/lib/auth";
 import type { GroupInterviewComparison } from "@/types/groupInterview";
 
-type ComparisonSelection = "OVERALL" | 0 | 1 | 2;
+type ComparisonSelection = "OVERALL" | 0 | 1 | 2 | 3;
 
 const COMPARISON_TABS: { label: string; value: ComparisonSelection }[] = [
   { label: "전체", value: "OVERALL" },
   { label: "질문 1", value: 0 },
   { label: "질문 2", value: 1 },
   { label: "질문 3", value: 2 },
+  { label: "질문 4", value: 3 },
 ];
 
 const SCORE_FIELDS: {
