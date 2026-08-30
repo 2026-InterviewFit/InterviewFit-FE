@@ -106,7 +106,7 @@ export interface GroupInterviewHistory {
   analysisStatus: GroupAnalysisStatus;
 }
 
-export type GroupAnswerCompletionType = "COMPLETED" | "TIMED_OUT";
+export type GroupAnswerCompletionType = "COMPLETED" | "TIMED_OUT" | "RECORDING_FAILED" | "SKIPPED";
 
 export interface GroupInterviewMyAnswer {
   answerId: number;
