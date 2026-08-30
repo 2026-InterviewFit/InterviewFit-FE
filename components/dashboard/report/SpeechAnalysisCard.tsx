@@ -1,6 +1,7 @@
 "use client";
 
-import { Mic, MessageSquare, Star, KeyRound } from "lucide-react";
+import { CheckCircle2, KeyRound, MessageSquare, Mic, Star, TriangleAlert } from "lucide-react";
+import { externalAiAnalysisView } from "@/lib/externalAiAnalysis";
 import type { AnswerReport } from "@/types";
 
 interface SpeechAnalysisCardProps {
@@ -67,6 +68,9 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
   const totalStarScore = normalizedStarScores.every((score): score is number => score !== undefined)
     ? normalizedStarScores.reduce((sum, score) => sum + score, 0)
     : undefined;
+  const externalAiView = speech.externalAiAnalysis
+    ? externalAiAnalysisView(speech.externalAiAnalysis)
+    : null;
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -155,12 +159,16 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {STAR_ITEMS.map(({ label }, index) => {
             const score = normalizedStarScores[index];
+            const externalDescription = externalAiView?.star[index]?.value;
             return (
-              <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 text-center flex flex-col gap-1 shadow-sm">
+              <div key={label} className="p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 flex flex-col gap-1 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-500">{label}</span>
-                <span className="text-lg font-bold text-amber-500">
+                <span className="text-lg font-bold text-amber-500 text-center">
                   {score === undefined ? "분석 데이터 없음" : `${formatScore(score)} / ${STAR_RAW_ITEM_MAX_SCORE}점`}
                 </span>
+                <p className="mt-2 border-t border-black/5 pt-2 text-left text-xs font-medium leading-relaxed text-ink break-keep dark:border-white/5 dark:text-slate-300">
+                  {externalDescription ?? "분석 결과가 없습니다."}
+                </p>
               </div>
             );
           })}
@@ -168,7 +176,51 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
         <p className="mt-2 rounded-xl border border-black/5 bg-gray-50/50 p-4 text-sm font-medium leading-relaxed text-navy break-keep dark:bg-slate-800/30 dark:text-slate-300">
           {aiEvaluation.feedback || "STAR 기법에 맞춰 경험을 구체적으로 설명해 보세요."}
         </p>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <ExternalFeedbackList
+            title="잘한 점"
+            items={externalAiView?.strengths ?? []}
+            icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+            emptyText="분석된 강점이 없습니다."
+          />
+          <ExternalFeedbackList
+            title="개선할 점"
+            items={externalAiView?.improvements ?? []}
+            icon={<TriangleAlert className="h-4 w-4 text-amber-500" />}
+            emptyText="분석된 개선점이 없습니다."
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ExternalFeedbackList({
+  title,
+  items,
+  icon,
+  emptyText,
+}: {
+  title: string;
+  items: string[];
+  icon: React.ReactNode;
+  emptyText: string;
+}) {
+  return (
+    <div className="rounded-xl border border-black/5 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-slate-800/30">
+      <h5 className="flex items-center gap-2 text-sm font-bold text-navy dark:text-white">{icon}{title}</h5>
+      {items.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {items.map((item, index) => (
+            <li key={`${item}-${index}`} className="flex gap-2 text-xs font-medium leading-relaxed text-ink dark:text-slate-300">
+              <span aria-hidden="true">•</span><span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-xs text-muted">{emptyText}</p>
+      )}
     </div>
   );
 }

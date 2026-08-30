@@ -6,7 +6,6 @@ import { ArrowLeft, CheckCircle2, Clock3, FileVideo, RefreshCw, UserRound } from
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import GroupComparisonView from "@/components/dashboard/group/GroupComparisonView";
 import SpeechAnalysisCard from "@/components/dashboard/report/SpeechAnalysisCard";
-import ExternalAiAnalysisCard from "@/components/dashboard/report/ExternalAiAnalysisCard";
 import VisualAnalysisCard from "@/components/dashboard/report/VisualAnalysisCard";
 import {
   getGroupAnswerAnalysis,
@@ -277,7 +276,6 @@ export default function GroupInterviewDashboardDetailPage() {
                         </div>
                         <VisualAnalysisCard answerData={answerReport} showGaze />
                         <SpeechAnalysisCard answerData={answerReport} useActualMetrics />
-                        <ExternalAiAnalysisCard analysis={answerReport?.speech?.externalAiAnalysis} />
                       </div>
                     )}
                   </div>
