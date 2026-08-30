@@ -1,72 +1,184 @@
-'use client';
+// app/oauth/kakao/callback/page.tsx
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+"use client";
 
-export default function KakaoCallbackPage() {
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { kakaoLogin } from "@/lib/api";
+import { setAuthUser } from "@/lib/auth";
+
+function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const code = searchParams.get('code');
-  const [statusText, setStatusText] = useState(
-    '카카오 로그인 인증을 처리하고 있습니다...'
+
+  const requestedRef = useRef(false);
+
+  const [message, setMessage] = useState(
+    "카카오 로그인 처리 중입니다...",
   );
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   useEffect(() => {
-    if (!code) return;
+    if (requestedRef.current) {
+      return;
+    }
 
-    const sendCodeToBackend = async () => {
+    requestedRef.current = true;
+
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+    const errorDescription = searchParams.get("error_description");
+
+    if (error) {
+      setErrorMessage(
+        `카카오 로그인 실패: ${errorDescription ?? error}`,
+      );
+      return;
+    }
+
+    if (!code) {
+      setErrorMessage("카카오 인가 코드가 없습니다.");
+      return;
+    }
+
+    const completeLogin = async () => {
       try {
-        console.log("백엔드로 카카오 인가 코드 전송:", code);
-
-        const response = await fetch(
-          'http://localhost:8080/api/users/kakao-login',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ code }),
-          }
+        setMessage(
+          "백엔드로 로그인 정보를 전달하는 중입니다...",
         );
 
-        // 응답 확인
-        console.log("응답 상태:", response.status);
-        console.log("응답 성공 여부:", response.ok);
+        console.log("[Kakao] 인가 코드 수신 완료");
 
-        if (!response.ok) {
-          const errorText = await response.text();
+        const response = await kakaoLogin(code);
 
-          console.error("========== 백엔드 오류 ==========");
-          console.error("Status :", response.status);
-          console.error("Body :", errorText);
-          console.error("===============================");
+        console.log(
+          "[Kakao] 백엔드 로그인 응답:",
+          response,
+        );
 
-          throw new Error(
-            `백엔드 로그인 실패 (${response.status})`
+        // 백엔드에서 반환한 Access Token 저장
+        if (response?.token) {
+          localStorage.setItem(
+            "interviewfit_access_token",
+            response.token,
+          );
+        } else if ((response as any)?.accessToken) {
+          localStorage.setItem(
+            "interviewfit_access_token",
+            (response as any).accessToken,
+          );
+        } else if ((response as any)?.jwt) {
+          localStorage.setItem(
+            "interviewfit_access_token",
+            (response as any).jwt,
           );
         }
 
-        const data = await response.json();
-        console.log("로그인 성공:", data);
+        if (
+          !response?.user ||
+          response.user.id == null
+        ) {
+          throw new Error(
+            "백엔드 로그인 응답에 사용자 정보가 없습니다.",
+          );
+        }
 
-        localStorage.setItem('accessToken', data.token);
+        setAuthUser(response.user);
 
-        router.push('/mypage/dashboard');
+        console.log(
+          "[Kakao] 사용자 정보 반영 완료:",
+          response.user,
+        );
 
-      } catch (error) {
-        console.error("로그인 에러:", error);
-        setStatusText('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+        setMessage(
+          "로그인 성공! 홈으로 이동합니다...",
+        );
+
+        router.replace("/");
+      } catch (errorValue) {
+        console.error(
+          "[Kakao] 로그인 처리 실패:",
+          errorValue,
+        );
+
+        setErrorMessage(
+          errorValue instanceof Error
+            ? errorValue.message
+            : "카카오 로그인 처리 중 오류가 발생했습니다.",
+        );
       }
     };
 
-    sendCodeToBackend();
-  }, [code, router]);
+    void completeLogin();
+  }, [router, searchParams]);
 
   return (
-    <div className="flex h-screen items-center justify-center">
-      <p className="text-lg font-semibold text-gray-700">
-        {statusText}
-      </p>
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-bg px-6">
+      <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+        <p className="text-sm font-bold text-navy/70">
+          InterviewFit
+        </p>
+
+        <h1 className="mt-3 text-2xl font-bold text-navy">
+          카카오 로그인
+        </h1>
+
+        {errorMessage ? (
+          <>
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {errorMessage}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.replace("/login")}
+              className="mt-6 h-11 rounded-full bg-navy px-6 text-sm font-bold text-white"
+            >
+              로그인으로 돌아가기
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="mt-4 text-sm text-muted">
+              {message}
+            </p>
+
+            <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function KakaoCallbackFallback() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg px-6">
+      <div className="w-full max-w-md rounded-[28px] border border-white/50 bg-white/70 px-8 py-10 text-center shadow-[0_24px_70px_-20px_rgba(31,44,70,0.25)] backdrop-blur-2xl">
+        <p className="text-sm font-bold text-navy/70">
+          InterviewFit
+        </p>
+
+        <h1 className="mt-3 text-2xl font-bold text-navy">
+          카카오 로그인
+        </h1>
+
+        <p className="mt-4 text-sm text-muted">
+          카카오 로그인 정보를 확인하는 중입니다...
+        </p>
+
+        <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
+      </div>
+    </main>
+  );
+}
+
+export default function KakaoCallbackPage() {
+  return (
+    <Suspense fallback={<KakaoCallbackFallback />}>
+      <KakaoCallbackContent />
+    </Suspense>
   );
 }

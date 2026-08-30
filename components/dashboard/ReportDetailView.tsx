@@ -2,8 +2,12 @@
 
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, ListVideo, Play } from "lucide-react";
+import { ArrowLeft, Trash2, ListVideo, Play, Share2, Loader2 } from "lucide-react";
 import type { DashboardRecord } from "@/types";
+import {
+  CommunityApiError,
+  publishCommunityBestAnswer,
+} from "@/lib/communityApi";
 import {
   getOverallScore, getAverageEyeScore, getAveragePoseScore, getSpeechScore,
   getReportStatusLabel, getMainFeedback, getSortedReports, getVideoPlaybackUrl,
@@ -26,7 +30,9 @@ interface ReportDetailViewProps {
 
 export default function ReportDetailView({ record, roundLabel, onBack, onDelete, onStartNew }: ReportDetailViewProps) {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState(0);
-  const [activePlaybackTime, setActivePlaybackTime] = useState(0); 
+  const [activePlaybackTime, setActivePlaybackTime] = useState(0);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedAnswerIds, setPublishedAnswerIds] = useState<number[]>([]);
   const playerRef = useRef<MirroredVideoPlayerHandle>(null);
   
   const report = record.report;
@@ -58,6 +64,8 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
   };
 
   const handleJumpToQuestion = (idx: number) => {
+    setSelectedAnswerIndex(idx);
+
     const target = timestamps[idx];
     if (typeof target === "number") {
       playerRef.current?.seekTo(target);
@@ -67,6 +75,62 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
   const activeQuestionIndex = timestamps.length > 0
     ? timestamps.reduce((activeIdx, ts, idx) => (ts <= activePlaybackTime ? idx : activeIdx), 0)
     : -1;
+
+  const handlePublishBestAnswer = async () => {
+    const answerId = selectedAnswerData?.answerId;
+
+    if (!answerId) {
+      alert("공개할 답변 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    const companyInput = window.prompt(
+      "기업명을 입력해주세요. 기업명을 공개하지 않으려면 빈칸으로 두고 확인을 눌러주세요.",
+      "",
+    );
+
+    if (companyInput === null) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "현재 답변의 STT 스크립트를 우수 답변 피드에 공개할까요? 작성자 이름은 마스킹되어 표시됩니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsPublishing(true);
+
+    try {
+      await publishCommunityBestAnswer({
+        answerId,
+        companyName: companyInput.trim() || undefined,
+      });
+
+      setPublishedAnswerIds((prev) =>
+        prev.includes(answerId) ? prev : [...prev, answerId],
+      );
+
+      alert("우수 답변 피드에 공개되었습니다.");
+    } catch (error) {
+      console.error("우수 답변 공개 실패:", error);
+
+      if (error instanceof CommunityApiError && error.status === 409) {
+        alert(error.message || "이미 공개된 답변입니다.");
+        return;
+      }
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "우수 답변 공개에 실패했습니다.",
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full animate-in slide-in-from-right-4 duration-300">
@@ -78,13 +142,37 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
         >
           <ArrowLeft className="h-4 w-4 text-muted" /> 목록으로 돌아가기
         </button>
-        <button
-          onClick={() => onDelete(record.interviewId)}
-          aria-label="이 분석 기록 삭제"
-          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
-        >
-          <Trash2 className="h-4 w-4" /> 기록 삭제
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handlePublishBestAnswer()}
+            disabled={
+              isPublishing ||
+              !selectedAnswerData?.answerId ||
+              publishedAnswerIds.includes(selectedAnswerData.answerId)
+            }
+            aria-label="현재 답변을 우수 답변 피드에 공개"
+            className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-medium text-blue-600 shadow-sm transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPublishing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+            {selectedAnswerData?.answerId &&
+            publishedAnswerIds.includes(selectedAnswerData.answerId)
+              ? "공개 완료"
+              : "우수 답변 공개"}
+          </button>
+
+          <button
+            onClick={() => onDelete(record.interviewId)}
+            aria-label="이 분석 기록 삭제"
+            className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-500 shadow-sm transition-colors hover:bg-red-100"
+          >
+            <Trash2 className="h-4 w-4" /> 기록 삭제
+          </button>
+        </div>
       </div>
 
       {/* grid에 items-start 추가 */}
@@ -101,7 +189,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
               <div className="text-right">
                 <p className="text-xs text-muted mb-1">종합 점수</p>
                 <div className="text-4xl font-bold text-blue-600">
-                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
+                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted"> 점</span>
                 </div>
               </div>
             </div>
@@ -109,7 +197,11 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
             <OverviewVisualizer eyeScore={eyeScore} poseScore={poseScore} speechScore={speechScore} />
           </div>
           
-          <VisualAnalysisCard answerData={selectedAnswerData} />
+          <VisualAnalysisCard
+            answerData={selectedAnswerData}
+            eyeReport={report?.eye}
+            poseReport={report?.pose}
+          />
           <SpeechAnalysisCard answerData={selectedAnswerData} />
         </div>
 

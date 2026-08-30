@@ -1,72 +1,107 @@
+// components/login/LoginCard.tsx
+
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+
 import { BRAND } from "@/lib/constants";
 
-const easeOut = [0.22, 1, 0.36, 1] as const;
-
-declare global {
-  interface Window {
-    Kakao: any;
-  }
-}
+const easeOut = [
+  0.22,
+  1,
+  0.36,
+  1,
+] as const;
 
 export default function LoginCard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [kakaoReady, setKakaoReady] = useState(false);
-
-  useEffect(() => {
-    // 💡 window.Kakao와 Kakao.Auth가 완전히 로드될 때까지 0.1초마다 안전하게 체크
-    const checkKakao = setInterval(() => {
-      if (typeof window !== "undefined" && window.Kakao) {
-        if (!window.Kakao.isInitialized()) {
-          try {
-            window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
-          } catch (e) {
-            console.error("카카오 초기화 실패:", e);
-          }
-        }
-        // Auth 객체까지 완벽히 로드되었는지 확인
-        if (window.Kakao.Auth) {
-          setKakaoReady(true);
-          clearInterval(checkKakao);
-        }
-      }
-    }, 100);
-
-    return () => clearInterval(checkKakao);
-  }, []);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = () => {
-    if (typeof window === "undefined" || !window.Kakao || !window.Kakao.Auth) {
-      alert("카카오 로그인 모듈이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+    setErrorMessage("");
+
+    /**
+     * 카카오 OAuth Authorization Code 방식에서는
+     * REST API 키를 client_id로 사용한다.
+     *
+     * JavaScript SDK를 사용하지 않으므로
+     * NEXT_PUBLIC_KAKAO_JS_KEY는 여기서 필요하지 않다.
+     */
+    const restApiKey =
+      process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+
+    const redirectUri =
+      process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI ??
+      "http://localhost:3000/oauth/kakao/callback";
+
+    if (!restApiKey) {
+      console.error(
+        "NEXT_PUBLIC_KAKAO_REST_API_KEY가 .env.local에 없습니다.",
+      );
+
+      setErrorMessage(
+        "카카오 REST API 키가 설정되지 않았습니다.",
+      );
+
       return;
     }
 
-    setLoading(true);
+    console.log(
+      "[Kakao Login] redirectUri:",
+      redirectUri,
+    );
 
-    try {
-      // 💡 안전하게 옵셔널 체이닝(?.)을 사용하여 Auth.authorize 호출
-      window.Kakao.Auth?.authorize({
-        redirectUri: `${window.location.origin}/oauth/kakao/callback`,
-      });
-    } catch (err) {
-      console.error("카카오 인증 요청 실패:", err);
-      alert("로그인 요청에 실패했어요. 다시 시도해주세요.");
-      setLoading(false);
-    }
+    /**
+     * 카카오 인가 코드 요청 URL 생성
+     */
+    const authorizeUrl = new URL(
+      "https://kauth.kakao.com/oauth/authorize",
+    );
+
+    authorizeUrl.searchParams.set(
+      "client_id",
+      restApiKey,
+    );
+
+    authorizeUrl.searchParams.set(
+      "redirect_uri",
+      redirectUri,
+    );
+
+    authorizeUrl.searchParams.set(
+      "response_type",
+      "code",
+    );
+
+    /**
+     * 카카오 로그인 페이지로 이동
+     *
+     * 로그인 성공 후:
+     *
+     * /oauth/kakao/callback?code=...
+     *
+     * 형태로 돌아오게 된다.
+     */
+    window.location.href =
+      authorizeUrl.toString();
   };
 
   return (
     <section className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1280px] items-center justify-center px-8">
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: easeOut }}
+        initial={{
+          opacity: 0,
+          y: 24,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.9,
+          ease: easeOut,
+        }}
         className="relative w-full max-w-[440px]"
       >
         <div className="pointer-events-none absolute -inset-6 rounded-[36px] bg-gradient-to-br from-white/30 to-navy/5 blur-2xl" />
@@ -75,73 +110,145 @@ export default function LoginCard() {
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
           <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: easeOut }}
+            initial={{
+              opacity: 0,
+              y: 8,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.2,
+              ease: easeOut,
+            }}
             className="text-center text-base font-bold tracking-tight text-navy/70"
           >
             {BRAND.name}
           </motion.p>
 
           <motion.h1
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3, ease: easeOut }}
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.7,
+              delay: 0.3,
+              ease: easeOut,
+            }}
             className="mt-3 text-center text-5xl font-bold tracking-[-0.02em] text-navy"
           >
             Login
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4, ease: easeOut }}
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.7,
+              delay: 0.4,
+              ease: easeOut,
+            }}
             className="mt-4 text-center text-sm leading-relaxed text-muted"
           >
             카카오 계정으로 바로 시작하세요.
           </motion.p>
 
           <motion.button
-            onClick={handleLogin}
-            disabled={loading || !kakaoReady}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.55, ease: easeOut }}
             type="button"
-            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99] disabled:opacity-60"
+            onClick={handleLogin}
+            initial={{
+              opacity: 0,
+              y: 16,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.7,
+              delay: 0.55,
+              ease: easeOut,
+            }}
+            className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
           >
             <KakaoIcon />
-            {!kakaoReady ? "카카오 로딩 중..." : loading ? "카카오 로그인 이동 중..." : "카카오로 시작하기"}
+            카카오로 시작하기
           </motion.button>
 
+          {errorMessage && (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-xs font-medium text-red-600">
+              {errorMessage}
+            </p>
+          )}
+
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.75 }}
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.75,
+            }}
             className="mt-5 text-center text-[13px] text-muted"
           >
             처음이신가요? 카카오 로그인 한 번으로 자동 가입됩니다.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.85 }}
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.85,
+            }}
             className="mt-8 h-px w-full bg-navy/10"
           />
 
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.9 }}
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.9,
+            }}
             className="mt-5 text-center text-[11px] leading-relaxed text-muted/90"
           >
             로그인 시{" "}
-            <Link href="/terms" className="underline underline-offset-2 hover:text-navy">
+            <Link
+              href="/terms"
+              className="underline underline-offset-2 hover:text-navy"
+            >
               이용약관
             </Link>{" "}
             및{" "}
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-navy">
+            <Link
+              href="/privacy"
+              className="underline underline-offset-2 hover:text-navy"
+            >
               개인정보처리방침
             </Link>
             에 동의합니다.
@@ -154,7 +261,13 @@ export default function LoginCard() {
 
 function KakaoIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         fillRule="evenodd"
         clipRule="evenodd"

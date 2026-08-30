@@ -95,71 +95,110 @@ export type GazeReport = {
   resultJson?: GazeResultJson;
 };
 
+export type EyeReport = {
+  reportId: number;
+  blinkCount: number;
+  blinkRate: number;
+  durationSeconds?: number;
+  notDetectedCount?: number;
+  notDetectedRatio?: number;
+  score: number;
+  grade?: string | null;
+  feedback: string;
+  blinkLogs?: {
+    logId?: number;
+    timestamp: number;
+    eventType?: string;
+  }[];
+};
+
+export type PoseReport = {
+  reportId: number;
+  totalDuration: number;
+  badCount: number;
+  badDuration: number;
+  shoulderBadCount: number;
+  faceBadCount: number;
+  shoulderBadDuration: number;
+  faceBadDuration: number;
+  badRatio: number;
+  score: number;
+  grade: string | null;
+};
+
+export type ExternalAiAnalysis = {
+  star: {
+    situation: string | null;
+    task: string | null;
+    action: string | null;
+    result: string | null;
+  } | null;
+  strengths: string[] | null;
+  improvements: string[] | null;
+};
+
+export type SpeechReport = {
+  reportId: number;
+  textScript: string;
+  totalFillerCount: number;
+  fillerDetailsJson: string;
+  repeatedExpressionsJson: string;
+  paceEvaluation: string;
+  paceFeedback: string;
+  charactersPerSecond: number;
+  totalSilenceSeconds: number;
+  pauseRatePercent: number;
+  criticalSilenceCount: number;
+  volumeDbMean?: number;
+  volumeDbStd?: number;
+  aiEvaluationJson?: string;
+  modelAnswer?: string;
+  externalAiAnalysis?: ExternalAiAnalysis | null;
+};
+
+export type AiEvaluationReport = {
+  evaluationId: number;
+  starEvaluationJson?: string | null;
+  geminiFeedback?: string | null;
+  keywordsJson?: string | null;
+  modelAnswer?: string | null;
+};
+
+export type FollowUpAnswerReport = {
+  followUpAnswerId: number;
+  answerText?: string | null;
+  startTime?: number | null;
+  endTime?: number | null;
+  analysisStatus: string;
+  errorMessage?: string | null;
+};
+
+export type FollowUpReport = {
+  followUpQuestionId: number;
+  questionText: string;
+  createdAt?: string | null;
+  answers: FollowUpAnswerReport[];
+};
+
 export type AnswerReport = {
   answerId: number;
+  interviewQuestionId?: number | null;
   questionId: number | null;
   questionText: string | null;
-  videoObjectKey: string;
+  videoObjectKey?: string;
+  answerText?: string | null;
   answerOrder: number;
+  startTime?: number | null;
+  endTime?: number | null;
   analysisStatus: string;
   errorMessage: string | null;
+  aiEvaluation?: AiEvaluationReport | null;
+  followUps?: FollowUpReport[];
 
-  eye: {
-    reportId: number;
-    blinkCount: number;
-    blinkRate: number;
-    durationSeconds?: number;
-    score: number;
-    feedback: string;
-    blinkLogs?: {
-      logId?: number;
-      timestamp: number;
-      eventType?: string;
-    }[];
-  } | null;
-
-  gaze?: GazeReport | null;
-
-  pose: {
-    reportId: number;
-    totalDuration: number;
-    badCount: number;
-    badDuration: number;
-    shoulderBadCount: number;
-    faceBadCount: number;
-    shoulderBadDuration: number;
-    faceBadDuration: number;
-    badRatio: number;
-    score: number;
-    grade: string;
-  } | null;
-
-  speech: {
-    reportId: number;
-    textScript: string;
-    totalFillerCount: number;
-    fillerDetailsJson: string;
-    repeatedExpressionsJson: string;
-    paceEvaluation: string;
-    paceFeedback: string;
-    charactersPerSecond: number;
-    totalSilenceSeconds: number;
-    pauseRatePercent: number;
-    criticalSilenceCount: number;
-    volumeDbMean: number;
-    volumeDbStd: number;
-    aiEvaluationJson: string;
-    modelAnswer: string;
-  } | null;
-  gaze: {
-    reportId: number;
-    centerRatio: number;
-    gazeAwayRatio: number;
-    gazeAwayCount: number;
-    score: number;
-    feedback?: string;
-    evaluation?: string;
-  } | null;
+  eye: EyeReport | null;
+  gaze: GazeReport | null;
+  pose: PoseReport | null;
+  speech: SpeechReport | null;
 };
 
 export type InterviewReportResponse = {
@@ -171,6 +210,11 @@ export type InterviewReportResponse = {
   createdAt: string;
   analysisStatus: string;
   completed: boolean;
+
+  eye?: EyeReport | null;
+  gaze?: GazeReport | null;
+  pose?: PoseReport | null;
+
   answers: AnswerReport[];
 };
 
