@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRoomConnection } from "@/hooks/useRoomConnection";
 import { useGroupAnswerRecording, type GroupVideoUploadStatus } from "@/hooks/useGroupAnswerRecording";
@@ -16,6 +16,7 @@ import {
   getLiveKitCredentials,
   GroupInterviewApiError,
   joinGroupRoom,
+  skipGroupAnswer,
   startGroupAnswer,
   startGroupInterview,
 } from "@/lib/groupInterviewApi";
@@ -151,6 +152,8 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
   const [requestedActionKey, setRequestedActionKey] = useState("");
   const [answerError, setAnswerError] = useState("");
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [recordingFallbackNotice, setRecordingFallbackNotice] = useState("");
+  const terminalAnswerKeysRef = useRef(new Set<string>());
   const syncedParticipants = participants;
 
   const currentQuestion = progress?.currentQuestionText || "질문을 불러오는 중입니다.";
@@ -182,10 +185,12 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     stopRecording,
     stopRecordingForAnswer,
     retryRecording,
+    canStartRecording,
     isCheckingAudio,
     canRetryRecording,
     uploadStatuses,
     recordingError,
+    recordingFailureAnswerId,
     retryUpload,
     wasAnswerTimedOut,
   } = useGroupAnswerRecording({
@@ -196,10 +201,43 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     lastEvent,
   });
 
+  const terminalAnswerKey = useCallback((answerId?: number | null) => (
+    typeof answerId === "number" && Number.isFinite(answerId)
+      ? `answer:${answerId}`
+      : `turn:${progress?.currentRound ?? ""}:${progress?.currentQuestionIndex ?? ""}:${progress?.currentParticipantUserId ?? ""}`
+  ), [progress?.currentParticipantUserId, progress?.currentQuestionIndex, progress?.currentRound]);
+
+  const skipRecordingFailed = useCallback(async (answerId?: number | null) => {
+    const key = terminalAnswerKey(answerId);
+    if (terminalAnswerKeysRef.current.has(key)) return;
+    terminalAnswerKeysRef.current.add(key);
+    setRequestedActionKey(answerActionKey);
+    setPendingAnswerAction("complete");
+    setAnswerError("");
+    setRecordingFallbackNotice("음성/영상이 정상적으로 저장되지 않아 해당 답변의 분석이 제공되지 않을 수 있지만 면접은 계속 진행됩니다.");
+    try {
+      await skipGroupAnswer(roomId, "RECORDING_FAILED");
+    } catch (cause) {
+      terminalAnswerKeysRef.current.delete(key);
+      setRequestedActionKey("");
+      setAnswerError(cause instanceof Error ? cause.message : "녹화 실패 답변을 건너뛰지 못했습니다.");
+    } finally {
+      setPendingAnswerAction(null);
+    }
+  }, [answerActionKey, roomId, terminalAnswerKey]);
+
   useEffect(() => {
     const tipTimer = setInterval(() => setTipIndex((prev) => (prev + 1) % INTERVIEW_TIPS.length), 6000);
     return () => clearInterval(tipTimer);
   }, []);
+
+  useEffect(() => {
+    if (!isMyTurn || !isAnswering || recordingFailureAnswerId == null) return;
+    const timer = window.setTimeout(() => {
+      void skipRecordingFailed(recordingFailureAnswerId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isAnswering, isMyTurn, recordingFailureAnswerId, skipRecordingFailed]);
 
   useEffect(() => {
     const deadline = progress?.answerDeadlineAt ? Date.parse(progress.answerDeadlineAt) : Number.NaN;
@@ -231,6 +269,11 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     if (!isMyTurn || !isQuestionView || pendingAnswerAction || requestedActionKey === answerActionKey) return;
 
     try {
+      setRecordingFallbackNotice("");
+      if (!canStartRecording()) {
+        await skipRecordingFailed(progress?.answerId);
+        return;
+      }
       setRequestedActionKey(answerActionKey);
       setPendingAnswerAction("start");
       setAnswerError("");
@@ -255,20 +298,29 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     try {
       setPendingAnswerAction("complete");
       setAnswerError("");
+      setRecordingFallbackNotice("");
       const answerId = progress?.answerId;
       if (typeof answerId !== "number" || !Number.isFinite(answerId)) {
         setAnswerError("현재 답변 정보를 확인할 수 없어 답변을 완료할 수 없습니다.");
         return;
       }
-      // Blob 생성까지만 기다린다. duration 보정과 영상 업로드는 별도로 계속 진행된다.
+      // Blob 생성과 영상 업로드 시도를 마친 뒤 성공 여부에 따라 완료 또는 fallback으로 진행한다.
       const stoppedContext = await stopRecordingForAnswer(answerId);
-      if (!stoppedContext || stoppedContext.answerId !== answerId) {
-        setAnswerError("현재 답변 녹화 또는 마이크 입력을 확인할 수 없습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
+      if (!stoppedContext || stoppedContext.answerId !== answerId || !stoppedContext.videoCreated) {
+        await skipRecordingFailed(answerId);
         return;
       }
-      if (stoppedContext && wasAnswerTimedOut(stoppedContext.answerId)) return;
+      if (wasAnswerTimedOut(stoppedContext.answerId)) return;
+      const terminalKey = terminalAnswerKey(answerId);
+      if (terminalAnswerKeysRef.current.has(terminalKey)) return;
+      terminalAnswerKeysRef.current.add(terminalKey);
       setRequestedActionKey(answerActionKey);
-      await completeGroupAnswer(roomId);
+      try {
+        await completeGroupAnswer(roomId);
+      } catch (cause) {
+        terminalAnswerKeysRef.current.delete(terminalKey);
+        throw cause;
+      }
     } catch (cause) {
       setRequestedActionKey("");
       setAnswerError(cause instanceof Error ? cause.message : "답변 완료를 처리하지 못했습니다.");
@@ -291,9 +343,12 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
     return (
       <>
         <GroupAnalyzing roomId={roomId} onDone={() => {
-          if (uploadStatuses.length > 0) {
-            alert("답변 영상 업로드가 끝나거나 실패한 영상을 재시도한 뒤 이동해주세요.");
+          if (uploadStatuses.some((item) => item.status === "uploading")) {
+            alert("답변 영상 업로드가 끝난 뒤 이동해주세요.");
             return;
+          }
+          if (uploadStatuses.some((item) => item.status === "failed")) {
+            alert("일부 답변 영상이 저장되지 않아 해당 답변의 분석이 제공되지 않을 수 있습니다.");
           }
           router.push("/mypage/dashboard");
         }} />
@@ -392,7 +447,7 @@ function GroupInterviewRoom({ roomId }: { roomId: string }) {
         {/* 하단 컨트롤 */}
         <div className="relative z-10 flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 md:px-8 py-4 dark:border-white/10">
           <p className="text-xs font-medium text-muted">
-            {answerError || recordingError || (isMyTurn
+            {answerError || recordingFallbackNotice || recordingError || (isMyTurn
               ? isQuestionView
                 ? "질문을 확인한 뒤 답변을 시작해주세요."
                 : isAnswering
