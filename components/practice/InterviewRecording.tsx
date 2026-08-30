@@ -213,6 +213,11 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     const slot = safeFollowUpSlots[currentQuestionIdx];
 
     if (slot?.status === "ready" && slot.question && slot.followUpQuestionId) {
+      console.log("[FollowUp UI] 꼬리질문 표시 시작:", {
+        index: currentQuestionIdx,
+        followUpQuestionId: slot.followUpQuestionId,
+        question: slot.question,
+      });
       setIsWaitingForQuestion(false);
       camera.startAnswerRecording();
       return;
@@ -374,6 +379,7 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
         selectedCategory={selectedCategory}
         selectedJobName={selectedJobData?.name}
         currentQuestionText={displayedQuestion}
+        questionMode={questionMode}
         onCancelStop={() => setStep("recording")}
         onConfirmStop={() => setStep("analyzing")}
       />
