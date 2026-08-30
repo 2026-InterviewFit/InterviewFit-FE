@@ -93,7 +93,7 @@ export default function AddWikiPage() {
       });
 
       alert(
-        "기출문제가 등록되었습니다. 5명의 검증을 받으면 정식 기출문제로 사용할 수 있습니다.",
+        "기출문제가 등록되었습니다. 3명의 검증을 받으면 정식 기출문제로 사용할 수 있습니다.",
       );
       router.push("/community?tab=wiki");
     } catch (error) {
@@ -166,7 +166,7 @@ export default function AddWikiPage() {
               style={{ color: "#3F4A1B" }}
             />
             <p className="text-xs font-semibold" style={{ color: "#3F4A1B" }}>
-              5명의 동의를 얻으면 정식으로 위키에 등재됩니다.
+              3명의 동의를 얻으면 정식으로 위키에 등재됩니다.
             </p>
           </div>
 

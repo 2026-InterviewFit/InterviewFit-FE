@@ -38,7 +38,7 @@ export type Step =
 
 export type QuestionMode = "base" | "followup";
 
-export type FollowUpSlotStatus = "idle" | "loading" | "ready" | "failed";
+export type FollowUpSlotStatus = "idle" | "loading" | "ready" | "failed" | "skipped";
 
 export type FollowUpSlot = {
   status: FollowUpSlotStatus;
@@ -82,7 +82,7 @@ interface InterviewState {
   startedUserId: number | null;
   jobRoleId: number | null;
 
-  generatedQuestions: Array<{ id: number; question: string }>;
+  generatedQuestions: Array<{ id: number; question: string; questionOrder?: number | null }>;
 }
 
 interface InterviewActions {
@@ -103,6 +103,12 @@ interface InterviewActions {
   addFollowUpTask: (
     blob: Blob,
     originalQuestion: string,
+    baseQuestionIndex: number,
+    sourceQuestionId?: number,
+  ) => Promise<void>;
+
+  saveBaseAnswerTask: (
+    blob: Blob,
     baseQuestionIndex: number,
     sourceQuestionId?: number,
   ) => Promise<void>;
@@ -139,11 +145,14 @@ const initialState: Omit<InterviewState, "jobRoles"> = {
   generatedQuestions: [],
 };
 
-function emptyFollowUpSlots(count: number): FollowUpSlot[] {
-  return Array.from({ length: count }, () => ({
-    status: "idle" as const,
+function createFollowUpSlots(
+  questions: Array<{ id: number; question: string; questionOrder?: number | null }>,
+): FollowUpSlot[] {
+  return questions.map((question) => ({
+    status: question.questionOrder === 1 ? ("skipped" as const) : ("idle" as const),
     followUpQuestionId: null,
     question: null,
+    sourceQuestionId: question.id,
   }));
 }
 
@@ -292,7 +301,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
         jobRoleId: selectedJobId,
         currentQuestionIdx: 0,
         questionMode: "base",
-        followUpSlots: emptyFollowUpSlots(questionsResponse.length),
+        followUpSlots: createFollowUpSlots(questionsResponse),
         activeFollowUpGenerationTasks: 0,
         activeFollowUpSaveTasks: 0,
         step: "prepare",
@@ -301,6 +310,42 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
     } catch (error: unknown) {
       console.error("[Interview] 면접 시작 또는 질문 생성 API 실패:", error);
       alert(error instanceof Error ? error.message : "면접 준비에 실패했습니다.");
+    }
+  },
+
+  saveBaseAnswerTask: async (
+    blob,
+    baseQuestionIndex,
+    sourceQuestionId,
+  ) => {
+    try {
+      const { interviewId } = get();
+
+      if (!interviewId) {
+        throw new Error("면접 정보가 없습니다.");
+      }
+
+      if (!sourceQuestionId) {
+        throw new Error("원 질문 ID를 확인할 수 없습니다.");
+      }
+
+      const savedAnswer = await uploadAnswerVideo({
+        interviewId,
+        file: blob,
+        answerOrder: baseQuestionIndex + 1,
+        questionId: sourceQuestionId,
+      });
+
+      console.log("[Interview] 기본 답변 저장 완료:", {
+        questionId: sourceQuestionId,
+        answerId: savedAnswer.answerId,
+        followUpGenerated: false,
+      });
+    } catch (error) {
+      console.warn(
+        `[Interview] 기본 질문 ${baseQuestionIndex + 1} 답변 저장 실패:`,
+        error,
+      );
     }
   },
 

@@ -58,6 +58,7 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     followUpSlots,
     activeFollowUpGenerationTasks,
     addFollowUpTask,
+    saveBaseAnswerTask,
     saveFollowUpAnswerTask,
 
     jobRoles,
@@ -133,6 +134,10 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
 
     if (currentFollowUpSlot?.status === "ready" && currentFollowUpSlot.question) {
       return currentFollowUpSlot.question;
+    }
+
+    if (currentFollowUpSlot?.status === "skipped") {
+      return "자기소개 질문은 꼬리질문 없이 다음 질문으로 넘어갑니다.";
     }
 
     if (currentFollowUpSlot?.status === "failed") {
@@ -213,7 +218,7 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
       return;
     }
 
-    if (slot?.status === "failed") {
+    if (slot?.status === "failed" || slot?.status === "skipped") {
       if (currentQuestionIdx < safeFollowUpSlots.length - 1) {
         setCurrentQuestionIdx((prev) => prev + 1);
         return;
@@ -296,13 +301,25 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
       const answerBlob = await camera.stopAnswerRecording();
 
       if (questionMode === "base") {
-        if (isFollowUpEnabled) {
-          const currentQ = safeGeneratedQuestions[currentQuestionIdx];
-          const sourceId = currentQ?.id;
+        const currentQ = safeGeneratedQuestions[currentQuestionIdx];
+        const sourceId = currentQ?.id;
+        const isSelfIntroduction = currentQ?.questionOrder === 1;
 
+        /*
+         * 자기소개(questionOrder=1)는 답변 저장/비동기 STT·Gemini 분석은 유지하되
+         * 꼬리질문만 생성하지 않는다.
+         * 꼬리질문 기능을 끈 경우에도 기본 답변 저장 자체는 계속 수행한다.
+         */
+        if (isFollowUpEnabled && !isSelfIntroduction) {
           void addFollowUpTask(
             answerBlob,
             currentQuestion,
+            currentQuestionIdx,
+            sourceId,
+          );
+        } else {
+          void saveBaseAnswerTask(
+            answerBlob,
             currentQuestionIdx,
             sourceId,
           );

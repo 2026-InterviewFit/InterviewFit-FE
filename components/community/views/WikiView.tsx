@@ -368,7 +368,7 @@ export default function WikiView({
             filtered.map((question) => {
               const isChecked = selectedQuestions.includes(question.text);
               const chip = chipColorFor(question.companyName);
-              const verifyPct = Math.min((question.verifiedCount / 5) * 100, 100);
+              const verifyPct = Math.min((question.verifiedCount / 3) * 100, 100);
               const isVerifying = verifyingId === question.id;
               const canSelect = question.verified;
 
@@ -441,7 +441,7 @@ export default function WikiView({
                     <p className="mt-1 text-[10px] font-medium text-muted sm:hidden">
                       {question.verified
                         ? "검증완료"
-                        : `${question.verifiedCount}/5 검증중`}
+                        : `${question.verifiedCount}/3 검증중`}
                     </p>
                   </div>
 
@@ -478,7 +478,7 @@ export default function WikiView({
                     )}
 
                     <span className="text-[10px] font-bold text-muted">
-                      {question.verifiedCount}/5
+                      {question.verifiedCount}/3
                     </span>
                     <div className="h-1 w-full overflow-hidden rounded-full bg-chip">
                       <div
