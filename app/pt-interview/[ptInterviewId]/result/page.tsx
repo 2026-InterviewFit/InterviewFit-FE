@@ -10,7 +10,6 @@ import {
   ThumbsUp,
   AlertTriangle,
   Target,
-  FileText,
   Loader2,
   RefreshCcw,
 } from "lucide-react";
@@ -309,33 +308,19 @@ export default function PtResultPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm lg:col-span-5">
-            <h2 className="mb-5 text-sm font-bold text-ink">
-              역량별 점수
-            </h2>
+        <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
+          <h2 className="mb-5 text-sm font-bold text-ink">
+            역량별 점수
+          </h2>
 
-            <div className="flex flex-col gap-5">
-              {scoreItems.map((item) => (
-                <ScoreBar
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm lg:col-span-7">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
-              <FileText className="h-4 w-4 text-navy" />
-              발표 요약
-            </h2>
-
-            <p className="whitespace-pre-line text-sm font-medium leading-7 text-muted">
-              {report.presentationSummary ||
-                "발표 요약이 없습니다."}
-            </p>
+          <div className="flex flex-col gap-5">
+            {scoreItems.map((item) => (
+              <ScoreBar
+                key={item.label}
+                label={item.label}
+                value={item.value}
+              />
+            ))}
           </div>
         </div>
 
