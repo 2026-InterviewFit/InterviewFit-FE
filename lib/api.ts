@@ -17,7 +17,8 @@ import type {
 } from "@/types/ptInterview";
 
 import {
-  authenticatedFetch,
+  clearAuth,
+  getAuthToken,
   type AuthUser,
 } from "@/lib/auth";
 
@@ -87,25 +88,22 @@ export async function authFetch(
   input: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  /*
-   * auth.ts에는 이미 다음 흐름이 구현되어 있다.
-   *
-   * 요청 -> 401
-   *      -> HttpOnly refresh cookie로 /api/users/refresh 호출
-   *      -> 새 access cookie 발급
-   *      -> 원래 요청 1회 재시도
-   *
-   * 기존 api.ts는 이 로직을 사용하지 않고 401에서 바로 clearAuth()하여
-   * 30분 Access Token 만료 뒤 면접 중 요청들이 연쇄 401로 실패했다.
-   */
-  const response = await authenticatedFetch(
-    input,
-    init,
-  );
+  const token = getAuthToken();
+  const headers = new Headers(init.headers);
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(input, {
+    ...init,
+    headers,
+    credentials: "include", 
+  });
 
   if (response.status === 401) {
     const errorMessage = await readErrorMessage(response);
-
+    clearAuth();
     throw new Error(
       `인증 실패 (401): ${
         errorMessage || "다시 로그인해주세요."
@@ -643,7 +641,7 @@ export async function createQuestions(params: {
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}): Promise<Array<{ id: number; question: string }>> {
+}): Promise<Array<{ id: number; question: string; questionOrder?: number | null }>> {
   const payload = {
     interviewId: params.interviewId,
     count: params.count ?? 3,
@@ -685,7 +683,7 @@ export async function createQuestionsWithRetry(params: {
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}): Promise<Array<{ id: number; question: string }>> {
+}): Promise<Array<{ id: number; question: string; questionOrder?: number | null }>> {
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1000;
 
