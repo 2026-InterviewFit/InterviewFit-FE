@@ -66,10 +66,31 @@ export const getAverageEyeScore = (report?: InterviewReportResponse) => {
   }
 
   // 과거 답변별 eye 구조와의 호환을 위한 fallback
-  return average(
-    getSortedReports(report).map(
-      (answer) => answer.eye?.score,
-    ),
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.eye?.score,
+      ),
+    ) ?? 0
+  );
+};
+
+export const getAverageGazeScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.gaze?.score;
+
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
+
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.gaze?.score,
+      ),
+    ) ?? 0
   );
 };
 
@@ -84,10 +105,12 @@ export const getAveragePoseScore = (report?: InterviewReportResponse) => {
   }
 
   // 과거 답변별 pose 구조와의 호환을 위한 fallback
-  return average(
-    getSortedReports(report).map(
-      (answer) => answer.pose?.score,
-    ),
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.pose?.score,
+      ),
+    ) ?? 0
   );
 };
 export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
@@ -124,7 +147,7 @@ export const getAverageSpeechContentScore = (report?: InterviewReportResponse) =
     })
     .filter((v): v is number => typeof v === "number");
 
-  return average(scores);
+  return average(scores) ?? 0;
 };
 
 // 🔑 신규: 발화 속도 점수 + STAR 내용 점수를 함께 반영한 종합 발화 점수.
@@ -145,10 +168,28 @@ export const getSpeechScore = (report?: InterviewReportResponse) => {
 };
 
 export const getOverallScore = (report?: InterviewReportResponse) => {
-  const eyeScore = getAverageEyeScore(report);
+  const blinkScore  = getAverageEyeScore(report);
+  const gazeScore = getAverageGazeScore(report);
   const poseScore = getAveragePoseScore(report);
   const speechScore = getSpeechScore(report); // 🔑 개선된 함수로 교체
-  return average([eyeScore, poseScore, speechScore]);
+  
+  if (
+    typeof blinkScore !== "number" ||
+    typeof gazeScore !== "number" ||
+    typeof poseScore !== "number" ||
+    typeof speechScore !== "number"
+  ) {
+    return undefined;
+  }
+
+  const weightedScore =
+    blinkScore * 0.15 +
+    gazeScore * 0.2 +
+    poseScore * 0.2 +
+    speechScore * 0.25;
+
+  // 현재 반영 비율 합계 80% → 100점 만점으로 환산 -> 나중에 발화 관련 점수 추가하면 -> Math.round(weightedScore)
+  return Math.round(weightedScore / 0.8);
 };
 
 export const getMainFeedback = (report?: InterviewReportResponse) => {

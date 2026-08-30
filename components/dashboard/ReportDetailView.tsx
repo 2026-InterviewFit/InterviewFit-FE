@@ -188,7 +188,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
               <div className="text-right">
                 <p className="text-xs text-muted mb-1">종합 점수</p>
                 <div className="text-4xl font-bold text-blue-600">
-                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted">%</span>
+                  {typeof overallScore === "number" ? `${Math.round(overallScore)}` : "-"}<span className="text-lg text-muted"> 점</span>
                 </div>
               </div>
             </div>
