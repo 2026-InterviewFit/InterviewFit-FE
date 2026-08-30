@@ -224,9 +224,13 @@ export type InterviewHistoryItem = {
   userId?: number;
   jobRoleId?: number;
   jobName?: string;
-  answers?: { answerId: number; answerOrder?: number; analysisStatus?: string }[];
-  questionTexts?: string[];      
-  questionTimestamps?: number[]; 
+  answers?: {
+    answerId: number;
+    answerOrder?: number;
+    analysisStatus?: string;
+  }[];
+  questionTexts?: string[];
+  questionTimestamps?: number[];
   savedAt?: string;
 };
 

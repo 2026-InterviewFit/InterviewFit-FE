@@ -6,7 +6,7 @@ import Script from "next/script";
 
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import AuthBootstrap from "@/components/shared/AuthBootstrap";
-import InterviewTypeModal from "@/components/shared/InterviewTypeModal"; // 👈 추가된 import
+import InterviewTypeModal from "@/components/shared/InterviewTypeModal";
 
 import "./globals.css";
 
@@ -41,17 +41,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
-        <ThemeProvider>
-          <AuthBootstrap />
-          {children}
-          
-          <InterviewTypeModal />
-        </ThemeProvider>
-
         <Script
           src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
           strategy="afterInteractive"
         />
+
+        <ThemeProvider>
+          <AuthBootstrap />
+
+          {children}
+
+          <InterviewTypeModal />
+        </ThemeProvider>
       </body>
     </html>
   );
