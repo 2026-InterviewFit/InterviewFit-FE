@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Video, Calendar, Play, Trash2, X, UserCheck, Monitor, Users } from "lucide-react";
+import { Video, Calendar, Play, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ReportDetailView from "@/components/dashboard/ReportDetailView";
 import InterviewTabs from "@/components/dashboard/InterviewTabs";
@@ -16,6 +16,7 @@ import { GROUP_ANALYSIS_STATUS_LABEL, getGroupAnalysisStatusClassName } from "@/
 import { formatKoreanDate, formatKoreanDateTime, getOverallScore, getStatusClassName, getReportStatusLabel, getRecordDate, getRecordJobName } from "@/lib/reportUtils";
 import type { PtReport } from "@/types/ptInterview";
 import type { InterviewKind } from "@/lib/interviewHistoryStore";
+import { useModalStore } from "@/store/useModalStore";
 
 function AnimatedScore({ score }: { score: number }) {
   const animatedValue = useCounter({ target: score, duration: 1200 });
@@ -31,16 +32,18 @@ const KIND_BADGE: Record<InterviewKind, { label: string; bg: string; fg: string 
 export default function DashboardPage() {
   const router = useRouter();
   
+  // 💡 추가됨: 전역 모달 열기 함수 가져오기
+  const openInterviewModal = useModalStore((state) => state.openInterviewModal);
+  
   const {
     activeTab, setActiveTab, sortOrder, setSortOrder, checkedIds, toggleCheck, handleBulkDelete,
     counts, sortedSingle, sortedPtGroup, sortedGroup, showSingle, showPt, showGroup,
     isGroupLoading, groupError, deleteSingle, deletePtGroup, singleRecords
   } = useDashboard();
 
-  // 순수 UI 상태만 관리
+  // 순수 UI 상태만 관리 (isNewModalOpen 삭제됨)
   const [selectedSingleId, setSelectedSingleId] = useState<number | null>(null);
   const [selectedPtGroupId, setSelectedPtGroupId] = useState<string | null>(null);
-  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   // ── 상세 화면: 1:1 ──
   const selectedSingle = sortedSingle.find(r => r.interviewId === selectedSingleId);
@@ -53,7 +56,7 @@ export default function DashboardPage() {
             record={selectedSingle} roundLabel={roundLabel}
             onBack={() => setSelectedSingleId(null)}
             onDelete={(id) => { if(window.confirm("기록을 삭제하시겠습니까?")) { deleteSingle(id); setSelectedSingleId(null); } }}
-            onStartNew={() => setIsNewModalOpen(true)}
+            onStartNew={openInterviewModal} // 💡 수정됨
           />
         </main>
       </DashboardLayout>
@@ -63,7 +66,6 @@ export default function DashboardPage() {
   // ── 상세 화면: PT ──
   const selectedPtGroup = sortedPtGroup.find(r => r.id === selectedPtGroupId);
   if (selectedPtGroup) {
-    // 1. PT 면접 렌더링
     if (selectedPtGroup.kind === "pt" && selectedPtGroup.detail) {
       return (
         <DashboardLayout>
@@ -78,7 +80,6 @@ export default function DashboardPage() {
       );
     }
     
-    // detail이 없는 과거 PT 데이터 폴백
     return (
       <DashboardLayout>
         <main className="px-6 pb-32 pt-6 lg:px-10 lg:pt-10">
@@ -107,7 +108,8 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold text-navy dark:text-white">면접 분석 히스토리</h2>
               <p className="mt-2 text-sm text-muted dark:text-gray-400">면접 종류별로 회차를 선택해 상세 분석을 확인하세요.</p>
             </div>
-            <button onClick={() => setIsNewModalOpen(true)} className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-navy px-6 py-3 text-sm font-bold text-white shadow-sm transition-transform hover:bg-navy-dark hover:scale-[1.02]">
+            {/* 💡 수정됨: onClick 이벤트 변경 */}
+            <button onClick={openInterviewModal} className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-navy px-6 py-3 text-sm font-bold text-white shadow-sm transition-transform hover:bg-navy-dark hover:scale-[1.02]">
               <Video className="h-4 w-4" /> 새 면접 시작하기
             </button>
           </div>
@@ -202,7 +204,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* 그룹 면접: 백엔드 /me/history */}
+            {/* 그룹 면접 */}
             {showGroup && sortedGroup.map((record) => (
               <div key={`group_${record.roomId}`} className="flex w-full items-center gap-4 group">
                 <div
@@ -283,34 +285,7 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
-
-        {/* ── 모달 ── */}
-        <AnimatePresence>
-          {isNewModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 backdrop-blur-sm" onClick={() => setIsNewModalOpen(false)}>
-              <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-xl overflow-hidden rounded-[28px] border border-line bg-surface p-8 shadow-2xl dark:bg-[#1e293b] dark:border-white/10">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold text-navy dark:text-white tracking-tight">어떤 면접을 연습할까요?</h3>
-                  <button onClick={() => setIsNewModalOpen(false)} className="rounded-full p-2 text-muted hover:bg-chip hover:text-ink"><X className="h-5 w-5" /></button>
-                </div>
-                <div className="flex flex-col gap-3">
-                  <button onClick={() => router.push("/interview")} className="group flex items-center gap-5 rounded-2xl border border-line p-5 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/50 dark:border-white/10 dark:bg-[#0f1729]/50">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white"><UserCheck className="h-6 w-6" /></div>
-                    <div><h4 className="text-base font-bold text-ink dark:text-white mb-1">1:1 AI 모의면접</h4><p className="text-sm font-medium text-muted">이력서와 직무를 분석한 맞춤형 꼬리 질문 대비</p></div>
-                  </button>
-                  <button onClick={() => router.push("/pt-interview")} className="group flex items-center gap-5 rounded-2xl border border-line p-5 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-400 hover:bg-emerald-50/50 dark:border-white/10 dark:bg-[#0f1729]/50">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white"><Monitor className="h-6 w-6" /></div>
-                    <div><h4 className="text-base font-bold text-ink dark:text-white mb-1">PT 면접</h4><p className="text-sm font-medium text-muted">화면 공유를 통한 발표 논리 및 비언어적 역량 점검</p></div>
-                  </button>
-                  <button onClick={() => router.push("/group-interview")} className="group flex items-center gap-5 rounded-2xl border border-line p-5 text-left transition-all hover:-translate-y-0.5 hover:border-purple-400 hover:bg-purple-50/50 dark:border-white/10 dark:bg-[#0f1729]/50">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-colors group-hover:bg-purple-600 group-hover:text-white"><Users className="h-6 w-6" /></div>
-                    <div><h4 className="text-base font-bold text-ink dark:text-white mb-1">다대일 그룹 면접</h4><p className="text-sm font-medium text-muted">다른 지원자들과 함께 참여하는 실전 화상 대기실 환경</p></div>
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        {/* 💡 하단에 있던 모달 하드코딩 코드는 앱 최상단 layout.tsx가 담당하므로 깨끗하게 삭제되었습니다! */}
       </main>
     </DashboardLayout>
   );

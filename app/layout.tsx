@@ -6,6 +6,7 @@ import Script from "next/script";
 
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import AuthBootstrap from "@/components/shared/AuthBootstrap";
+import InterviewTypeModal from "@/components/shared/InterviewTypeModal"; // 👈 추가된 import
 
 import "./globals.css";
 
@@ -43,6 +44,8 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthBootstrap />
           {children}
+          
+          <InterviewTypeModal />
         </ThemeProvider>
 
         <Script
