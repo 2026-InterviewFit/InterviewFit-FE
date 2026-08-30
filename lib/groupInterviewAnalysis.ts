@@ -68,7 +68,7 @@ function toSpeechReport(
   speech: JsonObject | null,
   ai: JsonObject | null,
 ): SpeechReport | null {
-  if (!analysis.speechText && !speech && !ai) return null;
+  if (!analysis.speechText && !speech && !ai && !analysis.externalAiAnalysis) return null;
 
   const speechPace = pick(speech, "speech_pace_analysis", "speechPaceAnalysis");
   const silence = pick(speech, "silence_analysis", "silenceAnalysis");
@@ -118,6 +118,7 @@ function toSpeechReport(
     volumeDbStd: numberValue(pick(speech, "volumeDbStd", "volume_db_std"), Number.NaN),
     aiEvaluationJson: aiWithoutModelAnswer ? JSON.stringify(aiWithoutModelAnswer) : undefined,
     modelAnswer: stringValue(pick(effectiveAi, "modelAnswer", "model_answer")),
+    externalAiAnalysis: analysis.externalAiAnalysis ?? null,
   };
 }
 
