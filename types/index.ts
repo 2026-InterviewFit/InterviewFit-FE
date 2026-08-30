@@ -126,6 +126,17 @@ export type PoseReport = {
   grade: string | null;
 };
 
+export type ExternalAiAnalysis = {
+  star: {
+    situation: string | null;
+    task: string | null;
+    action: string | null;
+    result: string | null;
+  } | null;
+  strengths: string[] | null;
+  improvements: string[] | null;
+};
+
 export type SpeechReport = {
   reportId: number;
   textScript: string;
@@ -142,6 +153,7 @@ export type SpeechReport = {
   volumeDbStd?: number;
   aiEvaluationJson?: string;
   modelAnswer?: string;
+  externalAiAnalysis?: ExternalAiAnalysis | null;
 };
 
 export type AnswerReport = {
