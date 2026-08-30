@@ -17,6 +17,7 @@ import {
 import FeedbackAccordion from "./report/FeedbackAccordion";
 import VisualAnalysisCard from "./report/VisualAnalysisCard";
 import SpeechAnalysisCard from "./report/SpeechAnalysisCard";
+import ExternalAiAnalysisCard from "./report/ExternalAiAnalysisCard";
 import OverviewVisualizer from "./report/OverviewVisualizer";
 import MirroredVideoPlayer, { MirroredVideoPlayerHandle } from "./report/MirroredVideoPlayer";
 
@@ -201,6 +202,7 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
             poseReport={report?.pose}
           />
           <SpeechAnalysisCard answerData={selectedAnswerData} />
+          <ExternalAiAnalysisCard analysis={selectedAnswerData?.speech?.externalAiAnalysis} />
         </div>
 
         {/* sticky 및 top-6 추가 */}

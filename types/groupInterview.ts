@@ -1,5 +1,7 @@
 // types/groupInterview.ts
 
+import type { ExternalAiAnalysis } from "@/types";
+
 // 방 모집/진행 상태
 export type RoomStatus =
   | "recruiting" // 모집중
@@ -127,6 +129,7 @@ export interface GroupInterviewAnswerAnalysis {
   speechText: string | null;
   speechResultJson: string | null;
   aiEvaluationJson: string | null;
+  externalAiAnalysis?: ExternalAiAnalysis | null;
   eyeBlinkingResultJson: string | null;
   eyeGazeResultJson: string | null;
   poseResultJson: string | null;
