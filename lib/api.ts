@@ -641,7 +641,7 @@ export async function createQuestions(params: {
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}): Promise<Array<{ id: number; question: string }>> {
+}): Promise<Array<{ id: number; question: string; questionOrder?: number | null }>> {
   const payload = {
     interviewId: params.interviewId,
     count: params.count ?? 3,
@@ -683,7 +683,7 @@ export async function createQuestionsWithRetry(params: {
   jobRoleId: number;
   jobName: string;
   coverLetterId?: number;
-}): Promise<Array<{ id: number; question: string }>> {
+}): Promise<Array<{ id: number; question: string; questionOrder?: number | null }>> {
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1000;
 
