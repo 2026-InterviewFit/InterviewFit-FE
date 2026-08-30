@@ -124,7 +124,7 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
           <div className="flex flex-col gap-2 p-4 rounded-xl border border-black/5 bg-gray-50/50 dark:bg-slate-800/30">
             <span className="text-xs font-bold text-slate-500">현재 답변 (STT)</span>
             <p className="text-sm text-navy dark:text-slate-300 leading-relaxed font-medium break-keep h-32 overflow-y-auto scrollbar-hide">
-              {speech.textScript || "답변 내용을 불러올 수 없습니다."}
+              {answerData?.answerText || speech.textScript || "답변 내용을 불러올 수 없습니다."}
             </p>
           </div>
           <div className="flex flex-col gap-2 p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10">
