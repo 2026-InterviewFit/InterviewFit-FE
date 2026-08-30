@@ -58,9 +58,12 @@ export interface GroupInterviewProgress {
   currentParticipantUserId: number | null;
   status: string;
   answerId: number | null;
+  answerStartDeadlineAt?: string | null;
   answerStartedAt: string | null;
   answerDeadlineAt: string | null;
 }
+
+export type GroupAnswerSkipCompletionType = "RECORDING_FAILED" | "SKIPPED";
 
 export interface GroupInterviewEvent {
   type:
@@ -103,7 +106,7 @@ export interface GroupInterviewHistory {
   analysisStatus: GroupAnalysisStatus;
 }
 
-export type GroupAnswerCompletionType = "COMPLETED" | "TIMED_OUT";
+export type GroupAnswerCompletionType = "COMPLETED" | "TIMED_OUT" | "RECORDING_FAILED" | "SKIPPED";
 
 export interface GroupInterviewMyAnswer {
   answerId: number;

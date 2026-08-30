@@ -217,34 +217,6 @@ function QuestionAnalysisCard({
         </div>
       </div>
 
-      {/* 질문별 기존 평가 점수 */}
-      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <MetricCard
-          label="종합"
-          value={`${analysis.overallScore ?? 0}점`}
-        />
-
-        <MetricCard
-          label="이해도"
-          value={`${analysis.understandingScore ?? 0}점`}
-        />
-
-        <MetricCard
-          label="논리성"
-          value={`${analysis.logicScore ?? 0}점`}
-        />
-
-        <MetricCard
-          label="구체성"
-          value={`${analysis.specificityScore ?? 0}점`}
-        />
-
-        <MetricCard
-          label="근거"
-          value={`${analysis.evidenceScore ?? 0}점`}
-        />
-      </div>
-
       {/* 실제 답변 */}
       <div className="mt-6 rounded-2xl border border-line bg-bg/60 p-5">
         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">

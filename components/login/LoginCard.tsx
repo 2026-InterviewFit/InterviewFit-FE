@@ -16,8 +16,7 @@ const easeOut = [
 ] as const;
 
 export default function LoginCard() {
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = () => {
     setErrorMessage("");
@@ -186,7 +185,6 @@ export default function LoginCard() {
             className="mt-10 flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#FEE500] text-[15px] font-semibold text-[#191600] transition-all hover:scale-[1.015] hover:shadow-lg active:scale-[0.99]"
           >
             <KakaoIcon />
-
             카카오로 시작하기
           </motion.button>
 

@@ -7,6 +7,7 @@ import type {
   GroupInterviewMyAnswer,
   GroupParticipant,
   GroupInterviewProgress,
+  GroupAnswerSkipCompletionType,
   GroupRoom,
   LiveKitCredentials,
   RoomStatus,
@@ -202,6 +203,20 @@ export function startGroupAnswer(roomId: string) {
 
 export function completeGroupAnswer(roomId: string) {
   return mutateSession(roomId, "answer-complete");
+}
+
+export async function skipGroupAnswer(
+  roomId: string,
+  completionType: GroupAnswerSkipCompletionType = "SKIPPED",
+): Promise<GroupInterviewProgress> {
+  return (await unwrap(await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answer/skip`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completionType }),
+    },
+  ))) as GroupInterviewProgress;
 }
 
 export async function uploadGroupAnswerVideo(
