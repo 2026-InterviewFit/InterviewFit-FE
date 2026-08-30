@@ -156,8 +156,33 @@ export type SpeechReport = {
   externalAiAnalysis?: ExternalAiAnalysis | null;
 };
 
+export type AiEvaluationReport = {
+  evaluationId: number;
+  starEvaluationJson?: string | null;
+  geminiFeedback?: string | null;
+  keywordsJson?: string | null;
+  modelAnswer?: string | null;
+};
+
+export type FollowUpAnswerReport = {
+  followUpAnswerId: number;
+  answerText?: string | null;
+  startTime?: number | null;
+  endTime?: number | null;
+  analysisStatus: string;
+  errorMessage?: string | null;
+};
+
+export type FollowUpReport = {
+  followUpQuestionId: number;
+  questionText: string;
+  createdAt?: string | null;
+  answers: FollowUpAnswerReport[];
+};
+
 export type AnswerReport = {
   answerId: number;
+  interviewQuestionId?: number | null;
   questionId: number | null;
   questionText: string | null;
   videoObjectKey?: string;
@@ -167,6 +192,8 @@ export type AnswerReport = {
   endTime?: number | null;
   analysisStatus: string;
   errorMessage: string | null;
+  aiEvaluation?: AiEvaluationReport | null;
+  followUps?: FollowUpReport[];
 
   eye: EyeReport | null;
   gaze: GazeReport | null;

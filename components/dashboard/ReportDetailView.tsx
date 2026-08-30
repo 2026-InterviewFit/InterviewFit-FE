@@ -64,6 +64,8 @@ export default function ReportDetailView({ record, roundLabel, onBack, onDelete,
   };
 
   const handleJumpToQuestion = (idx: number) => {
+    setSelectedAnswerIndex(idx);
+
     const target = timestamps[idx];
     if (typeof target === "number") {
       playerRef.current?.seekTo(target);
