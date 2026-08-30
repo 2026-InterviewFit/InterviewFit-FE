@@ -8,6 +8,7 @@ import {
   createQuestionsWithRetry,
   transcribeFollowUpAnswer,
   saveFollowUpAnswer,
+  uploadAnswerVideo,
 } from "@/lib/api";
 
 import type { JobRole } from "@/types";
@@ -332,7 +333,32 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
         throw new Error("면접 또는 직무 정보가 없습니다.");
       }
 
-      const transcription = await transcribeFollowUpAnswer(blob);
+      if (!sourceQuestionId) {
+        throw new Error("원 질문 ID를 확인할 수 없습니다.");
+      }
+
+      /*
+       * 기본 질문 답변은 두 가지 용도로 사용한다.
+       *
+       * 1) Whisper STT -> 꼬리질문 생성용 텍스트
+       * 2) interview_answers 저장 -> sourceAnswerId 확보
+       *
+       * 두 작업은 서로 독립적이므로 동시에 실행한다.
+       */
+      const [transcription, savedAnswer] = await Promise.all([
+        transcribeFollowUpAnswer(blob),
+        uploadAnswerVideo({
+          interviewId,
+          file: blob,
+          answerOrder: baseQuestionIndex + 1,
+          questionId: sourceQuestionId,
+        }),
+      ]);
+
+      console.log("[FollowUp] 원 답변 저장 완료:", {
+        questionId: sourceQuestionId,
+        answerId: savedAnswer.answerId,
+      });
 
       const result = await createFollowUpQuestion({
         jobRoleId,
@@ -341,6 +367,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
         answer: transcription.text,
         interviewStyle: "normal",
         sourceQuestionId,
+        sourceAnswerId: savedAnswer.answerId,
       });
 
       const followUpQuestion =
