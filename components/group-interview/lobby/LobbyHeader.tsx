@@ -21,7 +21,7 @@ export default function LobbyHeader({ roomCount, onCreate }: LobbyHeaderProps) {
           <Users className="h-3 w-3" /> Group Interview
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
-          다대일 모의면접 로비
+          그룹 면접 로비
         </h1>
         <p className="mt-1.5 text-sm font-medium text-muted">
           실제 그룹 면접처럼 여러 지원자와 함께 연습하세요 · 현재{" "}
