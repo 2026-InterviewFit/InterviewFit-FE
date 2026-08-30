@@ -30,6 +30,10 @@ interface AnswerRecordingContext {
   microphonePublication: LocalTrackPublication;
 }
 
+export interface GroupRecordingStopResult extends AnswerRecordingContext {
+  videoCreated: boolean;
+}
+
 interface AnswerContextInput {
   answerId: number | null | undefined;
   participantUserId: number | string | null | undefined;
@@ -95,8 +99,9 @@ export function useGroupAnswerRecording({
   const currentAnswerContextRef = useRef<AnswerContextInput | null>(null);
   const recordingContextRef = useRef<AnswerRecordingContext | null>(null);
   const isStoppingRef = useRef(false);
-  const stopPromiseRef = useRef<Promise<AnswerRecordingContext | null> | null>(null);
-  const resolveStopRef = useRef<((context: AnswerRecordingContext | null) => void) | null>(null);
+  const stopPromiseRef = useRef<Promise<GroupRecordingStopResult | null> | null>(null);
+  const resolveStopRef = useRef<((result: GroupRecordingStopResult | null) => void) | null>(null);
+  const recordingErrorAnswerIdsRef = useRef(new Set<number>());
   const timedOutAnswerIdsRef = useRef(new Set<number>());
   const uploadedAnswerIdsRef = useRef(new Set<number>());
   const uploadingAnswerIdsRef = useRef(new Set<number>());
@@ -107,6 +112,7 @@ export function useGroupAnswerRecording({
   const [recordingError, setRecordingError] = useState("");
   const [isCheckingAudio, setIsCheckingAudio] = useState(false);
   const [canRetryRecording, setCanRetryRecording] = useState(false);
+  const [recordingFailureAnswerId, setRecordingFailureAnswerId] = useState<number | null>(null);
 
   const setUploadStatus = useCallback((next: GroupVideoUploadStatus | null, answerId: number) => {
     if (!mountedRef.current) return;
@@ -143,25 +149,27 @@ export function useGroupAnswerRecording({
     }
   }, []);
 
-  const stopRecording = useCallback((): Promise<AnswerRecordingContext | null> => {
+  const stopRecording = useCallback((): Promise<GroupRecordingStopResult | null> => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") return Promise.resolve(null);
     if (isStoppingRef.current) return stopPromiseRef.current ?? Promise.resolve(null);
 
     isStoppingRef.current = true;
-    stopPromiseRef.current = new Promise((resolve) => {
+    const stopPromise = new Promise<GroupRecordingStopResult | null>((resolve) => {
       resolveStopRef.current = resolve;
     });
+    stopPromiseRef.current = stopPromise;
     try {
       recorder.stop();
     } catch (cause) {
       isStoppingRef.current = false;
       resolveStopRef.current?.(null);
       resolveStopRef.current = null;
+      stopPromiseRef.current = null;
       console.error("그룹 답변 녹화 종료 실패", cause);
       if (mountedRef.current) setRecordingError("답변 녹화를 종료하지 못했습니다.");
     }
-    return stopPromiseRef.current;
+    return stopPromise;
   }, []);
 
   const startRecording = useCallback(async (input: AnswerContextInput) => {
@@ -188,6 +196,7 @@ export function useGroupAnswerRecording({
       isStartingRef.current = false;
       setIsCheckingAudio(false);
       setCanRetryRecording(true);
+      setRecordingFailureAnswerId(input.answerId);
       setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
       return;
     }
@@ -210,6 +219,7 @@ export function useGroupAnswerRecording({
       isStartingRef.current = false;
       setIsCheckingAudio(false);
       setCanRetryRecording(true);
+      setRecordingFailureAnswerId(input.answerId);
       setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
       return;
     }
@@ -264,11 +274,22 @@ export function useGroupAnswerRecording({
           currentAnswerContextRef.current = null;
         }
 
-        if (rawBlob.size === 0) {
+        const videoCreated = rawBlob.size > 0
+          && !recordingErrorAnswerIdsRef.current.has(stoppedContext.answerId);
+        recordingErrorAnswerIdsRef.current.delete(stoppedContext.answerId);
+
+        const resolveStoppedRecording = () => {
+          resolveStopRef.current?.({ ...stoppedContext, videoCreated });
+          resolveStopRef.current = null;
+          stopPromiseRef.current = null;
+        };
+
+        if (!videoCreated) {
           console.error(`그룹 답변 영상이 비어 있습니다. (answerId: ${stoppedContext.answerId})`);
           if (mountedRef.current) setRecordingError("녹화된 답변 영상이 비어 있어 업로드하지 못했습니다.");
+          resolveStoppedRecording();
         } else {
-          // progress가 이미 다음 답변자로 바뀌었더라도 녹화 시작 시 고정한 answerId를 사용한다.
+          // 업로드 실패는 상태만 남기고 완료되므로, 호출자는 그 후 answer-complete로 진행할 수 있다.
           pendingUploadBlobsRef.current.set(stoppedContext.answerId, rawBlob);
           const durationMs = Math.max(1, Date.now() - stoppedContext.startedAtMs);
           void fixWebmBlobDuration(rawBlob, durationMs)
@@ -276,14 +297,13 @@ export function useGroupAnswerRecording({
               console.error(`그룹 답변 영상 길이 보정 실패 (answerId: ${stoppedContext.answerId})`, cause);
               return rawBlob;
             })
-            .then((blob) => uploadVideo(stoppedContext.answerId, blob));
+            .then((blob) => uploadVideo(stoppedContext.answerId, blob))
+            .finally(resolveStoppedRecording);
         }
-        resolveStopRef.current?.(stoppedContext);
-        resolveStopRef.current = null;
-        stopPromiseRef.current = null;
       };
       recorder.onerror = (event) => {
         console.error("그룹 답변 녹화 오류", event);
+        recordingErrorAnswerIdsRef.current.add(recordingContext.answerId);
         if (mountedRef.current) setRecordingError("답변 녹화 중 오류가 발생했습니다.");
       };
 
@@ -291,6 +311,7 @@ export function useGroupAnswerRecording({
       recordingContextRef.current = recordingContext;
       recorderRef.current = recorder;
       setRecordingError("");
+      setRecordingFailureAnswerId(null);
       // 답변 첫 음절을 놓치지 않도록 chunking 없이 즉시 녹화를 시작한다.
       recorder.start();
       isStartingRef.current = false;
@@ -314,6 +335,7 @@ export function useGroupAnswerRecording({
       isStoppingRef.current = false;
       setIsCheckingAudio(false);
       setCanRetryRecording(true);
+      setRecordingFailureAnswerId(input.answerId);
       console.error("그룹 답변 녹화 시작 실패", cause);
       setRecordingError("답변 녹화를 시작하지 못했습니다.");
     }
@@ -338,9 +360,14 @@ export function useGroupAnswerRecording({
       if (mountedRef.current) {
         setRecordingError("마이크 입력이 감지되지 않습니다. 마이크 권한/음소거/입력 장치를 확인해주세요.");
       }
+      if (recorder?.state === "recording" && context?.answerId === answerId) {
+        // 실패한 녹화의 잔여 chunk가 skip 후 업로드되지 않도록 실패로 표시하고 먼저 정지한다.
+        recordingErrorAnswerIdsRef.current.add(answerId);
+        return stopRecording().then(() => null);
+      }
       return Promise.resolve(null);
     }
-    return new Promise<AnswerRecordingContext | null>((resolve) => {
+    return new Promise<GroupRecordingStopResult | null>((resolve) => {
       window.setTimeout(() => {
         void stopRecording().then(resolve);
       }, RECORDING_TAIL_BUFFER_MS);
@@ -355,6 +382,23 @@ export function useGroupAnswerRecording({
     }
     void startRecording(context);
   }, [startRecording]);
+
+  const canStartRecording = useCallback(() => {
+    const publication = localParticipant.getTrackPublication(Track.Source.Microphone);
+    const track = publication?.track;
+    const mediaTrack = track?.mediaStreamTrack;
+    return Boolean(
+      publication
+      && track
+      && !publication.isMuted
+      && !track.isMuted
+      && mediaTrack
+      && mediaTrack.kind === "audio"
+      && mediaTrack.enabled
+      && !mediaTrack.muted
+      && mediaTrack.readyState === "live",
+    );
+  }, [localParticipant]);
 
   useEffect(() => {
     const eventAnswerId = lastEvent?.progress?.answerId ?? lastEvent?.answerId;
@@ -389,6 +433,7 @@ export function useGroupAnswerRecording({
     isStartingRef.current = false;
     setIsCheckingAudio(false);
     setCanRetryRecording(false);
+    setRecordingFailureAnswerId(null);
     if (recorderRef.current?.state === "recording") void stopRecording();
     else if (!isStoppingRef.current) currentAnswerContextRef.current = null;
   }, [myUserId, progress, rememberAnswerContext, startRecording, stopRecording]);
@@ -447,10 +492,12 @@ export function useGroupAnswerRecording({
     stopRecording,
     stopRecordingForAnswer,
     retryRecording,
+    canStartRecording,
     isCheckingAudio,
     canRetryRecording,
     uploadStatuses,
     recordingError,
+    recordingFailureAnswerId,
     retryUpload,
     wasAnswerTimedOut,
   };
