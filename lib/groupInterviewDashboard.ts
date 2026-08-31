@@ -20,6 +20,12 @@ export function getGroupQuestionIndices(questionIndices: readonly number[]): num
     .sort((left, right) => left - right);
 }
 
+export function formatGroupComparisonScore(score: number | null): string {
+  return score === null
+    ? "분석 데이터 없음"
+    : `${Number.isInteger(score) ? score : score.toFixed(1)}점`;
+}
+
 export type GroupAnswerVideoState = "AVAILABLE" | "RECORDING_FAILED" | "HIDDEN";
 
 export function getGroupAnswerVideoState(

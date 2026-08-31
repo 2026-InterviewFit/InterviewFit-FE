@@ -10,12 +10,19 @@ import SpeechAnalysisCard from "@/components/dashboard/report/SpeechAnalysisCard
 import VisualAnalysisCard from "@/components/dashboard/report/VisualAnalysisCard";
 import {
   getGroupAnswerAnalysis,
+  getGroupInterviewQuestionComparisons,
   getMyGroupInterviewAnswers,
   getMyGroupInterviewHistory,
   GroupInterviewApiError,
   retryGroupAnswerAnalysis,
 } from "@/lib/groupInterviewApi";
-import { GROUP_ANALYSIS_STATUS_LABEL, getGroupAnalysisStatusClassName } from "@/lib/groupInterviewDashboard";
+import {
+  formatGroupComparisonScore,
+  getGroupAnalysisStatusClassName,
+  getGroupQuestionIndices,
+  GROUP_ANALYSIS_STATUS_LABEL,
+} from "@/lib/groupInterviewDashboard";
+import { initializeAuth } from "@/lib/auth";
 import { toGroupAnswerReport } from "@/lib/groupInterviewAnalysis";
 import { formatKoreanDateTime } from "@/lib/reportUtils";
 import type {
@@ -40,6 +47,7 @@ export default function GroupInterviewDashboardDetailPage() {
   const [analysisLoadingId, setAnalysisLoadingId] = useState<number | null>(null);
   const [analysisError, setAnalysisError] = useState("");
   const [retryingAnswerIds, setRetryingAnswerIds] = useState<number[]>([]);
+  const [totalScoreByQuestionIndex, setTotalScoreByQuestionIndex] = useState<Record<number, number | null>>({});
   const [dashboardView, setDashboardView] = useState<"personal" | "comparison">("personal");
 
   const handleError = (cause: unknown, fallback: string) => {
@@ -158,6 +166,41 @@ export default function GroupInterviewDashboardDetailPage() {
   const hasPendingAnalysis = answers.some((answer) =>
     ["WAITING", "UPLOADED", "RUNNING"].includes(answer.analysisStatus),
   );
+  const questionScoreRefreshKey = answers
+    .map((answer) => `${answer.questionIndex}:${answer.analysisStatus}`)
+    .join("|");
+
+  useEffect(() => {
+    if (!isValidRoomId || answers.length === 0) return;
+    let cancelled = false;
+    const questionIndices = getGroupQuestionIndices(answers.map((answer) => answer.questionIndex));
+
+    void initializeAuth()
+      .then(async (user) => {
+        if (!user || cancelled) return [];
+        return Promise.all(questionIndices.map(async (questionIndex) => {
+          try {
+            const comparisons = await getGroupInterviewQuestionComparisons(roomId, questionIndex);
+            const mine = comparisons.find((comparison) => comparison.participantUserId === user.id);
+            return [questionIndex, mine?.totalScore ?? null] as const;
+          } catch {
+            return [questionIndex, null] as const;
+          }
+        }));
+      })
+      .then((entries) => {
+        if (!cancelled) setTotalScoreByQuestionIndex(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        // 비교 점수 조회 실패가 기존 내 분석 및 영상 다시보기를 막지 않도록 한다.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // 점수는 질문 구성이나 분석 상태가 바뀔 때 다시 조회한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isValidRoomId, questionScoreRefreshKey, roomId]);
 
   useEffect(() => {
     if (!hasPendingAnalysis || !isValidRoomId) return;
@@ -236,12 +279,20 @@ export default function GroupInterviewDashboardDetailPage() {
                 <section className="flex flex-col gap-3 xl:col-span-5">
                   {answers.map((answer) => {
                     const isRetrying = retryingAnswerIds.includes(answer.answerId);
+                    const questionTotalScore = totalScoreByQuestionIndex[answer.questionIndex];
                     return (
                       <article key={answer.answerId} className={`rounded-[22px] border bg-white p-5 shadow-sm transition-colors dark:bg-[#1e293b] ${selectedAnswerId === answer.answerId ? "border-navy" : "border-line dark:border-white/10"}`}>
                         <button type="button" onClick={() => handleSelectAnswer(answer)} className="w-full text-left">
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start justify-between gap-3">
                             <span className="text-xs font-bold text-indigo-500">라운드 {answer.round} · 질문 {answer.questionIndex + 1}</span>
-                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${getGroupAnalysisStatusClassName(answer.analysisStatus)}`}>{GROUP_ANALYSIS_STATUS_LABEL[answer.analysisStatus]}</span>
+                            <div className="flex shrink-0 flex-col items-end gap-1.5">
+                              {Object.hasOwn(totalScoreByQuestionIndex, answer.questionIndex) && (
+                                <span className="text-xl font-black text-navy dark:text-white">
+                                  {formatGroupComparisonScore(questionTotalScore ?? null)}
+                                </span>
+                              )}
+                              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${getGroupAnalysisStatusClassName(answer.analysisStatus)}`}>{GROUP_ANALYSIS_STATUS_LABEL[answer.analysisStatus]}</span>
+                            </div>
                           </div>
                           <h2 className="mt-3 text-sm font-bold leading-relaxed text-ink dark:text-white">{answer.questionText ?? "질문 내용이 없습니다."}</h2>
                           <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-muted">
