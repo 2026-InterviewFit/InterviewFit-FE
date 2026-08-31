@@ -6,9 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import { Camera, Briefcase, Mic2, ChevronDown, ArrowRight, Wifi, Volume2, MonitorSmartphone } from "lucide-react";
-import { useModalStore } from "@/store/useModalStore"; // 💡 모달 스토어 추가
+import { useModalStore } from "@/store/useModalStore";
 
-// 💡 톤앤매너 통일: 불필요한 개별 색상을 제거하고, 글로벌 테마 변수를 활용하도록 변경했습니다.
 const STEPS = [
   {
     number: "01",
@@ -33,7 +32,6 @@ const STEPS = [
   },
 ];
 
-// 💡 FAQ 개편: 사용법 및 실제 유저들이 겪을 만한 상황 위주로 재구성
 const FAQS = [
   {
     category: "카메라 · 마이크 세팅",
@@ -65,20 +63,14 @@ export default function HowToPage() {
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const toggleFaq = (key: string) => setOpenFaq((prev) => (prev === key ? null : key));
   
-  // 💡 모달 열기 함수
   const openInterviewModal = useModalStore((state) => state.openInterviewModal);
 
   return (
     <main className="min-h-screen w-full font-sans bg-bg transition-colors duration-300 overflow-hidden">
       <Navbar />
 
-      {/* 💡 간격 수정: 히어로 섹션 하단 여백과 패딩 조절로 넉넉한 배치 완성 */}
       <section className="relative w-full pt-32 pb-16 px-6 overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute -left-20 top-0 h-[560px] w-[560px] rounded-full bg-[#bfdbfe]/30 blur-[140px]" />
-          <div className="absolute -right-10 -top-10 h-[600px] w-[600px] rounded-full bg-[#e9d5ff]/30 blur-[150px]" />
-        </div>
-
+        {/* 기존에 있던 파란색/보라색 배경 블러(blur) 효과 div를 제거했습니다. */}
         <motion.div
           initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="relative z-10 mx-auto max-w-[1280px] text-center flex flex-col items-center"
@@ -99,7 +91,6 @@ export default function HowToPage() {
         </motion.div>
       </section>
 
-      {/* 💡 간격 수정: pt-8 등을 주어 히어로 텍스트와 박스 사이 간격 벌림 */}
       <section className="mx-auto w-full max-w-[1280px] px-6 pb-28 pt-8">
         <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="hidden md:block absolute top-[52px] left-[calc(33.33%-24px)] right-[calc(33.33%-24px)] h-px border-t border-dashed border-line z-0" />
@@ -127,7 +118,6 @@ export default function HowToPage() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }} className="mt-20 flex justify-center">
-          {/* 💡 모달 연결 및 브랜드 컬러(brand-accent) 통일 */}
           <button
             onClick={openInterviewModal}
             className="flex items-center gap-3 rounded-full bg-brand-accent px-10 py-5 font-bold text-[16px] text-navy shadow-lg transition-transform hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl"
@@ -137,7 +127,6 @@ export default function HowToPage() {
         </motion.div>
       </section>
 
-      {/* 환경 안내 배너: Features 하단의 남색 모달처럼 통일 */}
       <section className="mx-auto w-full max-w-[1280px] px-6 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -168,7 +157,6 @@ export default function HowToPage() {
         </motion.div>
       </section>
 
-      {/* FAQ 섹션 */}
       <section className="mx-auto w-full max-w-[800px] px-6 pb-32">
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-12 text-center">
           <h2 className="text-3xl font-bold text-ink tracking-tight">자주 묻는 질문</h2>

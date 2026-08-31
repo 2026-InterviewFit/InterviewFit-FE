@@ -106,19 +106,6 @@ export default function AccountSettings() {
           </p>
         </div>
 
-        {/* 회원 ID */}
-        <div className="flex items-center justify-between border-b border-line/50 py-3 dark:border-white/10">
-          <div>
-            <p className="font-medium text-ink dark:text-white">
-              회원 ID
-            </p>
-          </div>
-
-          <p className="text-sm font-medium text-muted dark:text-gray-300">
-            {user?.id ?? "-"}
-          </p>
-        </div>
-
         {/* 계정 탈퇴 */}
         <div className="flex items-center justify-between py-3">
           <p className="font-medium text-ink dark:text-white">
