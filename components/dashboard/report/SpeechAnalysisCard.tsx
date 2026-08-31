@@ -91,9 +91,16 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
           {/* 팀원이 작성한 점수 표시 로직 */}
           {speechScoreDisplay && (
             <div className="flex max-w-full flex-col items-end gap-1 text-right">
-              <span className={`rounded-full px-3 py-1 text-sm font-bold ${speechScoreDisplay.isInsufficient ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" : "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"}`}>
-                {speechScoreDisplay.label}
-              </span>
+              {speechScoreDisplay.isInsufficient ? (
+                <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                  {speechScoreDisplay.label}
+                </span>
+              ) : (
+                <span className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                  {formatScore(speech.speechScore as number)}
+                  <span className="text-sm text-muted">점</span>
+                </span>
+              )}
               {speechScoreDisplay.reason && (
                 <span className="max-w-sm text-xs font-medium text-amber-700 dark:text-amber-300">
                   {speechScoreDisplay.reason}
@@ -172,8 +179,12 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
             </div>
             <h4 className="text-base font-bold text-navy dark:text-white">STAR 구조 평가</h4>
           </div>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-            총점 {totalStarScore === undefined ? "분석 데이터 없음" : formatScore(totalStarScore)} / {STAR_TOTAL_MAX_SCORE}점
+          <span className="text-2xl font-bold text-amber-600 dark:text-amber-300">
+            {totalStarScore === undefined ? (
+              <span className="text-sm text-muted">분석 데이터 없음</span>
+            ) : (
+              <>{formatScore(totalStarScore)}<span className="text-sm text-muted"> / {STAR_TOTAL_MAX_SCORE}점</span></>
+            )}
           </span>
         </div>
         

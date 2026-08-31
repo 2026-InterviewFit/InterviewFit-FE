@@ -9,7 +9,7 @@ import {
   GroupInterviewApiError,
 } from "@/lib/groupInterviewApi";
 import { initializeAuth } from "@/lib/auth";
-import { getGroupQuestionIndices } from "@/lib/groupInterviewDashboard";
+import { formatGroupComparisonScore, getGroupQuestionIndices } from "@/lib/groupInterviewDashboard";
 import type { GroupInterviewComparison } from "@/types/groupInterview";
 
 type ComparisonSelection = "OVERALL" | number;
@@ -25,10 +25,6 @@ const SCORE_FIELDS: {
   { label: "눈 깜빡임", key: "blinkScore" },
 ];
 
-const formatScore = (score: number | null) => (
-  score === null ? "분석 데이터 없음" : `${Number.isInteger(score) ? score : score.toFixed(1)}점`
-);
-
 function ScoreBar({ label, score }: { label: string; score: number | null }) {
   const width = score === null ? 0 : Math.min(100, Math.max(0, score));
   return (
@@ -36,7 +32,7 @@ function ScoreBar({ label, score }: { label: string; score: number | null }) {
       <div className="mb-1.5 flex items-center justify-between gap-3 text-xs font-bold">
         <span className="text-muted">{label}</span>
         <span className={score === null ? "text-muted" : "text-navy dark:text-white"}>
-          {formatScore(score)}
+          {formatGroupComparisonScore(score)}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
@@ -117,7 +113,7 @@ function ComparisonCard({
         </div>
         <div className="text-right">
           <p className="text-xs font-bold text-muted">종합 점수</p>
-          <p className="mt-1 text-2xl font-black text-navy dark:text-white">{formatScore(comparison.totalScore)}</p>
+          <p className="mt-1 text-2xl font-black text-navy dark:text-white">{formatGroupComparisonScore(comparison.totalScore)}</p>
         </div>
       </div>
 
