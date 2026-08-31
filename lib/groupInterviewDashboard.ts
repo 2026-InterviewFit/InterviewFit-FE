@@ -1,4 +1,4 @@
-import type { GroupAnalysisStatus } from "@/types/groupInterview";
+import type { GroupAnalysisStatus, GroupAnswerCompletionType } from "@/types/groupInterview";
 
 export const GROUP_ANALYSIS_STATUS_LABEL = {
   WAITING: "분석 대기",
@@ -18,4 +18,15 @@ export function getGroupAnalysisStatusClassName(status: GroupAnalysisStatus): st
 export function getGroupQuestionIndices(questionIndices: readonly number[]): number[] {
   return [...new Set(questionIndices.filter((index) => Number.isInteger(index) && index >= 0))]
     .sort((left, right) => left - right);
+}
+
+export type GroupAnswerVideoState = "AVAILABLE" | "RECORDING_FAILED" | "HIDDEN";
+
+export function getGroupAnswerVideoState(
+  videoUploaded: boolean,
+  completionType: GroupAnswerCompletionType | null,
+): GroupAnswerVideoState {
+  if (completionType === "SKIPPED") return "HIDDEN";
+  if (videoUploaded) return "AVAILABLE";
+  return completionType === "RECORDING_FAILED" ? "RECORDING_FAILED" : "HIDDEN";
 }
