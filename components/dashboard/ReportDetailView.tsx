@@ -1,7 +1,7 @@
 // components/dashboard/ReportDetailView.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Trash2, ListVideo, Play, Share2, Loader2 } from "lucide-react";
 import type { DashboardRecord } from "@/types";
@@ -70,6 +70,8 @@ export default function ReportDetailView({
   const questionsList = record.questionTexts && record.questionTexts.length > 0 ? record.questionTexts : parsedQuestions;
   const timestamps = record.questionTimestamps ?? [];
 
+  const [pendingSeekTime, setPendingSeekTime] = useState<number | null>(null);
+
   const formatTimestamp = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60).toString().padStart(2, "0");
@@ -77,10 +79,12 @@ export default function ReportDetailView({
   };
 
   const handleJumpToQuestion = (idx: number) => {
-    setSelectedAnswerIndex(idx);
     const target = timestamps[idx];
+
+    setSelectedAnswerIndex(idx);
+
     if (typeof target === "number") {
-      playerRef.current?.seekTo(target);
+      setPendingSeekTime(target);
     }
   };
 
@@ -108,6 +112,17 @@ export default function ReportDetailView({
       setIsPublishing(false);
     }
   };
+
+  useEffect(() => {
+    if (pendingSeekTime === null) return;
+
+    const timer = setTimeout(() => {
+      playerRef.current?.seekTo(pendingSeekTime);
+      setPendingSeekTime(null);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [selectedVideoUrl, pendingSeekTime]);
 
   return (
     <div className="flex w-full flex-col animate-in slide-in-from-right-4 duration-300">
