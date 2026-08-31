@@ -8,6 +8,16 @@ export const formatKoreanDate = (value?: string) => {
   return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
 };
 
+export const formatKoreanDateTime = (value?: string | null) => {
+  if (!value) return "시간 정보 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "시간 정보 없음";
+  return `${formatKoreanDate(value)} ${date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
 export const average = (values: Array<number | undefined | null>) => {
   const validValues = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   if (validValues.length === 0) return undefined;
@@ -45,60 +55,140 @@ export const getVideoPlaybackUrl = (objectKey?: string) => {
 };
 
 export const getSortedReports = (report?: InterviewReportResponse) => [...(report?.answers ?? [])].sort((a, b) => a.answerOrder - b.answerOrder);
-export const getAverageEyeScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.eye?.score));
-export const getAveragePoseScore = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.pose?.score));
-export const getAverageSpeechPace = (report?: InterviewReportResponse) => average(getSortedReports(report).map((a) => a.speech?.charactersPerSecond));
+export const getAverageEyeScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.eye?.score;
 
-// 🔑 신규: STAR 평가 점수를 0~100 척도로 환산해서 평균
-// 백엔드가 speech 전용 종합 점수를 아직 내려주지 않아서,
-// AI 평가(aiEvaluationJson) 안의 star_score(S/T/A/R)를 임시로 활용합니다.
-// ⚠️ star_score가 항목별 0~25점(4개 합 100점) 구조라고 가정한 근사치입니다.
-//    백엔드 척도가 다르다면 이 함수만 조정하면 됩니다.
-export const getAverageSpeechContentScore = (report?: InterviewReportResponse) => {
-  const scores = getSortedReports(report)
-    .map((answer) => {
-      if (!answer.speech?.aiEvaluationJson) return undefined;
-      try {
-        const parsed = JSON.parse(answer.speech.aiEvaluationJson);
-        const star = parsed?.star_score;
-        if (!star || typeof star !== "object") return undefined;
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
 
-        const values = Object.values(star).filter((v): v is number => typeof v === "number");
-        if (values.length === 0) return undefined;
+  // 과거 답변별 eye 구조와의 호환을 위한 fallback
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.eye?.score,
+      ),
+    ) ?? 0
+  );
+};
 
-        const total = values.reduce((sum, v) => sum + v, 0);
-        return Math.max(0, Math.min(100, total));
-      } catch {
-        return undefined;
-      }
-    })
-    .filter((v): v is number => typeof v === "number");
+export const getAverageGazeScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.gaze?.score;
+
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
+
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.gaze?.score,
+      ),
+    ) ?? 0
+  );
+};
+
+export const getAveragePoseScore = (report?: InterviewReportResponse) => {
+  const topLevelScore = report?.pose?.score;
+
+  if (
+    typeof topLevelScore === "number" &&
+    Number.isFinite(topLevelScore)
+  ) {
+    return topLevelScore;
+  }
+
+  // 과거 답변별 pose 구조와의 호환을 위한 fallback
+  return (
+    average(
+      getSortedReports(report).map(
+        (answer) => answer.pose?.score,
+      ),
+    ) ?? 0
+  );
+};
+export const getSpeechScore = (report?: InterviewReportResponse) => {
+  return average(getSortedReports(report).map((answer) => answer.speech?.speechScore));
+};
+
+// 기존 Gemini STAR 평가를 답변 내용 점수(0~100)로 환산하는 프로젝트 기존 기준.
+export const getAnswerContentScore = (report?: InterviewReportResponse) => {
+  const scores = getSortedReports(report).map((answer) => {
+    if (!answer.speech?.aiEvaluationJson) return undefined;
+    try {
+      const parsed = JSON.parse(answer.speech.aiEvaluationJson) as {
+        star_score?: Record<string, unknown>;
+      };
+      const starScore = parsed.star_score;
+      if (!starScore) return undefined;
+
+      const values = [
+        ["S", "s", "situation"],
+        ["T", "t", "task"],
+        ["A", "a", "action"],
+        ["R", "r", "result"],
+      ].map((keys) => keys
+        .map((key) => starScore[key])
+        .find((value): value is number => typeof value === "number" && Number.isFinite(value)));
+
+      if (!values.every((value): value is number => typeof value === "number")) return undefined;
+      return Math.max(0, Math.min(100, values.reduce((sum, value) => sum + value, 0) * 2.5));
+    } catch {
+      return undefined;
+    }
+  });
 
   return average(scores);
 };
 
-// 🔑 신규: 발화 속도 점수 + STAR 내용 점수를 함께 반영한 종합 발화 점수.
-// 기존에는 속도(글자/초)만으로 점수를 매겨서, 말은 빨리 해도 내용이 부실하면
-// 오히려 점수가 높게 나오는 문제가 있었습니다. 이제 내용 점수 비중을 더 둡니다.
-export const getSpeechScore = (report?: InterviewReportResponse) => {
-  const pace = getAverageSpeechPace(report);
-  const paceScore =
-    typeof pace === "number" ? Math.max(0, Math.min(100, 100 - Math.abs(pace - 3.5) * 12)) : undefined;
-  const contentScore = getAverageSpeechContentScore(report);
-
-  if (typeof paceScore === "number" && typeof contentScore === "number") {
-    // 속도 40% + 내용 60% 가중 평균 (내용이 더 중요하다고 보고 가중치를 둠)
-    return paceScore * 0.4 + contentScore * 0.6;
+export function calculateInterviewTotalScore(scores: {
+  blinkScore: number | null | undefined;
+  gazeScore: number | null | undefined;
+  poseScore: number | null | undefined;
+  speechScore: number | null | undefined;
+  contentScore: number | null | undefined;
+}): number | undefined {
+  const { blinkScore, gazeScore, poseScore, speechScore, contentScore } = scores;
+  const isFiniteScore = (score: number | null | undefined): score is number => (
+    typeof score === "number" && Number.isFinite(score)
+  );
+  if (
+    !isFiniteScore(blinkScore)
+    || !isFiniteScore(gazeScore)
+    || !isFiniteScore(poseScore)
+    || !isFiniteScore(speechScore)
+    || !isFiniteScore(contentScore)
+  ) {
+    return undefined;
   }
 
-  return paceScore ?? contentScore;
-};
+  return blinkScore * 0.15
+    + gazeScore * 0.2
+    + poseScore * 0.2
+    + speechScore * 0.2
+    + contentScore * 0.25;
+}
 
 export const getOverallScore = (report?: InterviewReportResponse) => {
-  const eyeScore = getAverageEyeScore(report);
+  const blinkScore = getAverageEyeScore(report);
+  const gazeScore = getAverageGazeScore(report);
   const poseScore = getAveragePoseScore(report);
-  const speechScore = getSpeechScore(report); // 🔑 개선된 함수로 교체
-  return average([eyeScore, poseScore, speechScore]);
+  const speechScore = getSpeechScore(report);
+  const contentScore = getAnswerContentScore(report);
+
+  return calculateInterviewTotalScore({
+    blinkScore,
+    gazeScore,
+    poseScore,
+    speechScore,
+    contentScore,
+  });
 };
 
 export const getMainFeedback = (report?: InterviewReportResponse) => {

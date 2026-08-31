@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import RadarChart from "./RadarChart";
 import { BarChart3 } from "lucide-react";
-import { useCounter } from "@/hooks/useCounter"; // 💡 훅 추가
+import { useCounter } from "@/hooks/useCounter"; 
 
 interface OverviewVisualizerProps {
   eyeScore?: number;

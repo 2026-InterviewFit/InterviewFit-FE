@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Briefcase, CheckCircle2, ChevronRight, Sparkles } from "lucide-react"; // Sparkles 추가
+import { Briefcase, CheckCircle2, ChevronRight, Sparkles } from "lucide-react";
 import type { JobRole } from "@/types";
 
 interface JobSelectionModalProps {
@@ -12,8 +12,10 @@ interface JobSelectionModalProps {
   setSelectedJobId: (id: number | null) => void;
   filteredJobs: JobRole[];
   uniqueCategories: string[];
-  recommendedJobId?: number | null; // 💡 추가
+  recommendedJobId?: number | null;
   onStartInterview: () => void;
+  isFollowUpEnabled: boolean;
+  setIsFollowUpEnabled: (val: boolean) => void;
 }
 
 export default function JobSelectionModal({
@@ -24,8 +26,10 @@ export default function JobSelectionModal({
   setSelectedJobId,
   filteredJobs,
   uniqueCategories,
-  recommendedJobId, // 💡 추가
+  recommendedJobId,
   onStartInterview,
+  isFollowUpEnabled,
+  setIsFollowUpEnabled,
 }: JobSelectionModalProps) {
   const selectedJobData = jobRoles.find((job) => job.id === selectedJobId);
 
@@ -77,7 +81,7 @@ export default function JobSelectionModal({
         </div>
 
         {/* 세부 직무 칩 영역 */}
-        <div className="mb-8 min-h-[140px]">
+        <div className="mb-6 min-h-[140px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedCategory}
@@ -95,20 +99,22 @@ export default function JobSelectionModal({
                     className={`px-4 py-3.5 rounded-2xl transition-all border-2 flex items-center justify-between group ${
                       selectedJobId === job.id
                         ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : recommendedJobId === job.id
+                        ? "border-purple-200 bg-purple-50 text-navy" 
                         : "border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="flex flex-col items-start gap-1 w-full truncate pr-2">
+                    <div className="flex flex-col items-start gap-1.5 w-full truncate pr-2">
                       <span className="text-[13px] font-bold">{job.name}</span>
-                      {/* 💡 추천 직무일 경우 뱃지 추가 */}
+                      
                       {recommendedJobId === job.id && (
-                        <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-md">
+                        <span className="text-[10px] font-extrabold text-purple-600 bg-purple-100/80 px-2 py-0.5 rounded-md border border-purple-200 shadow-sm">
                           ✨ AI 추천
                         </span>
                       )}
                     </div>
                     {selectedJobId === job.id && (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-500" />
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-blue-500" />
                     )}
                   </button>
                 ))
@@ -121,11 +127,31 @@ export default function JobSelectionModal({
           </AnimatePresence>
         </div>
 
+        {/* 💡 신규 추가: 꼬리질문 심층면접 토글 */}
+        <div className="mb-6 flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+            <div>
+                <h3 className="text-sm font-bold text-navy">꼬리질문 심층 면접</h3>
+                <p className="text-[11px] text-muted mt-1">답변 내용을 분석하여 꼬리질문을 생성합니다.</p>
+            </div>
+            <button 
+                onClick={() => setIsFollowUpEnabled(!isFollowUpEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isFollowUpEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+            >
+                <span 
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isFollowUpEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} 
+                />
+            </button>
+        </div>
+
         {/* 시작 버튼 */}
         <button
           disabled={!selectedJobId}
           onClick={onStartInterview}
-          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4.5 text-sm font-bold transition-all duration-200 ${
+          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 ${
             selectedJobId
               ? "bg-navy text-white hover:bg-navy-dark shadow-lg shadow-navy/20 hover:-translate-y-0.5"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

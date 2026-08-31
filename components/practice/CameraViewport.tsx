@@ -11,6 +11,7 @@ interface CameraViewportProps {
   selectedCategory: string | null;
   selectedJobName?: string;
   currentQuestionText: string;
+  questionMode: "base" | "followup";
   onCancelStop: () => void;
   onConfirmStop: () => void;
 }
@@ -22,6 +23,7 @@ export default function CameraViewport({
   selectedCategory,
   selectedJobName,
   currentQuestionText,
+  questionMode,
   onCancelStop,
   onConfirmStop,
 }: CameraViewportProps) {
@@ -43,7 +45,7 @@ export default function CameraViewport({
 
       {/* 💡 모달 단계가 아닐 때만 카메라 UI 가이드라인 및 면접용 오버레이 표시 */}
       {!isModalStep && (
-        <div className="absolute inset-0 z-10 flex flex-col p-8 justify-between pointer-events-none">
+        <div className="absolute inset-0 z-40 flex flex-col p-8 justify-between pointer-events-none">
           
           <div className="flex w-full justify-center pt-4">
             <AnimatePresence mode="wait">
@@ -68,21 +70,25 @@ export default function CameraViewport({
 
               {step === "recording" && (
                 <motion.div
-                  key="question"
+                  key={`${questionMode}-${currentQuestionText}`}
                   initial={{ opacity: 0, y: -30 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center rounded-[28px] bg-white px-10 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-white/40 max-w-2xl text-center pointer-events-auto"
                 >
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                      AI Live Question
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                      questionMode === "followup"
+                        ? "bg-violet-50 text-violet-700"
+                        : "bg-blue-50 text-blue-600"
+                    }`}>
+                      {questionMode === "followup" ? "AI Follow-up Question" : "AI Live Question"}
                     </span>
                     <span className="text-[10px] font-bold text-gray-400">
                       {selectedCategory} · {selectedJobName}
                     </span>
                   </div>
-                  <h2 className="text-lg font-bold text-navy mt-1 leading-snug">
-                    {currentQuestionText}
+                  <h2 className="mt-1 whitespace-pre-line text-lg font-bold leading-snug text-slate-900">
+                    {currentQuestionText?.trim() || "질문을 불러오는 중입니다..."}
                   </h2>
                 </motion.div>
               )}
