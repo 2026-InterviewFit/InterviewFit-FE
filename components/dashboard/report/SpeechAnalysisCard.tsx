@@ -2,6 +2,7 @@
 
 import { CheckCircle2, KeyRound, MessageSquare, Mic, Star, TriangleAlert } from "lucide-react";
 import { externalAiAnalysisView } from "@/lib/externalAiAnalysis";
+import { getSpeechScoreDisplay } from "@/lib/groupSpeechScore";
 import type { AnswerReport } from "@/types";
 
 interface SpeechAnalysisCardProps {
@@ -57,7 +58,9 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
   }
 
   const pauseRate = Number.isFinite(speech.pauseRatePercent) ? speech.pauseRatePercent : undefined;
-  const volumeDeviation = Number.isFinite(speech.volumeDbStd) ? speech.volumeDbStd : undefined;
+  const speechScoreDisplay = useActualMetrics
+    ? getSpeechScoreDisplay(speech.speechScore, speech.speechScoreStatus, speech.speechScoreReason)
+    : null;
   const starScore = aiEvaluation.star_score as Record<string, unknown>;
   const normalizedStarScores = STAR_ITEMS.map(({ keys }) => {
     const rawScore = keys.map((key) => starScore?.[key]).find((value) => typeof value === "number");
@@ -76,20 +79,33 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
     <div className="flex flex-col gap-6 w-full">
       {/* 1. 발화 및 키워드 통계 */}
       <div className="rounded-[24px] bg-white dark:bg-[#1e293b] p-6 border border-black/[0.04] dark:border-white/[0.04] shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="rounded-lg bg-purple-50 dark:bg-purple-900/30 p-2 text-purple-600 dark:text-purple-300">
-            <Mic className="h-4 w-4" />
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-purple-50 dark:bg-purple-900/30 p-2 text-purple-600 dark:text-purple-300">
+              <Mic className="h-4 w-4" />
+            </div>
+            <h4 className="text-base font-bold text-navy dark:text-white">발화 및 습관어 분석</h4>
           </div>
-          <h4 className="text-base font-bold text-navy dark:text-white">발화 및 습관어 분석</h4>
+          {speechScoreDisplay && (
+            <div className="flex max-w-full flex-col items-end gap-1 text-right">
+              <span className={`rounded-full px-3 py-1 text-sm font-bold ${speechScoreDisplay.isInsufficient ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" : "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"}`}>
+                {speechScoreDisplay.label}
+              </span>
+              {speechScoreDisplay.reason && (
+                <span className="max-w-sm text-xs font-medium text-amber-700 dark:text-amber-300">
+                  {speechScoreDisplay.reason}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className={`grid grid-cols-2 gap-4 mb-6 ${useActualMetrics ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
           <StatBox label="발화 속도 (CPS)" value={formatMetric(speech.charactersPerSecond, "자/초")} />
           {useActualMetrics ? (
             <>
               <StatBox label="침묵 시간" value={formatMetric(speech.totalSilenceSeconds, "초")} />
               <StatBox label="침묵 비율" value={pauseRate === undefined ? "분석 데이터 없음" : `${pauseRate.toFixed(1)}%`} isWarning={pauseRate !== undefined && pauseRate > 15} />
-              <StatBox label="음량 편차" value={volumeDeviation === undefined ? "분석 데이터 없음" : `${volumeDeviation.toFixed(1)}dB`} />
             </>
           ) : (
             <>

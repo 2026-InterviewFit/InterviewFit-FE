@@ -1,6 +1,6 @@
 // types/groupInterview.ts
 
-import type { ExternalAiAnalysis } from "@/types";
+import type { ExternalAiAnalysis, SpeechScoreStatus } from "@/types";
 
 // 방 모집/진행 상태
 export type RoomStatus =
@@ -132,6 +132,9 @@ export interface GroupInterviewAnswerAnalysis {
   speechText: string | null;
   speechResultJson: string | null;
   aiEvaluationJson: string | null;
+  speechScore: number | null;
+  speechScoreStatus: SpeechScoreStatus | null;
+  speechScoreReason: string | null;
   externalAiAnalysis?: ExternalAiAnalysis | null;
   eyeBlinkingResultJson: string | null;
   eyeGazeResultJson: string | null;
