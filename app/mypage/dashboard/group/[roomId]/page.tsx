@@ -334,7 +334,7 @@ export default function GroupInterviewDashboardDetailPage() {
                           </div>
                         </div>
                         <VisualAnalysisCard answerData={answerReport} showGaze />
-                        <SpeechAnalysisCard answerData={answerReport} useActualMetrics />
+                        <SpeechAnalysisCard answerData={answerReport} />
                       </div>
                     )}
                   </div>
