@@ -14,3 +14,8 @@ export function getGroupAnalysisStatusClassName(status: GroupAnalysisStatus): st
   if (status === "RUNNING") return "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300";
   return "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300";
 }
+
+export function getGroupQuestionIndices(questionIndices: readonly number[]): number[] {
+  return [...new Set(questionIndices.filter((index) => Number.isInteger(index) && index >= 0))]
+    .sort((left, right) => left - right);
+}
