@@ -181,7 +181,7 @@ export default function VisualAnalysisCard({
 
 function formatScore(value: number) {
   return Number.isFinite(value)
-    ? <>{value}<span className="text-sm text-muted">점</span></>
+    ? <>{Math.round(value)}<span className="text-sm text-muted">점</span></>
     : <span className="text-sm text-muted">분석 데이터 없음</span>;
 }
 
