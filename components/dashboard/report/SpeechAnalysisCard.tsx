@@ -7,7 +7,6 @@ import type { AnswerReport } from "@/types";
 
 interface SpeechAnalysisCardProps {
   answerData?: AnswerReport;
-  useActualMetrics?: boolean;
 }
 
 const STAR_RAW_ITEM_MAX_SCORE = 10;
@@ -27,7 +26,7 @@ function formatScore(score: number) {
   return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
-export default function SpeechAnalysisCard({ answerData, useActualMetrics = false }: SpeechAnalysisCardProps) {
+export default function SpeechAnalysisCard({ answerData }: SpeechAnalysisCardProps) {
   const speech = answerData?.speech;
   
   if (!speech) {
@@ -58,9 +57,11 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
   }
 
   const pauseRate = Number.isFinite(speech.pauseRatePercent) ? speech.pauseRatePercent : undefined;
-  const speechScoreDisplay = useActualMetrics
-    ? getSpeechScoreDisplay(speech.speechScore, speech.speechScoreStatus, speech.speechScoreReason)
-    : null;
+  const speechScoreDisplay = getSpeechScoreDisplay(
+    speech.speechScore,
+    speech.speechScoreStatus,
+    speech.speechScoreReason,
+  );
   const starScore = aiEvaluation.star_score as Record<string, unknown>;
   const normalizedStarScores = STAR_ITEMS.map(({ keys }) => {
     const rawScore = keys.map((key) => starScore?.[key]).find((value) => typeof value === "number");
@@ -79,7 +80,6 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
     <div className="flex w-full flex-col gap-6">
       {/* 1. 발화 및 키워드 통계 */}
       <div className="rounded-[24px] border border-black/[0.04] bg-white p-6 shadow-sm dark:border-white/[0.04] dark:bg-[#1e293b]">
-        {/* 공통 헤더 규격 안에 팀원의 점수 표시 로직(speechScoreDisplay) 융합 */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-4 dark:border-white/5">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-purple-50 p-2 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
@@ -88,43 +88,30 @@ export default function SpeechAnalysisCard({ answerData, useActualMetrics = fals
             <h4 className="text-base font-bold text-navy dark:text-white">발화 및 습관어 분석</h4>
           </div>
           
-          {/* 팀원이 작성한 점수 표시 로직 */}
-          {speechScoreDisplay && (
-            <div className="flex max-w-full flex-col items-end gap-1 text-right">
-              {speechScoreDisplay.isInsufficient ? (
-                <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                  {speechScoreDisplay.label}
-                </span>
-              ) : (
-                <span className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                  {formatScore(speech.speechScore as number)}
-                  <span className="text-sm text-muted">점</span>
-                </span>
-              )}
-              {speechScoreDisplay.reason && (
-                <span className="max-w-sm text-xs font-medium text-amber-700 dark:text-amber-300">
-                  {speechScoreDisplay.reason}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex max-w-full flex-col items-end gap-1 text-right">
+            {speechScoreDisplay.isInsufficient ? (
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                {speechScoreDisplay.label}
+              </span>
+            ) : (
+              <span className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                {formatScore(speech.speechScore as number)}
+                <span className="text-sm text-muted">점</span>
+              </span>
+            )}
+            {speechScoreDisplay.reason && (
+              <span className="max-w-sm text-xs font-medium text-amber-700 dark:text-amber-300">
+                {speechScoreDisplay.reason}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* 팀원이 작성한 그리드 반응형 조건 적용 + 은재님의 mb-6 여백 유지 */}
-        <div className={`mb-6 grid grid-cols-2 gap-4 ${useActualMetrics ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatBox label="발화 속도 (CPS)" value={formatMetric(speech.charactersPerSecond, "자/초")} />
-          {useActualMetrics ? (
-            <>
-              <StatBox label="침묵 시간" value={formatMetric(speech.totalSilenceSeconds, "초")} />
-              <StatBox label="침묵 비율" value={pauseRate === undefined ? "분석 데이터 없음" : `${pauseRate.toFixed(1)}%`} isWarning={pauseRate !== undefined && pauseRate > 15} />
-            </>
-          ) : (
-            <>
-              <StatBox label="침묵 시간 (비율)" value={`${speech.totalSilenceSeconds.toFixed(1)}초 (${speech.totalSilenceSeconds ? (speech.totalSilenceSeconds / (speech.charactersPerSecond * 10) * 100).toFixed(1) : "0.0"}%)`} />
-              <StatBox label="음량 안정성" value="우수" />
-              <StatBox label="핵심 키워드 포함률" value="78%" />
-            </>
-          )}
+          <StatBox label="침묵 시간" value={formatMetric(speech.totalSilenceSeconds, "초")} />
+          <StatBox label="침묵 비율" value={pauseRate === undefined ? "분석 데이터 없음" : `${pauseRate.toFixed(1)}%`} isWarning={pauseRate !== undefined && pauseRate > 15} />
+          <StatBox label="긴 침묵 횟수" value={formatMetric(speech.criticalSilenceCount, "회", 0)} />
         </div>
 
         {/* 공통 하단 박스 규격 */}
@@ -258,8 +245,8 @@ function ExternalFeedbackList({
   );
 }
 
-function formatMetric(value: number, suffix: string) {
-  return Number.isFinite(value) ? `${value.toFixed(1)}${suffix}` : "분석 데이터 없음";
+function formatMetric(value: number, suffix: string, fractionDigits = 1) {
+  return Number.isFinite(value) ? `${value.toFixed(fractionDigits)}${suffix}` : "분석 데이터 없음";
 }
 
 function StatBox({ label, value, isWarning = false }: { label: string; value: string | number; isWarning?: boolean }) {
