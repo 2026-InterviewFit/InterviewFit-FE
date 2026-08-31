@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion"; // 💡 애니메이션을 위해 추가
+import { motion } from "framer-motion"; 
 
 interface RadarChartProps {
   eyeScore?: number;
@@ -64,7 +64,7 @@ export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 
           <line key={i} x1={CENTER} y1={CENTER} x2={p.x} y2={p.y} stroke="#f1f5f9" strokeWidth="1" />
         ))}
 
-        {/* 💡 애니메이션이 적용된 실제 점수 다각형! (중앙에서 퍼져나감) */}
+        {/* 애니메이션이 적용된 실제 점수 다각형 */}
         <motion.polygon 
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -76,7 +76,7 @@ export default function RadarChart({ eyeScore = 0, poseScore = 0, speechScore = 
           strokeWidth="2" 
         />
 
-        {/* 💡 각 축 끝점 강조 점도 같이 나타나게! */}
+        {/* 각 축 끝점 강조 점도 같이 나타나게 */}
         {dataPoints.map((p, i) => (
           <motion.circle 
             key={i} 
