@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clock3, FileVideo, RefreshCw, UserRound } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import GroupComparisonView from "@/components/dashboard/group/GroupComparisonView";
+import GroupAnswerVideoPlayer from "@/components/dashboard/group/GroupAnswerVideoPlayer";
 import SpeechAnalysisCard from "@/components/dashboard/report/SpeechAnalysisCard";
 import VisualAnalysisCard from "@/components/dashboard/report/VisualAnalysisCard";
 import {
@@ -261,6 +262,13 @@ export default function GroupInterviewDashboardDetailPage() {
                 <section className="xl:col-span-7">
                   <div className="min-h-[360px] rounded-[28px] border border-line bg-white p-7 shadow-sm dark:border-white/10 dark:bg-[#1e293b]">
                     {!selectedAnswer && <div className="flex min-h-[300px] items-center justify-center text-center text-sm font-bold text-muted">질문을 선택하면 상세 분석 결과를 확인할 수 있습니다.</div>}
+                    {selectedAnswer && (
+                      <GroupAnswerVideoPlayer
+                        key={selectedAnswer.answerId}
+                        roomId={roomId}
+                        answer={selectedAnswer}
+                      />
+                    )}
                     {selectedAnswer && selectedAnswer.analysisStatus !== "DONE" && selectedAnswer.analysisStatus !== "FAILED" && <div className="flex min-h-[300px] items-center justify-center text-center text-sm font-bold text-muted">분석 결과를 준비하고 있습니다.</div>}
                     {selectedAnswer?.analysisStatus === "FAILED" && <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 text-center"><p className="text-sm font-bold text-red-600">분석에 실패했습니다.</p><button type="button" disabled={retryingAnswerIds.includes(selectedAnswer.answerId)} onClick={() => void handleRetry(selectedAnswer.answerId)} className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">다시 분석하기</button></div>}
                     {selectedAnswer?.analysisStatus === "DONE" && analysisLoadingId === selectedAnswer.answerId && <div className="flex min-h-[300px] items-center justify-center text-sm font-bold text-muted">상세 분석 결과를 불러오는 중입니다.</div>}

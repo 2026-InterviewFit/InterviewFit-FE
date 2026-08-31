@@ -249,6 +249,21 @@ export async function getGroupAnswerAnalysis(
   } as GroupInterviewAnswerAnalysis;
 }
 
+export async function getMyGroupAnswerVideo(
+  roomId: string,
+  answerId: number,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const response = await authFetch(
+    `${GROUP_API}/${encodeURIComponent(roomId)}/answers/${answerId}/video`,
+    { signal },
+  );
+  if (!response.ok) {
+    throw new GroupInterviewApiError(response.status, await readErrorMessage(response));
+  }
+  return response.blob();
+}
+
 export async function getGroupInterviewComparisons(
   roomId: string,
 ): Promise<GroupInterviewComparison[]> {
