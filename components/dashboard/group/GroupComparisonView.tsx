@@ -9,17 +9,10 @@ import {
   GroupInterviewApiError,
 } from "@/lib/groupInterviewApi";
 import { initializeAuth } from "@/lib/auth";
+import { getGroupQuestionIndices } from "@/lib/groupInterviewDashboard";
 import type { GroupInterviewComparison } from "@/types/groupInterview";
 
-type ComparisonSelection = "OVERALL" | 0 | 1 | 2 | 3;
-
-const COMPARISON_TABS: { label: string; value: ComparisonSelection }[] = [
-  { label: "전체", value: "OVERALL" },
-  { label: "질문 1", value: 0 },
-  { label: "질문 2", value: 1 },
-  { label: "질문 3", value: 2 },
-  { label: "질문 4", value: 3 },
-];
+type ComparisonSelection = "OVERALL" | number;
 
 const SCORE_FIELDS: {
   label: string;
@@ -147,9 +140,23 @@ function ComparisonCard({
   );
 }
 
-export default function GroupComparisonView({ roomId }: { roomId: string }) {
+export default function GroupComparisonView({
+  roomId,
+  questionIndices,
+}: {
+  roomId: string;
+  questionIndices: readonly number[];
+}) {
   const router = useRouter();
   const requestIdRef = useRef(0);
+  const availableQuestionIndices = getGroupQuestionIndices(questionIndices);
+  const comparisonTabs: { label: string; value: ComparisonSelection }[] = [
+    { label: "전체", value: "OVERALL" },
+    ...availableQuestionIndices.map((questionIndex) => ({
+      label: `질문 ${questionIndex + 1}`,
+      value: questionIndex,
+    })),
+  ];
   const [selection, setSelection] = useState<ComparisonSelection>("OVERALL");
   const [comparisons, setComparisons] = useState<GroupInterviewComparison[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -193,6 +200,7 @@ export default function GroupComparisonView({ roomId }: { roomId: string }) {
 
   const handleSelection = (nextSelection: ComparisonSelection) => {
     if (nextSelection === selection) return;
+    if (nextSelection !== "OVERALL" && !availableQuestionIndices.includes(nextSelection)) return;
     setSelection(nextSelection);
     void loadComparisons(nextSelection);
   };
@@ -202,7 +210,7 @@ export default function GroupComparisonView({ roomId }: { roomId: string }) {
   return (
     <section className="mt-6">
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-        {COMPARISON_TABS.map((tab) => (
+        {comparisonTabs.map((tab) => (
           <button
             key={String(tab.value)}
             type="button"

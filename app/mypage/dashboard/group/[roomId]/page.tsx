@@ -282,7 +282,10 @@ export default function GroupInterviewDashboardDetailPage() {
                 </section>
               </div>
             )) : (
-              <GroupComparisonView roomId={roomId} />
+              <GroupComparisonView
+                roomId={roomId}
+                questionIndices={answers.map((answer) => answer.questionIndex)}
+              />
             )}
           </>
         )}
