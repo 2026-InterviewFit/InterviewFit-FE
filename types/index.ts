@@ -137,6 +137,8 @@ export type ExternalAiAnalysis = {
   improvements: string[] | null;
 };
 
+export type SpeechScoreStatus = "SCORED" | "INSUFFICIENT_DATA";
+
 export type SpeechReport = {
   reportId: number;
   textScript: string;
@@ -151,6 +153,9 @@ export type SpeechReport = {
   criticalSilenceCount: number;
   volumeDbMean?: number;
   volumeDbStd?: number;
+  speechScore?: number | null;
+  speechScoreStatus?: SpeechScoreStatus | null;
+  speechScoreReason?: string | null;
   aiEvaluationJson?: string;
   modelAnswer?: string;
   externalAiAnalysis?: ExternalAiAnalysis | null;
