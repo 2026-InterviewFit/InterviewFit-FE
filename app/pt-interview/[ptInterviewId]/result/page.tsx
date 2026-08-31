@@ -60,7 +60,7 @@ function ScoreCard({
       </span>
 
       <span className="mt-1 text-3xl font-bold">
-        {value}
+        {Math.round(value)}
         <span
           className={`ml-0.5 text-sm ${
             primary ? "text-white/60" : "text-muted"
@@ -105,7 +105,7 @@ function ScoreBar({
       </div>
 
       <span className="w-14 text-right text-xs font-bold text-ink">
-        {value}/{max}
+        {Math.round(value)}/{max}
       </span>
     </div>
   );
@@ -176,16 +176,75 @@ function formatPercent(
     return "-";
   }
 
-  /*
-   * DB 값이 0~1 비율이면 100을 곱하고,
-   * 이미 0~100 값이면 그대로 사용한다.
-   */
   const percent =
     Math.abs(value) <= 1
       ? value * 100
       : value;
 
   return `${percent.toFixed(1)}%`;
+}
+
+// =========================================================
+// 종합 점수 반영 비율
+// =========================================================
+
+const SCORE_WEIGHTS = {
+  content: 30,
+  structure: 20,
+  delivery: 25,
+  qa: 25,
+} as const;
+
+// =========================================================
+// 레이더 차트
+// =========================================================
+
+const RADAR_CENTER = 120;
+const RADAR_RADIUS = 78;
+
+function getRadarPoint(
+  angleDeg: number,
+  score: number,
+  radius = RADAR_RADIUS,
+) {
+  const normalizedScore = Math.max(
+    0,
+    Math.min(100, score),
+  );
+
+  const distance =
+    (normalizedScore / 100) * radius;
+
+  const rad =
+    (angleDeg * Math.PI) / 180;
+
+  return {
+    x:
+      RADAR_CENTER +
+      distance * Math.cos(rad),
+
+    y:
+      RADAR_CENTER +
+      distance * Math.sin(rad),
+  };
+}
+
+function getRadarOuterPoint(
+  angleDeg: number,
+  radius: number,
+) {
+  const rad =
+    (angleDeg * Math.PI) / 180;
+
+  return {
+    x:
+      RADAR_CENTER +
+      radius * Math.cos(rad),
+
+    y:
+      RADAR_CENTER +
+      radius * Math.sin(rad),
+  };
 }
 
 // =========================================================
@@ -217,7 +276,6 @@ function QuestionAnalysisCard({
         </div>
       </div>
 
-      {/* 실제 답변 */}
       <div className="mt-6 rounded-2xl border border-line bg-bg/60 p-5">
         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
           <MessageSquareText className="h-4 w-4 text-navy" />
@@ -229,7 +287,6 @@ function QuestionAnalysisCard({
         </p>
       </div>
 
-      {/* STAR */}
       {star && (
         <div className="mt-6 rounded-2xl border border-line p-5">
           <div className="mb-5 flex items-center justify-between">
@@ -271,7 +328,6 @@ function QuestionAnalysisCard({
         </div>
       )}
 
-      {/* AI 피드백 */}
       {analysis.aiFeedback && (
         <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/50 p-5 dark:bg-blue-950/10">
           <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
@@ -285,7 +341,6 @@ function QuestionAnalysisCard({
         </div>
       )}
 
-      {/* 모범 답변 */}
       {(analysis.modelAnswer ||
         analysis.improvedAnswer) && (
         <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 dark:bg-emerald-950/10">
@@ -301,7 +356,6 @@ function QuestionAnalysisCard({
         </div>
       )}
 
-      {/* 기존 PT 분석 */}
       <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
         <FeedbackCard
           title="답변 강점"
@@ -387,6 +441,24 @@ export default function PtResultPage() {
           ptInterviewId,
         );
 
+      // ===================================================
+      // 디버깅용 로그
+      // ===================================================
+      console.log(
+        "=== PT REPORT 원본 ===",
+        response,
+      );
+
+      console.log(
+        "qaScore =",
+        response.qaScore,
+      );
+
+      console.log(
+        "questionAnalyses =",
+        response.questionAnalyses,
+      );
+
       setReport(response);
     } catch (loadError) {
       console.error(
@@ -433,10 +505,6 @@ export default function PtResultPage() {
     setSaved(true);
   };
 
-  // =======================================================
-  // Loading
-  // =======================================================
-
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg dark:bg-[#0f1729]">
@@ -450,10 +518,6 @@ export default function PtResultPage() {
       </main>
     );
   }
-
-  // =======================================================
-  // Error
-  // =======================================================
 
   if (error || !report) {
     return (
@@ -499,32 +563,75 @@ export default function PtResultPage() {
     );
   }
 
-  // =======================================================
-  // Data
-  // =======================================================
-
   const scoreItems = [
     {
       label: "발표 내용",
-      value:
-        report.contentScore,
+      value: report.contentScore,
+      weight: SCORE_WEIGHTS.content,
     },
     {
       label: "발표 구조",
-      value:
-        report.structureScore,
+      value: report.structureScore,
+      weight: SCORE_WEIGHTS.structure,
     },
     {
       label: "전달력",
-      value:
-        report.deliveryScore,
+      value: report.deliveryScore,
+      weight: SCORE_WEIGHTS.delivery,
     },
     {
       label: "질의응답",
-      value:
-        report.qaScore,
+      value: report.qaScore,
+      weight: SCORE_WEIGHTS.qa,
     },
   ];
+
+  const radarAngles =
+    scoreItems.map(
+      (_, index) =>
+        -90 +
+        (360 / scoreItems.length) *
+          index,
+    );
+
+  const radarDataPolygon =
+    scoreItems
+      .map((item, index) => {
+        const point =
+          getRadarPoint(
+            radarAngles[index],
+            item.value,
+          );
+
+        return `${point.x},${point.y}`;
+      })
+      .join(" ");
+
+  const radarOuterPolygon =
+    radarAngles
+      .map((angle) => {
+        const point =
+          getRadarOuterPoint(
+            angle,
+            RADAR_RADIUS,
+          );
+
+        return `${point.x},${point.y}`;
+      })
+      .join(" ");
+
+  const radarMiddlePolygon =
+    radarAngles
+      .map((angle) => {
+        const point =
+          getRadarOuterPoint(
+            angle,
+            RADAR_RADIUS * 0.5,
+          );
+
+        return `${point.x},${point.y}`;
+      })
+      .join(" ");
 
   const presentation =
     report.presentationAnalysis;
@@ -541,13 +648,8 @@ export default function PtResultPage() {
   const questionAnalyses =
     report.questionAnalyses ?? [];
 
-  // =======================================================
-  // UI
-  // =======================================================
-
   return (
     <main className="relative flex min-h-screen flex-col bg-bg transition-colors duration-300 dark:bg-[#0f1729]">
-      {/* Background */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40">
         <div className="absolute -left-20 top-20 h-[500px] w-[500px] rounded-full bg-[#E7F1A8]/30 blur-[140px]" />
 
@@ -557,7 +659,6 @@ export default function PtResultPage() {
       <Navbar />
 
       <div className="relative z-10 mx-auto w-full max-w-5xl flex-1 px-6 pb-28 pt-32">
-        {/* Header */}
         <div className="mb-8">
           <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-brand-soft/20 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-navy">
             PT Interview Report
@@ -573,10 +674,6 @@ export default function PtResultPage() {
             에 대한 분석 결과입니다.
           </p>
         </div>
-
-        {/* =================================================
-            종합 점수
-        ================================================= */}
 
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
           <ScoreCard
@@ -616,49 +713,234 @@ export default function PtResultPage() {
           />
         </div>
 
-        {/* =================================================
-            기존 종합 분석
-        ================================================= */}
-
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm lg:col-span-5">
-            <h2 className="mb-5 text-sm font-bold text-ink">
-              역량별 점수
-            </h2>
+            <div className="mb-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
+                Competency Balance
+              </p>
 
-            <div className="flex flex-col gap-5">
-              {scoreItems.map(
-                (item) => (
-                  <ScoreBar
-                    key={
-                      item.label
-                    }
-                    label={
-                      item.label
-                    }
-                    value={
-                      item.value
-                    }
-                  />
-                ),
-              )}
+              <h2 className="mt-1 text-base font-bold text-ink">
+                역량 밸런스
+              </h2>
+            </div>
+
+            <div className="flex justify-center py-2">
+              <svg
+                viewBox="0 0 240 240"
+                className="w-full max-w-[290px] overflow-visible"
+              >
+                <polygon
+                  points={
+                    radarMiddlePolygon
+                  }
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  className="text-line"
+                />
+
+                <polygon
+                  points={
+                    radarOuterPolygon
+                  }
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="text-line"
+                />
+
+                {radarAngles.map(
+                  (angle, index) => {
+                    const point =
+                      getRadarOuterPoint(
+                        angle,
+                        RADAR_RADIUS,
+                      );
+
+                    return (
+                      <line
+                        key={`axis-${index}`}
+                        x1={
+                          RADAR_CENTER
+                        }
+                        y1={
+                          RADAR_CENTER
+                        }
+                        x2={
+                          point.x
+                        }
+                        y2={
+                          point.y
+                        }
+                        stroke="currentColor"
+                        strokeWidth="1"
+                        className="text-line"
+                      />
+                    );
+                  },
+                )}
+
+                <polygon
+                  points={
+                    radarDataPolygon
+                  }
+                  fill="rgba(79, 70, 229, 0.14)"
+                  stroke="#4f46e5"
+                  strokeWidth="2.5"
+                />
+
+                {scoreItems.map(
+                  (item, index) => {
+                    const point =
+                      getRadarPoint(
+                        radarAngles[index],
+                        item.value,
+                      );
+
+                    return (
+                      <circle
+                        key={
+                          item.label
+                        }
+                        cx={point.x}
+                        cy={point.y}
+                        r="3.5"
+                        fill="#4f46e5"
+                      />
+                    );
+                  },
+                )}
+
+                {scoreItems.map(
+                  (item, index) => {
+                    const point =
+                      getRadarOuterPoint(
+                        radarAngles[index],
+                        RADAR_RADIUS +
+                          26,
+                      );
+
+                    return (
+                      <g
+                        key={`label-${item.label}`}
+                      >
+                        <text
+                          x={point.x}
+                          y={point.y - 4}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="fill-muted text-[10px] font-bold"
+                        >
+                          {item.label}
+                        </text>
+
+                        <text
+                          x={point.x}
+                          y={point.y + 10}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="fill-navy text-[10px] font-bold"
+                        >
+                          {Math.round(
+                            item.value,
+                          )}
+                          점
+                        </text>
+                      </g>
+                    );
+                  },
+                )}
+              </svg>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm lg:col-span-7">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
-              <FileText className="h-4 w-4 text-navy" />
-              발표 요약
-            </h2>
+          <div className="flex flex-col gap-6 lg:col-span-7">
+            <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
+              <div className="mb-6">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
+                  Score Weight
+                </p>
 
-            <p className="whitespace-pre-line text-sm font-medium leading-7 text-muted">
-              {report.actualPresentationSummary ||
-                "발표 요약이 없습니다."}
-            </p>
+                <h2 className="mt-1 text-base font-bold text-ink">
+                  종합 점수 반영 비율
+                </h2>
+
+                <p className="mt-1 text-xs font-medium text-muted">
+                  각 평가 항목은 아래 비율로 종합 점수에 반영됩니다.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                {scoreItems.map(
+                  (item) => (
+                    <div
+                      key={
+                        item.label
+                      }
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-ink">
+                            {
+                              item.label
+                            }
+                          </span>
+
+                          <span className="text-[10px] font-medium text-muted">
+                            {Math.round(
+                              item.value,
+                            )}
+                            점
+                          </span>
+                        </div>
+
+                        <span className="text-xs font-bold text-navy">
+                          {
+                            item.weight
+                          }
+                          %
+                        </span>
+                      </div>
+
+                      <div className="h-2.5 overflow-hidden rounded-full bg-chip">
+                        <div
+                          className="h-full rounded-full bg-navy transition-all duration-700"
+                          style={{
+                            width: `${item.weight}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <div className="mt-6 rounded-2xl bg-bg/60 p-4">
+                <p className="text-[11px] font-medium leading-5 text-muted">
+                  종합 점수 =
+                  발표 내용 30% +
+                  발표 구조 20% +
+                  전달력 25% +
+                  질의응답 25%
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-line bg-surface p-8 shadow-sm">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
+                <FileText className="h-4 w-4 text-navy" />
+                발표 요약
+              </h2>
+
+              <p className="whitespace-pre-line text-sm font-medium leading-7 text-muted">
+                {report.actualPresentationSummary ||
+                  "발표 요약이 없습니다."}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* 발표자료 vs 실제 발표 */}
         {report.presentationComparison && (
           <div className="mt-6 rounded-[24px] border border-line bg-surface p-6 shadow-sm md:p-8">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
@@ -674,7 +956,6 @@ export default function PtResultPage() {
           </div>
         )}
 
-        {/* 종합 피드백 */}
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <FeedbackCard
             title="강점"
@@ -707,10 +988,6 @@ export default function PtResultPage() {
           />
         </div>
 
-        {/* =================================================
-            상세 발표 분석
-        ================================================= */}
-
         <div className="mb-5 mt-12">
           <span className="text-[11px] font-bold uppercase tracking-widest text-navy">
             Detailed Analysis
@@ -731,10 +1008,6 @@ export default function PtResultPage() {
             발표 상세 분석 데이터가 없습니다.
           </div>
         )}
-
-        {/* =================================================
-            눈 깜빡임
-        ================================================= */}
 
         {blinking && (
           <div className="rounded-[24px] border border-line bg-surface p-6 shadow-sm md:p-8">
@@ -818,10 +1091,6 @@ export default function PtResultPage() {
           </div>
         )}
 
-        {/* =================================================
-            시선
-        ================================================= */}
-
         {gaze && (
           <div className="mt-6 rounded-[24px] border border-line bg-surface p-6 shadow-sm md:p-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -890,10 +1159,6 @@ export default function PtResultPage() {
             </div>
           </div>
         )}
-
-        {/* =================================================
-            음성 / STT
-        ================================================= */}
 
         {speech && (
           <div className="mt-6 rounded-[24px] border border-line bg-surface p-6 shadow-sm md:p-8">
@@ -1002,10 +1267,6 @@ export default function PtResultPage() {
           </div>
         )}
 
-        {/* =================================================
-            질문별 상세 분석
-        ================================================= */}
-
         <div className="mb-5 mt-12">
           <span className="text-[11px] font-bold uppercase tracking-widest text-navy">
             Q&A Analysis
@@ -1044,10 +1305,6 @@ export default function PtResultPage() {
           </div>
         )}
 
-        {/* =================================================
-            Report Metadata
-        ================================================= */}
-
         <div className="mt-8 rounded-[24px] border border-line bg-surface px-6 py-4 text-xs font-medium text-muted shadow-sm">
           <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
             <span>
@@ -1065,10 +1322,6 @@ export default function PtResultPage() {
             </span>
           </div>
         </div>
-
-        {/* =================================================
-            Buttons
-        ================================================= */}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
