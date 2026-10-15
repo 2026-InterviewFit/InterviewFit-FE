@@ -13,12 +13,15 @@ import {
   ChevronDown,
   Sparkles,
   RefreshCw,
+  EyeOff,
+  Loader2,
 } from "lucide-react";
 import { JOB_CATEGORIES, PALETTE, maskText } from "@/lib/communityData";
 import {
   getCommunityBestAnswers,
   likeCommunityBestAnswer,
   unlikeCommunityBestAnswer,
+  unpublishCommunityBestAnswer,
   type CommunityBestAnswer,
 } from "@/lib/communityApi";
 
@@ -52,6 +55,7 @@ export default function FeedView() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [updatingLikeIds, setUpdatingLikeIds] = useState<Set<number>>(new Set());
+  const [unpublishingIds, setUnpublishingIds] = useState<Set<number>>(new Set());
 
   const loadAnswers = useCallback(async () => {
     setIsLoading(true);
@@ -106,6 +110,47 @@ export default function FeedView() {
       );
     } finally {
       setUpdatingLikeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(answer.id);
+        return next;
+      });
+    }
+  };
+
+
+  const handleUnpublish = async (answer: CommunityBestAnswer) => {
+    if (!answer.mine || unpublishingIds.has(answer.id)) {
+      return;
+    }
+
+    if (!window.confirm("이 우수 답변의 게시를 중지할까요? 원본 면접 기록은 삭제되지 않습니다.")) {
+      return;
+    }
+
+    setUnpublishingIds((prev) => {
+      const next = new Set(prev);
+      next.add(answer.id);
+      return next;
+    });
+
+    try {
+      await unpublishCommunityBestAnswer(answer.id);
+      setAnswers((prev) => prev.filter((item) => item.id !== answer.id));
+
+      if (expandedId === answer.id) {
+        setExpandedId(null);
+      }
+
+      window.alert("우수 답변 게시를 중지했습니다.");
+    } catch (error) {
+      console.error("우수답변 게시 중지 실패:", error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "우수 답변 게시 중지에 실패했습니다.",
+      );
+    } finally {
+      setUnpublishingIds((prev) => {
         const next = new Set(prev);
         next.delete(answer.id);
         return next;
@@ -326,11 +371,29 @@ export default function FeedView() {
                       </span>
                       <span className="truncate text-[11px] font-bold text-muted">{ans.role}</span>
                     </div>
-                    <div
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold"
-                      style={{ backgroundColor: grade.bg, color: grade.fg }}
-                    >
-                      {grade.label}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {ans.mine && (
+                        <button
+                          type="button"
+                          onClick={() => void handleUnpublish(ans)}
+                          disabled={unpublishingIds.has(ans.id)}
+                          className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+                          aria-label="우수 답변 게시 중지"
+                        >
+                          {unpublishingIds.has(ans.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <EyeOff className="h-3 w-3" />
+                          )}
+                          게시 중지
+                        </button>
+                      )}
+                      <div
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold"
+                        style={{ backgroundColor: grade.bg, color: grade.fg }}
+                      >
+                        {grade.label}
+                      </div>
                     </div>
                   </div>
 
