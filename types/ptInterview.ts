@@ -181,6 +181,26 @@ export interface PtQuestionResponse {
   reason: string | null;
 }
 
+/**
+ * PT 질문별 답변 조회 응답
+ */
+export interface PtAnswerResponse {
+  answerId: number;
+  ptQuestionId: number;
+  questionNumber: number;
+  question: string;
+  answerText: string | null;
+  analysisStatus: string;
+  createdAt: string;
+}
+
+/**
+ * PT 질문별 영상 재생 URL 응답
+ */
+export interface PtAnswerVideoResponse {
+  videoUrl: string;
+}
+
 // =========================================================
 // PT 상세 리포트
 // =========================================================
