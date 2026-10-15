@@ -83,6 +83,7 @@ interface InterviewState {
   jobRoleId: number | null;
 
   generatedQuestions: Array<{ id: number; question: string; questionOrder?: number | null }>;
+  isStartingInterview: boolean;
 }
 
 interface InterviewActions {
@@ -143,6 +144,7 @@ const initialState: Omit<InterviewState, "jobRoles"> = {
   startedUserId: null,
   jobRoleId: null,
   generatedQuestions: [],
+  isStartingInterview: false,
 };
 
 function createFollowUpSlots(
@@ -277,6 +279,8 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
       return;
     }
 
+    set({ isStartingInterview: true });
+
     try {
       /*
        * 1) Interview를 먼저 생성한다.
@@ -310,6 +314,9 @@ export const useInterviewStore = create<InterviewState & InterviewActions>((set,
     } catch (error: unknown) {
       console.error("[Interview] 면접 시작 또는 질문 생성 API 실패:", error);
       alert(error instanceof Error ? error.message : "면접 준비에 실패했습니다.");
+    } finally {
+      // 성공하거나 실패해도 로딩 상태 해제
+      set({ isStartingInterview: false });
     }
   },
 

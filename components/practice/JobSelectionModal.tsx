@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Briefcase, CheckCircle2, ChevronRight, Sparkles } from "lucide-react";
+import { Briefcase, CheckCircle2, ChevronRight, Sparkles, Loader2 } from "lucide-react";
 import type { JobRole } from "@/types";
 
 interface JobSelectionModalProps {
@@ -16,6 +16,7 @@ interface JobSelectionModalProps {
   onStartInterview: () => void;
   isFollowUpEnabled: boolean;
   setIsFollowUpEnabled: (val: boolean) => void;
+  isStartingInterview: boolean;
 }
 
 export default function JobSelectionModal({
@@ -30,6 +31,7 @@ export default function JobSelectionModal({
   onStartInterview,
   isFollowUpEnabled,
   setIsFollowUpEnabled,
+  isStartingInterview,
 }: JobSelectionModalProps) {
   const selectedJobData = jobRoles.find((job) => job.id === selectedJobId);
 
@@ -157,8 +159,18 @@ export default function JobSelectionModal({
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          {selectedJobData ? `${selectedJobData.name} 맞춤 면접 시작` : "세부 직무를 선택해 주세요"}
-          {selectedJobId && <ChevronRight className="h-4 w-4" />}
+          {isStartingInterview ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              맞춤형 질문 생성 중...
+            </>
+          ) : selectedJobData ? (
+            `${selectedJobData.name} 맞춤 면접 시작`
+          ) : (
+            "세부 직무를 선택해 주세요"
+          )}
+
+          {!isStartingInterview && selectedJobId && <ChevronRight className="h-4 w-4" />}
         </button>
       </motion.div>
     </div>
