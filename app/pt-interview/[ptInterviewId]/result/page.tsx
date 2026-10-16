@@ -17,16 +17,34 @@ import {
   MessageSquareText,
   Sparkles,
 } from "lucide-react";
+import {
+  getPtAnswers,
+  getPtAnswerVideo,
+  getPtPresentationVideo,
+  getPtReport,
+} from "@/lib/api";
 
 import Navbar from "@/components/shared/Navbar";
-import { getPtReport } from "@/lib/api";
 import { saveRecord } from "@/lib/interviewHistoryStore";
 import { usePtInterviewStore } from "@/store/usePtInterviewStore";
+
 
 import type {
   PtReportResponse,
   PtQuestionAnalysisResponse,
 } from "@/types/ptInterview";
+
+
+interface PtAnswerItem {
+  answerId: number;
+  ptQuestionId: number;
+  questionNumber: number;
+  question: string;
+  answerText: string | null;
+  analysisStatus: string;
+  createdAt: string;
+}
+
 
 // =========================================================
 // 공통
@@ -250,11 +268,89 @@ function getRadarOuterPoint(
 // =========================================================
 // 질문별 상세 분석
 // =========================================================
+function PtAnswerVideo({
+  ptInterviewId,
+  answerId,
+}: {
+  ptInterviewId: number;
+  answerId: number;
+}) {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadVideo() {
+      setLoading(true);
+      setError(null);
+      setVideoUrl(null);
+
+      try {
+        const response = await getPtAnswerVideo(ptInterviewId,answerId);
+
+      if (!cancelled) {
+        setVideoUrl(response.videoUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("답변 영상을 불러오지 못했습니다.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadVideo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ptInterviewId, answerId]);
+
+  return (
+    <div className="mt-6 rounded-2xl border border-slate-200 p-5">
+      <h4 className="mb-4 text-base font-semibold">
+        질의응답 영상 다시보기
+      </h4>
+
+      {loading && (
+        <p className="text-sm text-slate-500">
+          영상을 불러오는 중입니다.
+        </p>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+
+      {videoUrl && (
+        <video
+          key={videoUrl}
+          src={videoUrl}
+          controls
+          playsInline
+          preload="metadata"
+          className="aspect-video w-full rounded-xl bg-black"
+        >
+          브라우저에서 영상 재생을 지원하지 않습니다.
+        </video>
+      )}
+    </div>
+  );
+}
 
 function QuestionAnalysisCard({
   analysis,
+  ptInterviewId,
+  answerId,
 }: {
   analysis: PtQuestionAnalysisResponse;
+  ptInterviewId: number;
+  answerId?: number;
 }) {
   const star = analysis.starAnalysis;
 
@@ -372,7 +468,7 @@ function QuestionAnalysisCard({
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           }
         />
-
+        
         <FeedbackCard
           title="개선 방법"
           content={analysis.improvement}
@@ -381,20 +477,32 @@ function QuestionAnalysisCard({
           }
         />
       </div>
+
+      {answerId !== undefined ? (
+        <PtAnswerVideo
+          ptInterviewId={ptInterviewId}
+          answerId={answerId}
+        />
+      ) : (
+        <p className="mt-6 text-sm text-muted">
+          이 질문에 연결된 녹화 영상이 없습니다.
+        </p>
+      )}
     </div>
   );
 }
 
-// =========================================================
-// 페이지
-// =========================================================
+
+
+ // =========================================================
+ // 페이지
+ // =========================================================
 
 export default function PtResultPage() {
   const router = useRouter();
   const params = useParams();
 
-  const rawPtInterviewId =
-    params.ptInterviewId;
+  const rawPtInterviewId = params.ptInterviewId;
 
   const ptInterviewId = Number(
     Array.isArray(rawPtInterviewId)
@@ -402,8 +510,7 @@ export default function PtResultPage() {
       : rawPtInterviewId,
   );
 
-  const { meta } =
-    usePtInterviewStore();
+  const { meta } = usePtInterviewStore();
 
   const [report, setReport] =
     useState<PtReportResponse | null>(null);
@@ -417,18 +524,31 @@ export default function PtResultPage() {
   const [saved, setSaved] =
     useState(false);
 
+  // =========================================================
+  // 추가 1. PT 질문별 답변 영상 정보
+  // =========================================================
+
+  const [ptAnswers, setPtAnswers] =
+    useState<PtAnswerItem[]>([]);
+
+  const [answersLoading, setAnswersLoading] =
+    useState(false);
+
+  const [answersError, setAnswersError] =
+    useState<string | null>(null);
+
   const isValidId =
     Number.isInteger(ptInterviewId) &&
     ptInterviewId > 0;
 
+  // =========================================================
+  // PT 종합 리포트 조회
+  // =========================================================
+
   const loadReport = async () => {
     if (!isValidId) {
-      setError(
-        "잘못된 PT 면접 ID입니다.",
-      );
-
+      setError("잘못된 PT 면접 ID입니다.");
       setIsLoading(false);
-
       return;
     }
 
@@ -436,14 +556,11 @@ export default function PtResultPage() {
     setError(null);
 
     try {
-      const response =
-        await getPtReport(
-          ptInterviewId,
-        );
+      const response = await getPtReport(
+        ptInterviewId,
+      );
 
-      // ===================================================
       // 디버깅용 로그
-      // ===================================================
       console.log(
         "=== PT REPORT 원본 ===",
         response,
@@ -476,11 +593,73 @@ export default function PtResultPage() {
     }
   };
 
+  // =========================================================
+  // 기존 종합 리포트 조회
+  // =========================================================
+
   useEffect(() => {
     void loadReport();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ptInterviewId]);
+
+  // =========================================================
+  // 추가 2. PT 질문별 답변 목록 조회
+  // =========================================================
+
+  useEffect(() => {
+    if (!isValidId) {
+      setPtAnswers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    setAnswersLoading(true);
+    setAnswersError(null);
+    setPtAnswers([]);
+
+    async function loadAnswers() {
+      try {
+        const answers = await getPtAnswers(
+          ptInterviewId,
+        );
+
+        if (!cancelled) {
+          setPtAnswers(
+            Array.isArray(answers) ? answers : [],
+          );
+        }
+      } catch (loadError) {
+        console.error(
+          "PT 질문별 답변 조회 실패:",
+          loadError,
+        );
+
+        if (!cancelled) {
+          setAnswersError(
+            loadError instanceof Error
+              ? loadError.message
+              : "질문별 답변 목록을 불러오지 못했습니다.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAnswersLoading(false);
+        }
+      }
+    }
+
+    void loadAnswers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ptInterviewId, isValidId]);
+
+  // =========================================================
+  // 리포트 저장
+  // =========================================================
 
   const handleSave = () => {
     if (!report) {
@@ -489,21 +668,19 @@ export default function PtResultPage() {
 
     saveRecord("pt", {
       id: String(ptInterviewId),
-      title:
-        meta?.topic ??
-        "PT 발표 면접",
-      jobName:
-        meta?.job ??
-        "직무 미지정",
-      overallScore:
-        report.overallScore,
-      savedAt:
-        new Date().toISOString(),
+      title: meta?.topic ?? "PT 발표 면접",
+      jobName: meta?.job ?? "직무 미지정",
+      overallScore: report.overallScore,
+      savedAt: new Date().toISOString(),
       detail: report,
     });
 
     setSaved(true);
   };
+
+  // =========================================================
+  // 로딩 화면
+  // =========================================================
 
   if (isLoading) {
     return (
@@ -647,6 +824,25 @@ export default function PtResultPage() {
 
   const questionAnalyses =
     report.questionAnalyses ?? [];
+
+    console.log("=== PT 답변 목록 ===", ptAnswers);
+
+console.log(
+  "=== PT 답변 질문 번호 ===",
+  ptAnswers.map((answer) => ({
+    answerId: answer.answerId,
+    ptQuestionId: answer.ptQuestionId,
+    questionNumber: answer.questionNumber,
+  }))
+);
+
+console.log(
+  "=== 리포트 질문 번호 ===",
+  questionAnalyses.map((analysis) => ({
+    questionNumber: analysis.questionNumber,
+    question: analysis.question,
+  }))
+);
 
   return (
     <main className="relative flex min-h-screen flex-col bg-bg transition-colors duration-300 dark:bg-[#0f1729]">
@@ -1277,10 +1473,22 @@ export default function PtResultPage() {
           </h2>
 
           <p className="mt-1 text-sm text-muted">
-            실제 답변과 STAR 구조, AI 피드백,
+            실제 답변과 녹화 영상, STAR 구조, AI 피드백,
             모범 답변을 확인할 수 있습니다.
           </p>
         </div>
+
+        {answersLoading && (
+          <p className="mb-4 text-sm text-muted">
+            질문별 녹화 영상 정보를 불러오는 중입니다.
+          </p>
+        )}
+
+        {answersError && (
+          <p className="mb-4 text-sm text-red-500">
+            영상 목록 조회 실패: {answersError}
+          </p>
+        )}
 
         {questionAnalyses.length ===
         0 ? (
@@ -1289,19 +1497,29 @@ export default function PtResultPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {questionAnalyses.map(
-              (
-                analysis,
-                index,
-              ) => (
-                <QuestionAnalysisCard
-                  key={`${analysis.questionNumber}-${index}`}
-                  analysis={
-                    analysis
-                  }
-                />
-              ),
-            )}
+            
+        {questionAnalyses.map((analysis, index) => {
+          const questionNumber = Number(
+            (analysis as typeof analysis & {
+              question_number?: number;
+            }).question_number ?? analysis.questionNumber
+          );
+
+          const matchedAnswer = ptAnswers.find(
+            (answer) =>
+              Number(answer.questionNumber) === questionNumber
+          );
+
+          return (
+            <QuestionAnalysisCard
+              key={`${questionNumber}-${index}`}
+              analysis={analysis}
+              ptInterviewId={ptInterviewId}
+              answerId={matchedAnswer?.answerId}
+            />
+          );
+        })}
+
           </div>
         )}
 

@@ -507,6 +507,46 @@ export async function uploadPtAnswer(params: {
 
   return response.json();
 }
+export type PtVideoUrlResponse = {
+  videoUrl: string;
+};
+
+// PT 발표 전체 영상 조회
+export async function getPtPresentationVideo(
+  ptInterviewId: number
+): Promise<PtVideoUrlResponse> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/presentation/video`,
+    { method: "GET" }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `PT 발표 영상 조회 실패 (${response.status})`
+    );
+  }
+
+  return response.json();
+}
+
+// PT 질문별 답변 영상 조회
+export async function getPtAnswerVideo(
+  ptInterviewId: number,
+  answerId: number
+): Promise<PtVideoUrlResponse> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/answers/${answerId}/video`,
+    { method: "GET" }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `PT 답변 영상 조회 실패 (${response.status})`
+    );
+  }
+
+  return response.json();
+}
 
 /**
  * PT 발표 전체 영상 업로드.
@@ -705,4 +745,32 @@ export async function createQuestionsWithRetry(params: {
   }
 
   throw new Error("질문 생성 재시도에 실패했습니다.");
+}
+export type PtAnswerItem = {
+  answerId: number;
+  ptQuestionId: number;
+  questionNumber: number;
+  question: string;
+  answerText: string | null;
+  analysisStatus: string;
+  createdAt: string;
+};
+
+export async function getPtAnswers(
+  ptInterviewId: number
+): Promise<PtAnswerItem[]> {
+  const response = await authFetch(
+    `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/answers`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `PT 답변 목록 조회 실패 (${response.status})`
+    );
+  }
+
+  return response.json();
 }
