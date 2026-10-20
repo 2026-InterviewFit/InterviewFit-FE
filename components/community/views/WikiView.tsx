@@ -15,12 +15,14 @@ import {
   Building2,
   RefreshCw,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ALL_ROLES, PALETTE } from "@/lib/communityData";
 import {
   COMPANY_TIERS,
   CommunityApiError,
+  deleteCommunityWikiQuestions,
   getCommunityWikiQuestions,
   verifyCommunityWikiQuestion,
   type CommunityWikiQuestion,
@@ -56,6 +58,9 @@ export default function WikiView({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedDeleteIds, setSelectedDeleteIds] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTiers, setSelectedTiers] = useState<string[]>([]);
@@ -142,6 +147,99 @@ export default function WikiView({
     setSearchTerm("");
   };
 
+
+  const ownFilteredQuestions = filtered.filter((question) => question.mine);
+
+  const toggleDeleteSelection = (questionId: number) => {
+    setSelectedDeleteIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(questionId)) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleSelectAllOwnFiltered = () => {
+    const ownIds = ownFilteredQuestions.map((question) => question.id);
+    const allSelected =
+      ownIds.length > 0 &&
+      ownIds.every((id) => selectedDeleteIds.has(id));
+
+    setSelectedDeleteIds((prev) => {
+      const next = new Set(prev);
+
+      if (allSelected) {
+        ownIds.forEach((id) => next.delete(id));
+      } else {
+        ownIds.forEach((id) => next.add(id));
+      }
+
+      return next;
+    });
+  };
+
+  const exitDeleteMode = () => {
+    setIsDeleteMode(false);
+    setSelectedDeleteIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedDeleteIds);
+
+    if (ids.length === 0) {
+      window.alert("삭제할 기출문제를 선택해주세요.");
+      return;
+    }
+
+    if (!window.confirm(`선택한 ${ids.length}개의 기출문제를 삭제할까요? 삭제 후에는 복구할 수 없습니다.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await deleteCommunityWikiQuestions(ids);
+
+      const deletedQuestions = questions.filter((question) =>
+        selectedDeleteIds.has(question.id),
+      );
+
+      deletedQuestions.forEach((question) => {
+        if (selectedQuestions.includes(question.text)) {
+          onToggleQuestion(String(question.id), question.text);
+        }
+      });
+
+      setQuestions((prev) =>
+        prev.filter((question) => !selectedDeleteIds.has(question.id)),
+      );
+
+      exitDeleteMode();
+      window.alert("선택한 기출문제를 삭제했습니다.");
+    } catch (error) {
+      console.error("기출문제 선택 삭제 실패:", error);
+
+      if (error instanceof CommunityApiError && error.status === 401) {
+        window.alert("로그인 후 본인이 작성한 글을 삭제할 수 있습니다.");
+        router.push("/login");
+        return;
+      }
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "기출문제 삭제에 실패했습니다.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleVerify = async (question: CommunityWikiQuestion) => {
     if (question.verified || question.verifiedByMe || verifyingId !== null) {
       return;
@@ -186,16 +284,64 @@ export default function WikiView({
     <div className="flex w-full animate-in fade-in duration-500 gap-6">
       {/* ───────── 좌측: 도구(필터 + 리스트) ───────── */}
       <div className="min-w-0 flex-1">
-        <div className="mb-5 flex items-end justify-between px-1">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 px-1">
           <p className="text-sm font-bold text-ink">
             총 <span className="text-navy">{filtered.length}</span>건의 기출문제
           </p>
-          <button
-            onClick={() => router.push("/community/add-wiki")}
-            className="flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-navy-dark"
-          >
-            <Plus className="h-3.5 w-3.5" /> 기출문제 등록
-          </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {isDeleteMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleSelectAllOwnFiltered}
+                  disabled={ownFilteredQuestions.length === 0 || isDeleting}
+                  className="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-navy/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  내 글 전체 선택
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteSelected()}
+                  disabled={selectedDeleteIds.size === 0 || isDeleting}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  선택 삭제 ({selectedDeleteIds.size})
+                </button>
+                <button
+                  type="button"
+                  onClick={exitDeleteMode}
+                  disabled={isDeleting}
+                  className="rounded-lg border border-line bg-surface px-3.5 py-2 text-xs font-bold text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  취소
+                </button>
+              </>
+            ) : (
+              <>
+                {questions.some((question) => question.mine) && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteMode(true)}
+                    className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 py-2 text-xs font-bold text-muted transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> 내 글 관리
+                  </button>
+                )}
+                <button
+                  onClick={() => router.push("/community/add-wiki")}
+                  className="flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-navy-dark"
+                >
+                  <Plus className="h-3.5 w-3.5" /> 기출문제 등록
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* 필터 바 */}
@@ -379,33 +525,59 @@ export default function WikiView({
                     isChecked ? "bg-brand-soft/10" : "hover:bg-chip/40"
                   }`}
                 >
-                  {/* 검증 완료된 질문만 모의면접에 담을 수 있음 */}
-                  <button
-                    type="button"
-                    aria-label={
-                      canSelect
-                        ? isChecked
-                          ? "선택 해제"
-                          : "질문 선택"
-                        : "검증 완료 후 선택 가능"
-                    }
-                    aria-pressed={isChecked}
-                    disabled={!canSelect}
-                    onClick={() =>
-                      onToggleQuestion(String(question.id), question.text)
-                    }
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                      !canSelect
-                        ? "cursor-not-allowed border-line bg-chip/50 opacity-60"
-                        : isChecked
-                          ? "border-navy bg-navy text-white"
-                          : "border-line bg-bg group-hover:border-navy/40"
-                    }`}
-                  >
-                    {isChecked && (
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    )}
-                  </button>
+                  {isDeleteMode ? (
+                    question.mine ? (
+                      <button
+                        type="button"
+                        aria-label={
+                          selectedDeleteIds.has(question.id)
+                            ? "삭제 선택 해제"
+                            : "삭제할 내 글 선택"
+                        }
+                        aria-pressed={selectedDeleteIds.has(question.id)}
+                        onClick={() => toggleDeleteSelection(question.id)}
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                          selectedDeleteIds.has(question.id)
+                            ? "border-red-500 bg-red-500 text-white"
+                            : "border-red-200 bg-red-50 text-red-500 hover:border-red-400"
+                        }`}
+                      >
+                        {selectedDeleteIds.has(question.id) && (
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="h-5 w-5 shrink-0" aria-hidden="true" />
+                    )
+                  ) : (
+                    /* 검증 완료된 질문만 모의면접에 담을 수 있음 */
+                    <button
+                      type="button"
+                      aria-label={
+                        canSelect
+                          ? isChecked
+                            ? "선택 해제"
+                            : "질문 선택"
+                          : "검증 완료 후 선택 가능"
+                      }
+                      aria-pressed={isChecked}
+                      disabled={!canSelect}
+                      onClick={() =>
+                        onToggleQuestion(String(question.id), question.text)
+                      }
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                        !canSelect
+                          ? "cursor-not-allowed border-line bg-chip/50 opacity-60"
+                          : isChecked
+                            ? "border-navy bg-navy text-white"
+                            : "border-line bg-bg group-hover:border-navy/40"
+                      }`}
+                    >
+                      {isChecked && (
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                      )}
+                    </button>
+                  )}
 
                   {/* 기업 이니셜 칩 */}
                   <div
@@ -434,6 +606,11 @@ export default function WikiView({
                       >
                         {question.role}
                       </span>
+                      {question.mine && (
+                        <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
+                          내가 등록
+                        </span>
+                      )}
                     </div>
                     <p className="truncate text-sm font-semibold text-ink">
                       {question.text}

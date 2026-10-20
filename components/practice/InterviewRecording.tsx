@@ -76,6 +76,7 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
     startInterviewSession,
     reset,
     generatedQuestions, 
+    isStartingInterview,
   } = useInterviewStore();
 
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
@@ -412,6 +413,7 @@ export default function InterviewRecording({ onExit }: InterviewRecordingProps) 
           onStartInterview={startInterviewSession}
           isFollowUpEnabled={isFollowUpEnabled}
           setIsFollowUpEnabled={setIsFollowUpEnabled}
+          isStartingInterview={isStartingInterview}
         />
       )}
 

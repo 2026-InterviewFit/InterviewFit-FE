@@ -23,6 +23,7 @@ export type CommunityWikiQuestion = {
   verifiedCount: number;
   verified: boolean;
   verifiedByMe: boolean;
+  mine: boolean;
 };
 
 export type CommunityWikiCreateRequest = {
@@ -42,6 +43,7 @@ export type CommunityBestAnswer = {
   script: string;
   likeCount: number;
   likedByMe: boolean;
+  mine: boolean;
   publishedAt: string | null;
 };
 
@@ -171,6 +173,24 @@ export async function verifyCommunityWikiQuestion(
   return (await response.json()) as CommunityWikiQuestion;
 }
 
+
+export async function deleteCommunityWikiQuestions(
+  questionIds: number[],
+): Promise<void> {
+  const response = await authenticatedFetch(
+    `${API_BASE_URL}/api/community/wiki/bulk`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ questionIds }),
+    },
+  );
+
+  await ensureOk(response);
+}
+
 export async function getCommunityBestAnswers(): Promise<CommunityBestAnswer[]> {
   const response = await fetch(
     `${API_BASE_URL}/api/community/answers`,
@@ -201,6 +221,20 @@ export async function publishCommunityBestAnswer(
 
   await ensureOk(response);
   return (await response.json()) as CommunityBestAnswer;
+}
+
+
+export async function unpublishCommunityBestAnswer(
+  answerId: number,
+): Promise<void> {
+  const response = await authenticatedFetch(
+    `${API_BASE_URL}/api/community/answers/${answerId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  await ensureOk(response);
 }
 
 export async function likeCommunityBestAnswer(
