@@ -3,22 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
+    "dev": "next dev",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --no-warnings --test --experimental-strip-types tests/*.test.mts"
+    "test": "node --no-warnings --test --experimental-strip-types tests/*.test.mts",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
     "@livekit/components-styles": "^1.2.0",
+    "@opennextjs/cloudflare": "^1.20.12",
     "@stomp/stompjs": "^7.3.0",
     "clsx": "^2.1.1",
     "fix-webm-duration": "^1.0.6",
     "framer-motion": "^12.40.0",
     "livekit-client": "^2.22.1",
     "lucide-react": "^1.16.0",
-    "next": "16.2.6",
+    "next": "^16.4.2",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -33,8 +38,9 @@
     "@types/react-dom": "^19",
     "@types/sockjs-client": "^1.5.4",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "^16.4.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.151.3"
   }
 }
