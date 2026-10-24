@@ -314,11 +314,13 @@ export const usePtInterviewStore = create<PtState & PtActions>(
           response.analysisStatus
         );
 
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
         const slides: Slide[] = response.slides.map((slide) => ({
           slideNumber: slide.slideNumber,
 
           thumbnailUrl: slide.imageObjectKey
-            ? `http://localhost:8080/api/pt-interviews/${ptInterviewId}/slides/${slide.slideNumber}/image`
+            ? `${API_BASE_URL}/api/pt-interviews/${ptInterviewId}/slides/${slide.slideNumber}/image`
             : undefined,
 
           title: slide.title ?? "",
